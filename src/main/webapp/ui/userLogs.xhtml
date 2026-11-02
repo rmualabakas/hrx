@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Journal d'audit"/>
+    <ui:param name="pageSubtitle" value="Historique des actions"/>
+    <ui:define name="title">Journal d'audit</ui:define>
+
+    <ui:define name="content">
+        <h:form id="frmLogs" prependId="false">
+
+            <div class="hx-page-head">
+                <div>
+                    <h2>Journal d'audit</h2>
+                    <p>Toutes les connexions et modifications, avec leur auteur, le poste utilisé et le résultat.</p>
+                </div>
+                <div class="hx-page-head__actions">
+                    <p:commandButton value="Exporter" icon="pi pi-file-excel" styleClass="hx-btn-secondary" ajax="false" rendered="#{privilegeBean.hasPrivilege('LOG_VIEW')}">
+                        <p:dataExporter type="xlsx" target="table" fileName="journal-audit-hrx" pageOnly="false"/>
+                    </p:commandButton>
+                </div>
+            </div>
+
+            <h:panelGroup id="kpis" layout="block" styleClass="hx-grid hx-grid--kpi hx-kpis-compact">
+                <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-list"></i> Événements</span><span class="hx-kpi__value">#{userLogBean.logs.size()}</span></div>
+                <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-check-circle"></i> Réussis</span><span class="hx-kpi__value">#{userLogBean.successCount}</span></div>
+                <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-times-circle"></i> Échoués</span><span class="hx-kpi__value #{userLogBean.failureCount gt 0 ? 'hx-kpi__value--danger' : ''}">#{userLogBean.failureCount}</span></div>
+                <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-users"></i> Utilisateurs</span><span class="hx-kpi__value hx-kpi__value--gold">#{userLogBean.userCount}</span></div>
+            </h:panelGroup>
+
+            <h:panelGroup id="barre" layout="block" styleClass="hx-toolbar">
+                <div class="hx-pane__search hx-toolbar__search">
+                    <i class="pi pi-search"></i>
+                    <p:inputText value="#{userLogBean.query}" placeholder="Utilisateur, résumé, ressource, adresse IP">
+                        <p:ajax event="keyup" listener="#{userLogBean.search}" update="table kpis" delay="400"/>
+                    </p:inputText>
+                </div>
+                <p:datePicker value="#{userLogBean.dateDebut}" pattern="dd/MM/yyyy" locale="fr" showIcon="true" styleClass="hx-date hx-toolbar__date" placeholder="Du">
+                    <p:ajax event="dateSelect" listener="#{userLogBean.search}" update="table kpis"/>
+                </p:datePicker>
+                <p:datePicker value="#{userLogBean.dateFin}" pattern="dd/MM/yyyy" locale="fr" showIcon="true" styleClass="hx-date hx-toolbar__date" placeholder="Au">
+                    <p:ajax event="dateSelect" listener="#{userLogBean.search}" update="table kpis"/>
+                </p:datePicker>
+                <p:selectOneMenu value="#{userLogBean.actionType}" styleClass="hx-select hx-toolbar__select">
+                    <f:selectItem itemLabel="Toutes les actions" itemValue="#{null}" noSelectionOption="true"/>
+                    <f:selectItems value="#{userLogBean.actionTypes}" var="t" itemLabel="#{userLogBean.actionTypeLabel(t)}" itemValue="#{t}"/>
+                    <p:ajax listener="#{userLogBean.search}" update="table kpis"/>
+                </p:selectOneMenu>
+                <p:commandButton icon="pi pi-refresh" title="Réinitialiser les filtres" styleClass="hx-btn-secondary hx-btn-icon" process="@this"
+                                 actionListener="#{userLogBean.reset}" update="barre table kpis"/>
+            </h:panelGroup>
+
+            <div class="hx-card">
+                <p:dataTable id="table" var="lg" value="#{userLogBean.logs}" rowKey="#{lg.id}"
+                             paginator="true" rows="25" paginatorPosition="bottom" paginatorAlwaysVisible="false"
+                             paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="{startRecord}–{endRecord} sur {totalRecords}" rowsPerPageTemplate="25,50,100"
+                             emptyMessage="Aucun événement sur la période." styleClass="hx-table hx-table--logs" rowHover="true">
+
+                    <p:column style="width: 36px;" exportable="false">
+                        <p:rowToggler/>
+                    </p:column>
+                    <p:column headerText="Date" sortBy="#{lg.actionAt}" style="width: 150px;" exportValue="#{userLogBean.dateLabel(lg)}">
+                        <span class="hx-cell-main"><h:outputText value="#{lg.actionAt}"><f:convertDateTime pattern="dd/MM/yyyy" timeZone="Africa/Kinshasa"/></h:outputText></span>
+                        <small class="hx-cell-sub"><h:outputText value="#{lg.actionAt}"><f:convertDateTime pattern="HH:mm:ss" timeZone="Africa/Kinshasa"/></h:outputText></small>
+                    </p:column>
+                    <p:column headerText="Action" sortBy="#{lg.actionType}" style="width: 210px;" exportValue="#{userLogBean.actionLabel(lg)}">
+                        <span class="hx-log-action hx-log-action--#{userLogBean.actionTone(lg)}"><i class="#{userLogBean.actionIcon(lg)}"></i> #{userLogBean.actionLabel(lg)}</span>
+                    </p:column>
+                    <p:column headerText="Utilisateur" sortBy="#{lg.userLogin}" style="width: 200px;" exportValue="#{empty lg.userFullName ? lg.userLogin : lg.userFullName} (#{lg.userLogin})">
+                        <span class="hx-cell-main">#{empty lg.userFullName ? (empty lg.userLogin ? 'Anonyme' : lg.userLogin) : lg.userFullName}</span>
+                        <small class="hx-cell-sub">#{lg.userLogin}</small>
+                    </p:column>
+                    <p:column headerText="Événement" exportValue="#{userLogBean.eventDescription(lg)} - #{userLogBean.resourceLabel(lg)} · #{userLogBean.resourceReference(lg)}">
+                        <span class="hx-cell-main">#{userLogBean.eventDescription(lg)}</span>
+                        <small class="hx-cell-sub">#{userLogBean.resourceLabel(lg)} · #{userLogBean.resourceReference(lg)}</small>
+                    </p:column>
+                    <p:column headerText="Adresse" sortBy="#{lg.ipAddress}" style="width: 140px;" exportValue="#{lg.ipAddress}">
+                        <span class="hx-mono">#{empty lg.ipAddress ? '—' : lg.ipAddress}</span>
+                    </p:column>
+                    <p:column headerText="Résultat" style="width: 120px;" exportValue="#{lg.success ? 'Réussi' : 'Échoué'}">
+                        <span class="hx-badge #{lg.success ? 'hx-badge--done' : 'hx-badge--late'}">#{lg.success ? 'Réussi' : 'Échoué'}</span>
+                    </p:column>
+
+                    <p:rowExpansion>
+                        <div class="hx-log-detail">
+                            <dl>
+                                <dt>Module</dt><dd>#{userLogBean.displayValue(lg.module)}</dd>
+                                <dt>Ressource</dt><dd>#{userLogBean.displayValue(lg.entityName)} <ui:fragment rendered="#{not empty lg.entityId}">(n° #{lg.entityId})</ui:fragment></dd>
+                                <dt>URL</dt><dd class="hx-mono">#{userLogBean.displayValue(lg.httpMethod)} #{userLogBean.displayValue(lg.requestUri)}</dd>
+                                <dt>Poste</dt><dd>#{userLogBean.displayValue(lg.hostname)} - <span class="hx-mono">#{userLogBean.displayValue(lg.ipAddress)}</span></dd>
+                                <dt>Navigateur</dt><dd class="hx-log-detail__ua">#{userLogBean.displayValue(lg.userAgent)}</dd>
+                                <dt>Session</dt><dd class="hx-mono">#{userLogBean.displayValue(lg.sessionId)}</dd>
+                            </dl>
+                            <ui:fragment rendered="#{not empty lg.details}">
+                                <pre class="hx-log-detail__raw">#{lg.details}</pre>
+                            </ui:fragment>
+                        </div>
+                    </p:rowExpansion>
+                </p:dataTable>
+            </div>
+        </h:form>
+    </ui:define>
+</ui:composition>

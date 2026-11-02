@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Tableau de bord"/>
+    <ui:param name="pageSubtitle" value="Vue d'ensemble"/>
+    <ui:define name="title">Tableau de bord</ui:define>
+
+    <ui:define name="content">
+        <div class="hx-page-head">
+            <div>
+                <p class="hx-crumb hx-dash__date">#{tableauBordView.dateDuJour}</p>
+                <h2>#{tableauBordView.salutation} #{loginBean.users.prenom}</h2>
+                <p>
+                    <ui:fragment rendered="#{tableauBordView.campagneOuverte}">Campagne <b>#{tableauBordView.campagne.libelle}</b> (#{tableauBordView.campagne.typeLabel} #{tableauBordView.campagne.exercice}) en cours. Les chiffres ci-dessous sont à jour.</ui:fragment>
+                    <ui:fragment rendered="#{not tableauBordView.campagneOuverte}">Aucune campagne d'évaluation n'est ouverte. La fixation des objectifs de l'exercice #{tableauBordView.exercice} reste possible à tout moment.</ui:fragment>
+                </p>
+            </div>
+            <div class="hx-page-head__actions">
+                <p:button value="Mon équipe" icon="pi pi-sitemap" outcome="/ui/equipe" styleClass="hx-btn-secondary" rendered="#{tableauBordView.manager}"/>
+                <p:button value="Mes évaluations" icon="pi pi-file-edit" outcome="/ui/mesEvaluations" styleClass="hx-btn-secondary" rendered="#{tableauBordView.moiEvaluable}"/>
+                <p:button value="Suivi des évaluations" icon="pi pi-list-check" outcome="/ui/evaluations" styleClass="hx-btn-secondary" rendered="#{tableauBordView.dcht and tableauBordView.campagneOuverte}"/>
+                <p:button value="Nouvelle campagne" icon="pi pi-plus" outcome="/ui/campagnes" rendered="#{privilegeBean.hasPrivilege('CAMP_CREATE') and not tableauBordView.campagneOuverte}"/>
+            </div>
+        </div>
+
+        <!-- Bandeau campagne -->
+        <ui:fragment rendered="#{tableauBordView.campagneOuverte}">
+            <section class="hx-dash__strip #{tableauBordView.campagne.enRetard ? 'is-late' : ''}" aria-label="Campagne en cours">
+                <div class="hx-dash__strip-main">
+                    <span class="hx-dash__strip-type">#{tableauBordView.campagne.typeLabel} · Exercice #{tableauBordView.campagne.exercice}</span>
+                    <strong>#{tableauBordView.campagne.libelle}</strong>
+                    <small>Du <b><h:outputText value="#{tableauBordView.campagne.dateDebut}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText></b>
+                        au <b><h:outputText value="#{tableauBordView.campagne.dateFin}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText></b>
+                        <ui:fragment rendered="#{tableauBordView.campagne.evaluerCompetences}"> · compétences évaluées</ui:fragment></small>
+                </div>
+                <div class="hx-dash__strip-time">
+                    <div class="hx-dash__strip-bar" title="Avancement calendaire : #{tableauBordView.avancementCalendrier} %"><span style="width:#{tableauBordView.avancementCalendrier}%"></span></div>
+                    <small>#{tableauBordView.avancementCalendrier} % du calendrier écoulé</small>
+                </div>
+                <div class="hx-dash__strip-days #{tableauBordView.joursRestants lt 0 ? 'is-late' : (tableauBordView.joursRestants le 7 ? 'is-soon' : '')}">
+                    <b>#{tableauBordView.joursRestants lt 0 ? -tableauBordView.joursRestants : tableauBordView.joursRestants}</b>
+                    <span>#{tableauBordView.joursRestants lt 0 ? 'jours de retard' : (tableauBordView.joursRestants eq 1 ? 'jour restant' : 'jours restants')}</span>
+                </div>
+            </section>
+        </ui:fragment>
+
+        <!-- Mon espace + À faire -->
+        <div class="hx-grid hx-grid--2 hx-dash__row">
+            <section class="hx-card" aria-labelledby="moiHeading">
+                <div class="hx-card__head">
+                    <div><h3 id="moiHeading">Mon parcours #{tableauBordView.exercice}</h3><small>Vos objectifs et votre fiche d'évaluation</small></div>
+                    <span class="hx-badge #{tableauBordView.maFicheClasse}">#{tableauBordView.maFicheEtat}</span>
+                </div>
+                <div class="hx-card__body">
+                    <ui:fragment rendered="#{tableauBordView.moiEvaluable}">
+                        <ol class="hx-steps hx-steps--5" aria-label="Avancement de ma fiche">
+                            <li class="#{tableauBordView.maFicheEtape ge 1 ? 'is-done' : ''}"><i class="pi pi-flag"></i><span>Objectifs</span></li>
+                            <li class="#{tableauBordView.maFicheEtape ge 3 ? 'is-done' : (tableauBordView.maFicheEtape eq 2 ? 'is-current' : '')}"><i class="pi pi-user-edit"></i><span>Auto-éval.</span></li>
+                            <li class="#{tableauBordView.maFicheEtape ge 4 ? 'is-done' : (tableauBordView.maFicheEtape eq 3 ? 'is-current' : '')}"><i class="pi pi-star"></i><span>Évaluation N+1</span></li>
+                            <li class="#{tableauBordView.maFicheEtape ge 5 ? 'is-done' : (tableauBordView.maFicheEtape eq 4 ? 'is-current' : '')}"><i class="pi pi-comments"></i><span>Avis</span></li>
+                            <li class="#{tableauBordView.maFicheEtape ge 5 ? 'is-done' : ''}"><i class="pi pi-verified"></i><span>Validation</span></li>
+                        </ol>
+                        <div class="hx-dash__facts">
+                            <div class="hx-dash__fact">
+                                <b>#{tableauBordView.mesObjectifsValides}</b>
+                                <span>objectif#{tableauBordView.mesObjectifsValides gt 1 ? 's' : ''} validé#{tableauBordView.mesObjectifsValides gt 1 ? 's' : ''}</span>
+                                <small>#{tableauBordView.mesObjectifsSignes ? 'Fiche d’objectifs signée' : (tableauBordView.mesObjectifsValides gt 0 ? 'Fiche d’objectifs en cours' : 'À fixer avec votre N+1')}</small>
+                            </div>
+                            <div class="hx-dash__fact">
+                                <b>#{tableauBordView.mesObjectifsProposes}</b>
+                                <span>proposition#{tableauBordView.mesObjectifsProposes gt 1 ? 's' : ''}</span>
+                                <small>en attente de validation</small>
+                            </div>
+                            <div class="hx-dash__fact">
+                                <ui:fragment rendered="#{tableauBordView.maNoteVisible}">
+                                    <b><h:outputText value="#{tableauBordView.maNote}"><f:convertNumber maxFractionDigits="1" minFractionDigits="0"/></h:outputText><em>/20</em></b>
+                                    <span>#{tableauBordView.maFiche.appreciation}</span>
+                                    <small>#{tableauBordView.maNiveauLabel}</small>
+                                </ui:fragment>
+                                <ui:fragment rendered="#{not tableauBordView.maNoteVisible}">
+                                    <b>—</b><span>note / 20</span>
+                                    <small>#{empty tableauBordView.maFiche ? 'après intégration à la campagne' : 'communiquée après l’évaluation du N+1'}</small>
+                                </ui:fragment>
+                            </div>
+                        </div>
+                        <ui:fragment rendered="#{not empty tableauBordView.maFiche}">
+                            <p class="hx-dash__hint">
+                                <i class="pi pi-clock"></i>
+                                <ui:fragment rendered="#{not empty tableauBordView.maFiche.dateSoumission}">Auto-évaluation soumise le <b><h:outputText value="#{tableauBordView.maFiche.dateSoumission}"><f:convertDateTime pattern="dd/MM/yyyy"/></h:outputText></b> - <span class="#{tableauBordView.maFiche.soumiseATemps ? 'hx-ok' : 'hx-ko'}">#{tableauBordView.maFiche.soumiseATemps ? 'dans les délais' : 'hors délai'}</span>.</ui:fragment>
+                                <ui:fragment rendered="#{empty tableauBordView.maFiche.dateSoumission}">Auto-évaluation à soumettre avant le <b><h:outputText value="#{tableauBordView.campagne.dateFin}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText></b>.</ui:fragment>
+                            </p>
+                        </ui:fragment>
+                    </ui:fragment>
+                    <ui:fragment rendered="#{not tableauBordView.moiEvaluable}">
+                        <div class="hx-empty hx-empty--sm"><i class="pi pi-user"></i><strong>Compte non évaluable</strong>Votre compte n'est pas soumis au processus d'évaluation individuelle.</div>
+                    </ui:fragment>
+                </div>
+                <ui:fragment rendered="#{tableauBordView.moiEvaluable}">
+                    <div class="hx-dash__foot">
+                        <p:button value="Mes objectifs" icon="pi pi-flag" outcome="/ui/mesEvaluations" styleClass="hx-btn-secondary hx-btn-sm"/>
+                        <p:button value="#{tableauBordView.maFiche.statut eq 'INITIEE' or tableauBordView.maFiche.statut eq 'RETOURNEE' ? 'Renseigner ma fiche' : 'Ouvrir ma fiche'}" icon="pi pi-file-edit" styleClass="hx-btn-sm" outcome="/ui/fiche" rendered="#{not empty tableauBordView.maFiche}"><f:param name="id" value="#{tableauBordView.maFiche.id}"/></p:button>
+                    </div>
+                </ui:fragment>
+            </section>
+
+            <section class="hx-card" aria-labelledby="todoHeading">
+                <div class="hx-card__head">
+                    <div><h3 id="todoHeading">À faire</h3>
+                        <small><ui:fragment rendered="#{empty tableauBordView.taches}">Aucune action en attente</ui:fragment><ui:fragment rendered="#{not empty tableauBordView.taches}">#{tableauBordView.taches.size()} action#{tableauBordView.taches.size() gt 1 ? 's' : ''} attendue#{tableauBordView.taches.size() gt 1 ? 's' : ''} de vous</ui:fragment></small></div>
+                </div>
+                <div class="hx-card__body hx-card__body--flush">
+                    <ui:fragment rendered="#{empty tableauBordView.taches}">
+                        <div class="hx-empty hx-empty--sm"><i class="pi pi-check"></i><strong>Rien à traiter pour le moment</strong>Vous serez notifié par e-mail dès qu'une action vous concernera.</div>
+                    </ui:fragment>
+                    <ul class="hx-todo">
+                        <ui:repeat value="#{tableauBordView.taches}" var="t">
+                            <li class="hx-todo__item hx-todo__item--#{t.niveau()}">
+                                <i class="pi #{t.icone()}"></i>
+                                <div class="hx-todo__text"><strong>#{t.titre()}</strong><small>#{t.detail()}</small></div>
+                                <a href="#{request.contextPath}#{t.lien()}" class="hx-icon-btn" title="Ouvrir"><i class="pi pi-arrow-right"></i></a>
+                            </li>
+                        </ui:repeat>
+                    </ul>
+                </div>
+            </section>
+        </div>
+
+        <!-- Mon équipe (N+1) -->
+        <ui:fragment rendered="#{tableauBordView.manager}">
+            <div class="hx-dash__section">
+                <div><span class="hx-dash__eyebrow">Mon équipe</span><h3>#{tableauBordView.equipeDirects} collaborateur#{tableauBordView.equipeDirects gt 1 ? 's' : ''} direct#{tableauBordView.equipeDirects gt 1 ? 's' : ''}<ui:fragment rendered="#{tableauBordView.equipeTaille gt tableauBordView.equipeDirects}"> · #{tableauBordView.equipeTaille} dans tout le périmètre</ui:fragment></h3></div>
+                <p:button value="Gérer mon équipe" icon="pi pi-arrow-right" iconPos="right" outcome="/ui/equipe" styleClass="hx-btn-ghost"/>
+            </div>
+            <section class="hx-grid hx-grid--kpi hx-kpis-compact" aria-label="Indicateurs de mon équipe">
+                <div class="hx-kpi">
+                    <span class="hx-kpi__label"><i class="pi pi-users"></i> Évaluables</span>
+                    <span class="hx-kpi__value">#{tableauBordView.equipeEvaluables}</span>
+                    <span class="hx-kpi__delta">sur #{tableauBordView.equipeTaille} dans le périmètre</span>
+                </div>
+                <div class="hx-kpi">
+                    <span class="hx-kpi__label"><i class="pi pi-flag"></i> Objectifs à fixer</span>
+                    <span class="hx-kpi__value #{tableauBordView.equipeSansObjectifs gt 0 ? 'hx-kpi__value--gold' : ''}">#{tableauBordView.equipeSansObjectifs}</span>
+                    <span class="hx-kpi__delta">#{tableauBordView.equipePropositions} proposition#{tableauBordView.equipePropositions gt 1 ? 's' : ''} à valider</span>
+                </div>
+                <div class="hx-kpi">
+                    <span class="hx-kpi__label"><i class="pi pi-inbox"></i> À évaluer</span>
+                    <span class="hx-kpi__value #{tableauBordView.equipeATraiter gt 0 ? 'hx-kpi__value--primary' : ''}">#{tableauBordView.equipeATraiter}</span>
+                    <span class="hx-kpi__delta">auto-évaluations reçues</span>
+                </div>
+                <div class="hx-kpi">
+                    <span class="hx-kpi__label"><i class="pi pi-check-circle"></i> Finalisées</span>
+                    <span class="hx-kpi__value">#{tableauBordView.equipeFinalisees}</span>
+                    <div class="hx-kpi__bar"><span style="width:#{tableauBordView.equipeTaux}%"></span></div>
+                    <span class="hx-kpi__delta">#{tableauBordView.equipeTaux} % de l'équipe évaluable</span>
+                </div>
+                <div class="hx-kpi">
+                    <span class="hx-kpi__label"><i class="pi pi-exclamation-triangle"></i> En retard</span>
+                    <span class="hx-kpi__value #{tableauBordView.equipeRetard gt 0 ? 'hx-kpi__value--danger' : ''}">#{tableauBordView.equipeRetard}</span>
+                    <span class="hx-kpi__delta">#{tableauBordView.campagneOuverte ? (tableauBordView.campagne.enRetard ? 'fiches non finalisées après échéance' : 'aucune échéance dépassée') : 'hors campagne'}</span>
+                </div>
+            </section>
+
+            <ui:fragment rendered="#{tableauBordView.campagneOuverte}">
+                <div class="hx-grid hx-grid--2 hx-dash__row">
+                    <section class="hx-card">
+                        <div class="hx-card__head"><div><h3>Avancement de mon équipe</h3><small>Répartition des #{tableauBordView.equipeEvaluables} collaborateurs évaluables sur la campagne</small></div></div>
+                        <div class="hx-card__body">
+                            <div class="hx-campaign__progress">
+                                <div class="hx-campaign__bar">
+                                    <span class="seg seg--done" style="width:#{tableauBordView.equipePct(tableauBordView.equipeFinalisees)}%"></span>
+                                    <span class="seg seg--eval" style="width:#{tableauBordView.equipePct(tableauBordView.equipeEvaluees)}%"></span>
+                                    <span class="seg seg--sub" style="width:#{tableauBordView.equipePct(tableauBordView.equipeATraiter)}%"></span>
+                                    <span class="seg seg--init" style="width:#{tableauBordView.equipePct(tableauBordView.equipeEnAutoEval)}%"></span>
+                                </div>
+                                <div class="hx-campaign__legend">
+                                    <span><i class="seg--done"></i>#{tableauBordView.equipeFinalisees} validées</span>
+                                    <span><i class="seg--eval"></i>#{tableauBordView.equipeEvaluees} évaluées, en validation</span>
+                                    <span><i class="seg--sub"></i>#{tableauBordView.equipeATraiter} à évaluer</span>
+                                    <span><i class="seg--init"></i>#{tableauBordView.equipeEnAutoEval} en auto-évaluation</span>
+                                    <span class="hx-campaign__rest"><i class="seg--rest"></i>#{tableauBordView.equipeAInitier} à intégrer</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    <section class="hx-card">
+                        <div class="hx-card__head"><div><h3>Auto-évaluations à traiter</h3><small>Les plus anciennes d'abord</small></div></div>
+                        <div class="hx-card__body hx-card__body--flush">
+                            <ui:fragment rendered="#{empty tableauBordView.equipeFichesATraiter}"><div class="hx-empty hx-empty--sm"><i class="pi pi-inbox"></i><strong>Aucune fiche en attente</strong></div></ui:fragment>
+                            <ul class="hx-dash__list">
+                                <ui:repeat value="#{tableauBordView.equipeFichesATraiter}" var="e">
+                                    <li>
+                                        <span class="hx-avatar hx-avatar--sm">#{tableauBordView.initiales(e.salarie)}</span>
+                                        <div class="hx-dash__list-text"><strong>#{e.salarie.nomComplet}</strong><small>Soumise #{tableauBordView.depuis(e.dateSoumission)} · <span class="#{e.soumiseATemps ? 'hx-ok' : 'hx-ko'}">#{e.soumiseATemps ? 'à temps' : 'hors délai'}</span></small></div>
+                                        <p:button value="Évaluer" icon="pi pi-star" styleClass="hx-btn-sm" outcome="/ui/fiche"><f:param name="id" value="#{e.id}"/></p:button>
+                                    </li>
+                                </ui:repeat>
+                            </ul>
+                        </div>
+                    </section>
+                </div>
+            </ui:fragment>
+        </ui:fragment>
+
+        <!-- Ma direction (directeur désigné) -->
+        <ui:fragment rendered="#{tableauBordView.directeur and tableauBordView.campagneOuverte}">
+            <div class="hx-dash__section">
+                <div><span class="hx-dash__eyebrow">Ma direction</span><h3>#{tableauBordView.directionsLibelle}</h3></div>
+            </div>
+            <div class="hx-grid hx-grid--2 hx-dash__row">
+                <section class="hx-grid hx-grid--kpi hx-kpis-compact" style="align-content:start; margin:0;">
+                    <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-users"></i> Effectif évaluable</span><span class="hx-kpi__value">#{tableauBordView.directionEffectif}</span><span class="hx-kpi__delta">#{tableauBordView.directionFiches} fiche#{tableauBordView.directionFiches gt 1 ? 's' : ''} initiée#{tableauBordView.directionFiches gt 1 ? 's' : ''}</span></div>
+                    <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-briefcase"></i> Avis attendus</span><span class="hx-kpi__value #{tableauBordView.directionAvisAttendus gt 0 ? 'hx-kpi__value--primary' : ''}">#{tableauBordView.directionAvisAttendus}</span><span class="hx-kpi__delta">fiches transmises par les N+1</span></div>
+                    <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-percentage"></i> Taux de réalisation</span><span class="hx-kpi__value hx-kpi__value--gold">#{tableauBordView.directionTaux} %</span><div class="hx-kpi__bar hx-kpi__bar--gold"><span style="width:#{tableauBordView.directionTaux}%"></span></div><span class="hx-kpi__delta">#{tableauBordView.directionValidees} validées</span></div>
+                </section>
+                <section class="hx-card">
+                    <div class="hx-card__head"><div><h3>Fiches en attente de votre avis</h3><small>Partie V - avis du directeur</small></div></div>
+                    <div class="hx-card__body hx-card__body--flush">
+                        <ui:fragment rendered="#{empty tableauBordView.directionFichesAViser}"><div class="hx-empty hx-empty--sm"><i class="pi pi-check"></i><strong>Aucune fiche transmise</strong></div></ui:fragment>
+                        <ul class="hx-dash__list">
+                            <ui:repeat value="#{tableauBordView.directionFichesAViser}" var="e">
+                                <li>
+                                    <span class="hx-avatar hx-avatar--sm">#{tableauBordView.initiales(e.salarie)}</span>
+                                    <div class="hx-dash__list-text"><strong>#{e.salarie.nomComplet}</strong><small>Évaluée par #{e.evaluateur.nomComplet} #{tableauBordView.depuis(e.dateEvaluation)}</small></div>
+                                    <p:button value="Donner mon avis" icon="pi pi-comment" styleClass="hx-btn-sm" outcome="/ui/fiche"><f:param name="id" value="#{e.id}"/></p:button>
+                                </li>
+                            </ui:repeat>
+                        </ul>
+                    </div>
+                </section>
+            </div>
+        </ui:fragment>
+
+        <!-- Pilotage DCHT -->
+        <ui:fragment rendered="#{tableauBordView.dcht}">
+            <div class="hx-dash__section">
+                <div><span class="hx-dash__eyebrow">Pilotage DCHT</span><h3>#{tableauBordView.campagneOuverte ? tableauBordView.campagne.libelle : 'Population évaluable'}</h3></div>
+                <div class="hx-row-actions">
+                    <p:button value="Objectifs" icon="pi pi-flag" outcome="/ui/suiviObjectifs" styleClass="hx-btn-ghost"/>
+                    <p:button value="Campagnes" icon="pi pi-calendar" outcome="/ui/campagnes" styleClass="hx-btn-ghost"/>
+                    <p:button value="Reporting" icon="pi pi-chart-bar" outcome="/ui/reporting" styleClass="hx-btn-ghost" rendered="#{privilegeBean.hasPrivilege('RPT_VIEW') or loginBean.users.profil.id eq 1}"/>
+                </div>
+            </div>
+
+            <section class="hx-grid hx-grid--kpi" aria-label="Indicateurs de campagne">
+                <div class="hx-kpi">
+                    <span class="hx-kpi__label"><i class="pi pi-users"></i> #{tableauBordView.campagneOuverte ? 'Évaluations attendues' : 'Comptes évaluables'}</span>
+                    <span class="hx-kpi__value">#{tableauBordView.campagneOuverte ? tableauBordView.attendues : tableauBordView.nbEvaluables}</span>
+                    <span class="hx-kpi__delta"><ui:fragment rendered="#{tableauBordView.campagneOuverte}">#{tableauBordView.nbEvaluables} comptes évaluables actifs</ui:fragment><ui:fragment rendered="#{not tableauBordView.campagneOuverte}">comptes actifs soumis à évaluation</ui:fragment></span>
+                </div>
+                <div class="hx-kpi">
+                    <span class="hx-kpi__label"><i class="pi pi-send"></i> Initiées</span>
+                    <span class="hx-kpi__value">#{tableauBordView.nbInitiees}</span>
+                    <div class="hx-kpi__bar"><span style="width:#{tableauBordView.tauxIntegration}%"></span></div>
+                    <span class="hx-kpi__delta"><ui:fragment rendered="#{tableauBordView.campagneOuverte}">#{tableauBordView.tauxIntegration} % de la population attendue · #{tableauBordView.restantes} restantes</ui:fragment><ui:fragment rendered="#{not tableauBordView.campagneOuverte}">aucune campagne ouverte</ui:fragment></span>
+                </div>
+                <div class="hx-kpi">
+                    <span class="hx-kpi__label"><i class="pi pi-user-edit"></i> Auto-évaluations soumises</span>
+                    <span class="hx-kpi__value">#{tableauBordView.nbSoumises}</span>
+                    <span class="hx-kpi__delta">#{tableauBordView.tauxSoumission} % des fiches initiées · #{tableauBordView.nbEnAttenteN1} chez le N+1</span>
+                </div>
+                <div class="hx-kpi">
+                    <span class="hx-kpi__label"><i class="pi pi-check-circle"></i> Validées</span>
+                    <span class="hx-kpi__value">#{tableauBordView.nbValidees}</span>
+                    <div class="hx-kpi__bar hx-kpi__bar--gold"><span style="width:#{tableauBordView.tauxRealisation}%"></span></div>
+                    <span class="hx-kpi__delta">#{tableauBordView.nbEvaluees} évaluée#{tableauBordView.nbEvaluees gt 1 ? 's' : ''} en attente de validation</span>
+                </div>
+                <div class="hx-kpi">
+                    <span class="hx-kpi__label"><i class="pi pi-percentage"></i> Taux de réalisation</span>
+                    <span class="hx-kpi__value hx-kpi__value--gold">#{tableauBordView.tauxRealisation} %</span>
+                    <span class="hx-kpi__delta">fiches validées / évaluations attendues</span>
+                </div>
+                <div class="hx-kpi">
+                    <span class="hx-kpi__label"><i class="pi pi-exclamation-triangle"></i> En retard</span>
+                    <span class="hx-kpi__value #{tableauBordView.nbRetard gt 0 ? 'hx-kpi__value--danger' : ''}">#{tableauBordView.nbRetard}</span>
+                    <span class="hx-kpi__delta">#{tableauBordView.nbHorsDelai} soumission#{tableauBordView.nbHorsDelai gt 1 ? 's' : ''} hors délai · #{tableauBordView.nbATemps} à temps</span>
+                </div>
+            </section>
+
+            <ui:fragment rendered="#{tableauBordView.campagneOuverte}">
+                <div class="hx-grid hx-grid--2 hx-dash__row">
+                    <section class="hx-card" aria-labelledby="dirHeading">
+                        <div class="hx-card__head">
+                            <div><h3 id="dirHeading">Réalisation par direction</h3><small>Fiches validées rapportées à l'effectif évaluable de chaque direction · #{tableauBordView.nbDirectionsConcernees} direction#{tableauBordView.nbDirectionsConcernees gt 1 ? 's' : ''}</small></div>
+                        </div>
+                        <div class="hx-card__body hx-card__body--flush">
+                            <ui:fragment rendered="#{empty tableauBordView.parDirection}"><div class="hx-empty hx-empty--sm"><i class="pi pi-building"></i><strong>Aucun collaborateur évaluable rattaché à une direction</strong></div></ui:fragment>
+                            <ui:fragment rendered="#{not empty tableauBordView.parDirection}">
+                                <table class="hx-dirtable">
+                                    <thead><tr><th>Direction</th><th class="num">Effectif</th><th class="num">Initiées</th><th class="num">Validées</th><th>Avancement</th><th class="num">Taux</th></tr></thead>
+                                    <tbody>
+                                    <ui:repeat value="#{tableauBordView.parDirection}" var="d">
+                                        <tr class="#{d.retard() gt 0 ? 'is-late' : ''}">
+                                            <td><strong>#{d.nom()}</strong><ui:fragment rendered="#{not empty d.abrege() and d.abrege() ne '—'}"><small> #{d.abrege()}</small></ui:fragment><ui:fragment rendered="#{d.retard() gt 0}"><small class="hx-ko"> · #{d.retard()} en retard</small></ui:fragment></td>
+                                            <td class="num">#{d.effectif()}</td>
+                                            <td class="num">#{d.initiees()}</td>
+                                            <td class="num">#{d.validees()}</td>
+                                            <td>
+                                                <div class="hx-campaign__bar hx-dirtable__bar" title="#{d.validees()} validées · #{d.evaluees()} évaluées · #{d.soumises()} à évaluer · #{d.nonInitiees()} non initiées">
+                                                    <span class="seg seg--done" style="width:#{d.pct(d.validees())}%"></span>
+                                                    <span class="seg seg--eval" style="width:#{d.pct(d.evaluees())}%"></span>
+                                                    <span class="seg seg--sub" style="width:#{d.pct(d.soumises())}%"></span>
+                                                    <span class="seg seg--init" style="width:#{d.pct(d.initiees() - d.validees() - d.evaluees() - d.soumises())}%"></span>
+                                                </div>
+                                            </td>
+                                            <td class="num"><b>#{d.taux()} %</b></td>
+                                        </tr>
+                                    </ui:repeat>
+                                    </tbody>
+                                </table>
+                            </ui:fragment>
+                        </div>
+                    </section>
+
+                    <div class="hx-dash__stack">
+                        <section class="hx-card">
+                            <div class="hx-card__head"><div><h3>Circuit de la campagne</h3><small>#{tableauBordView.nbInitiees} fiche#{tableauBordView.nbInitiees gt 1 ? 's' : ''} sur #{tableauBordView.attendues} attendues</small></div></div>
+                            <div class="hx-card__body">
+                                <div class="hx-campaign__progress">
+                                    <div class="hx-campaign__bar">
+                                        <span class="seg seg--done" style="width:#{tableauBordView.pctAttendu(tableauBordView.nbValidees)}%"></span>
+                                        <span class="seg seg--eval" style="width:#{tableauBordView.pctAttendu(tableauBordView.nbEvaluees)}%"></span>
+                                        <span class="seg seg--sub" style="width:#{tableauBordView.pctAttendu(tableauBordView.nbEnAttenteN1)}%"></span>
+                                        <span class="seg seg--init" style="width:#{tableauBordView.pctAttendu(tableauBordView.nbAutoEval)}%"></span>
+                                    </div>
+                                    <div class="hx-campaign__legend">
+                                        <span><i class="seg--done"></i>#{tableauBordView.nbValidees} validées</span>
+                                        <span><i class="seg--eval"></i>#{tableauBordView.nbEvaluees} à valider</span>
+                                        <span><i class="seg--sub"></i>#{tableauBordView.nbEnAttenteN1} à évaluer</span>
+                                        <span><i class="seg--init"></i>#{tableauBordView.nbAutoEval} en auto-évaluation<ui:fragment rendered="#{tableauBordView.nbRetournees gt 0}"> (dont #{tableauBordView.nbRetournees} retournée#{tableauBordView.nbRetournees gt 1 ? 's' : ''})</ui:fragment></span>
+                                        <span class="hx-campaign__rest"><i class="seg--rest"></i>#{tableauBordView.restantes} non initiées</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                        <section class="hx-card">
+                            <div class="hx-card__head">
+                                <div><h3>Niveaux d'atteinte</h3><small>#{tableauBordView.nbNotees} fiche#{tableauBordView.nbNotees gt 1 ? 's' : ''} évaluée#{tableauBordView.nbNotees gt 1 ? 's' : ''} par les N+1</small></div>
+                                <ui:fragment rendered="#{tableauBordView.nbNotees gt 0}"><span class="hx-badge hx-badge--info" title="Note moyenne des fiches évaluées">Moyenne <b><h:outputText value="#{tableauBordView.noteMoyenne}"><f:convertNumber maxFractionDigits="1" minFractionDigits="1"/></h:outputText>/20</b></span></ui:fragment>
+                            </div>
+                            <div class="hx-card__body">
+                                <ui:fragment rendered="#{tableauBordView.nbNotees eq 0}"><div class="hx-empty hx-empty--sm"><i class="pi pi-chart-bar"></i><strong>Aucune fiche évaluée pour l'instant</strong>La répartition apparaît dès que les N+1 transmettent leurs évaluations.</div></ui:fragment>
+                                <ui:fragment rendered="#{tableauBordView.nbNotees gt 0}">
+                                    <ul class="hx-att">
+                                        <ui:repeat value="#{tableauBordView.niveauxAtteinte}" var="n">
+                                            <li><span class="hx-att__label">#{n.libelle()}</span><div class="hx-att__bar"><span class="#{n.classe()}" style="width:#{n.pct()}%"></span></div><b>#{n.nb()}</b><small>#{n.pct()} %</small></li>
+                                        </ui:repeat>
+                                    </ul>
+                                </ui:fragment>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </ui:fragment>
+        </ui:fragment>
+
+    </ui:define>
+</ui:composition>

@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
+         version="6.0">
+
+    <display-name>HRX — Évaluations du personnel</display-name>
+
+    <!-- Filtre UTF-8 en premier -->
+    <filter>
+        <filter-name>utf8Filter</filter-name>
+        <filter-class>cd.mura.hrx.filter.Utf8Filter</filter-class>
+        <async-supported>true</async-supported>
+    </filter>
+    <filter-mapping>
+        <filter-name>utf8Filter</filter-name>
+        <url-pattern>/*</url-pattern>
+        <dispatcher>REQUEST</dispatcher>
+        <dispatcher>FORWARD</dispatcher>
+        <dispatcher>INCLUDE</dispatcher>
+        <dispatcher>ERROR</dispatcher>
+    </filter-mapping>
+
+    <welcome-file-list>
+        <welcome-file>login.jsf</welcome-file>
+    </welcome-file-list>
+
+    <!-- JSF -->
+    <context-param>
+        <param-name>jakarta.faces.STATE_SAVING_METHOD</param-name>
+        <param-value>server</param-value>
+    </context-param>
+    <context-param>
+        <param-name>jakarta.faces.PROJECT_STAGE</param-name>
+        <param-value>Production</param-value>
+    </context-param>
+    <context-param>
+        <param-name>jakarta.faces.FACELETS_ENCODING</param-name>
+        <param-value>UTF-8</param-value>
+    </context-param>
+    <context-param>
+        <param-name>jakarta.faces.FACELETS_SKIP_COMMENTS</param-name>
+        <param-value>true</param-value>
+    </context-param>
+
+    <!-- PrimeFaces -->
+    <context-param>
+        <param-name>primefaces.THEME</param-name>
+        <param-value>saga</param-value>
+    </context-param>
+    <context-param>
+        <param-name>primefaces.FONT_AWESOME</param-name>
+        <param-value>true</param-value>
+    </context-param>
+    <context-param>
+        <param-name>primefaces.LOCALE</param-name>
+        <param-value>fr</param-value>
+    </context-param>
+
+    <context-param>
+        <param-name>default-html-encoding</param-name>
+        <param-value>UTF-8</param-value>
+    </context-param>
+
+    <servlet>
+        <servlet-name>Faces Servlet</servlet-name>
+        <servlet-class>jakarta.faces.webapp.FacesServlet</servlet-class>
+        <load-on-startup>1</load-on-startup>
+        <multipart-config>
+            <!-- 20 Mo : pièces jointes des fiches d'évaluation / imports du référentiel -->
+            <max-file-size>20971520</max-file-size>
+            <max-request-size>23068672</max-request-size>
+            <file-size-threshold>0</file-size-threshold>
+        </multipart-config>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>Faces Servlet</servlet-name>
+        <url-pattern>*.xhtml</url-pattern>
+        <url-pattern>*.jsf</url-pattern>
+    </servlet-mapping>
+
+    <mime-mapping><extension>woff</extension><mime-type>font/woff</mime-type></mime-mapping>
+    <mime-mapping><extension>woff2</extension><mime-type>font/woff2</mime-type></mime-mapping>
+    <mime-mapping><extension>ttf</extension><mime-type>font/ttf</mime-type></mime-mapping>
+    <mime-mapping><extension>svg</extension><mime-type>image/svg+xml</mime-type></mime-mapping>
+
+    <session-config>
+        <!-- 60 minutes d'inactivité : données RH confidentielles -->
+        <session-timeout>60</session-timeout>
+        <cookie-config>
+            <http-only>true</http-only>
+            <!-- Secure est piloté par -Dhrx.cookie.secure=true afin de conserver le développement HTTP local. -->
+        </cookie-config>
+        <tracking-mode>COOKIE</tracking-mode>
+    </session-config>
+
+    <error-page>
+        <exception-type>jakarta.faces.application.ViewExpiredException</exception-type>
+        <location>/login.xhtml?sessionExpired=true</location>
+    </error-page>
+
+    <!-- Aucune trace technique n'est jamais montrée à l'utilisateur : page d'erreur sobre, détail dans les journaux serveur. -->
+    <error-page><error-code>400</error-code><location>/erreur.xhtml</location></error-page>
+    <error-page><error-code>403</error-code><location>/erreur.xhtml</location></error-page>
+    <error-page><error-code>404</error-code><location>/erreur.xhtml</location></error-page>
+    <error-page><error-code>405</error-code><location>/erreur.xhtml</location></error-page>
+    <error-page><error-code>500</error-code><location>/erreur.xhtml</location></error-page>
+    <error-page><exception-type>java.lang.Throwable</exception-type><location>/erreur.xhtml</location></error-page>
+</web-app>

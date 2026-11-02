@@ -1,0 +1,262 @@
+package cd.mura.hrx.bean.eval;
+
+import cd.mura.hrx.bean.config.LoginBean;
+import cd.mura.hrx.dao.config.UserDAO;
+import cd.mura.hrx.dao.eval.CampagneDAO;
+import cd.mura.hrx.dao.eval.EvaluationDAO;
+import cd.mura.hrx.dao.eval.ModeleFicheDAO;
+import cd.mura.hrx.dao.eval.ObjectifDAO;
+import cd.mura.hrx.entity.eval.FicheObjectifs;
+import cd.mura.hrx.entity.config.Users;
+import cd.mura.hrx.entity.eval.Campagne;
+import cd.mura.hrx.entity.eval.Evaluation;
+import cd.mura.hrx.entity.eval.ModeleFiche;
+import cd.mura.hrx.service.AuditService;
+import cd.mura.hrx.service.AuthorizationService;
+import jakarta.annotation.PostConstruct;
+import jakarta.ejb.EJB;
+import jakarta.faces.application.FacesMessage;
+import jakarta.faces.context.FacesContext;
+import jakarta.faces.view.ViewScoped;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.io.Serializable;
+import java.util.*;
+
+/** Mon équipe : périmètre du N+1, avancement des fiches de la campagne ouverte et fixation des objectifs. */
+@Named
+@ViewScoped
+@Getter
+@Setter
+public class EquipeView implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    @Inject private LoginBean loginBean;
+    @Inject private AuditService auditService;
+    @Inject private AuthorizationService authorization;
+    @EJB private UserDAO userDAO;
+    @EJB private CampagneDAO campagneDAO;
+    @EJB private EvaluationDAO evaluationDAO;
+    @EJB private ModeleFicheDAO modeleFicheDAO;
+    @EJB private ObjectifDAO objectifDAO;
+    @EJB private cd.mura.hrx.service.EvaluationService evaluationService;
+    @EJB private cd.mura.hrx.service.NotificationService notifications;
+
+    private Campagne campagne;
+    private List<Users> membres = new ArrayList<>();
+    private Map<Integer, Evaluation> fiches = new HashMap<>();
+    private Map<Integer, FicheObjectifs> fichesObjectifs = new HashMap<>();
+    private int exercice = java.time.Year.now().getValue();
+    private Map<Integer, Integer> niveaux = new HashMap<>();
+    /** Par défaut, tout le périmètre hiérarchique (N-1, N-2, N-3…) est affiché. */
+    private boolean inclureIndirects = true;
+    private String recherche = "";
+    private String filtre = "tous";
+    /** Affichage choisi : cartes, liste ou hierarchie. Mémorisé dans un cookie du navigateur. */
+    private String vue = "cartes";
+    private static final String COOKIE_VUE = "hrx_equipe_vue";
+    private static final Set<String> VUES = Set.of("cartes", "liste", "hierarchie");
+    /** Constitution de la population évaluable : identifiants cochés dans le dialogue. */
+    private List<Integer> selectionIds = new ArrayList<>();
+
+    @PostConstruct
+    public void init() {
+        Object c = FacesContext.getCurrentInstance().getExternalContext().getRequestCookieMap().get(COOKIE_VUE);
+        if (c instanceof jakarta.servlet.http.Cookie ck && VUES.contains(ck.getValue())) vue = ck.getValue();
+        charger();
+    }
+
+    public void choisirVue(String v) {
+        if (!VUES.contains(v)) return;
+        vue = v;
+        Map<String, Object> props = new HashMap<>();
+        props.put("maxAge", 60 * 60 * 24 * 365);
+        props.put("path", FacesContext.getCurrentInstance().getExternalContext().getRequestContextPath() + "/");
+        FacesContext.getCurrentInstance().getExternalContext().addResponseCookie(COOKIE_VUE, v, props);
+    }
+
+    public void charger() {
+        Users moi = loginBean.getUsers();
+        campagne = campagneDAO.findOuverte();
+        membres = new ArrayList<>();
+        niveaux.clear();
+        collecter(moi.getId(), 1, new HashSet<>());
+        fiches.clear();
+        exercice = campagne != null ? campagne.getExercice() : java.time.Year.now().getValue();
+        fichesObjectifs.clear();
+        for (FicheObjectifs f : objectifDAO.findFiches(exercice, membres.stream().map(Users::getId).toList())) fichesObjectifs.put(f.getSalarie().getId(), f);
+        if (campagne != null) {
+            for (Evaluation e : evaluationDAO.findByEvaluateur(campagne.getId(), moi.getId())) fiches.put(e.getSalarie().getId(), e);
+            // fiches de N-2 déjà initiées par leur propre N+1 (lecture seule ici)
+            if (inclureIndirects) for (Users u : membres) if (!fiches.containsKey(u.getId())) {
+                Evaluation e = evaluationDAO.findByCampagneEtSalarie(campagne.getId(), u.getId());
+                if (e != null) fiches.put(u.getId(), e);
+            }
+        }
+    }
+
+    private void collecter(int n1, int niveau, Set<Integer> vus) {
+        if (!vus.add(n1)) return;
+        for (Users u : userDAO.findBySuperieur(n1)) {
+            membres.add(u);
+            niveaux.put(u.getId(), niveau);
+            if (inclureIndirects) collecter(u.getId(), niveau + 1, vus);
+        }
+    }
+
+    // lecture
+    public List<Users> getMembresFiltres() {
+        String f = recherche == null ? "" : recherche.trim().toLowerCase(Locale.ROOT);
+        return membres.stream().filter(u -> {
+            if (!f.isEmpty() && !(s(u.getNomComplet()) + " " + s(u.getFonction()) + " " + s(u.getMatricule())).toLowerCase(Locale.ROOT).contains(f)) return false;
+            return switch (filtre) {
+                case "aInitier" -> u.getEvaluable() == 1 && fiche(u) == null;
+                case "aTraiter" -> fiche(u) != null && Evaluation.SOUMISE.equals(fiche(u).getStatut());
+                case "retard" -> enRetard(u);
+                case "finalisees" -> fiche(u) != null && fiche(u).isFinalisee();
+                default -> true;
+            };
+        }).toList();
+    }
+
+    public Evaluation fiche(Users u) { return fiches.get(u.getId()); }
+    public int niveau(Users u) { return niveaux.getOrDefault(u.getId(), 1); }
+    public boolean isDirect(Users u) { return niveau(u) == 1; }
+
+    public String etat(Users u) {
+        if (u.getEvaluable() != 1) return "Non évaluable";
+        if (campagne == null) return "Hors campagne";
+        Evaluation e = fiche(u);
+        return e == null ? "Fiche à initier" : e.getStatutLabel();
+    }
+
+    public String etatClasse(Users u) {
+        if (u.getEvaluable() != 1 || campagne == null) return "hx-badge--draft";
+        Evaluation e = fiche(u);
+        if (e == null) return enRetard(u) ? "hx-badge--late" : "hx-badge--draft";
+        return switch (e.getStatut()) {
+            case Evaluation.VALIDEE -> "hx-badge--done";
+            case Evaluation.SOUMISE -> "hx-badge--pending";
+            case Evaluation.RETOURNEE -> "hx-badge--late";
+            case Evaluation.EVALUEE -> "hx-badge--info";
+            default -> enRetard(u) ? "hx-badge--late" : "hx-badge--draft";
+        };
+    }
+
+    public boolean enRetard(Users u) {
+        if (campagne == null || !campagne.isEnRetard() || u.getEvaluable() != 1) return false;
+        Evaluation e = fiche(u);
+        return e == null || !e.isFinalisee();
+    }
+
+    public FicheObjectifs ficheObjectifs(Users u) { return fichesObjectifs.get(u.getId()); }
+    public int nbObjectifs(Users u) { FicheObjectifs f = ficheObjectifs(u); return f == null ? 0 : (int) f.getNbValides(); }
+    public int nbProposes(Users u) { FicheObjectifs f = ficheObjectifs(u); return f == null ? 0 : (int) f.getNbProposes(); }
+    /** Recrue de l'exercice : ses objectifs se fixent à la prise de poste. */
+    public boolean recrue(Users u) {
+        if (u.getDateEmbauche() == null) return false;
+        return u.getDateEmbauche().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate().getYear() == exercice;
+    }
+    /** Fiche non signée alors que la fenêtre de fixation (fin janvier, ou 1 mois après l'embauche) est passée. */
+    public boolean fixationEnRetard(Users u) {
+        if (u.getEvaluable() != 1 || objectifsSignes(u)) return false;
+        java.time.LocalDate effet = recrue(u) ? u.getDateEmbauche().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate() : java.time.LocalDate.of(exercice, 1, 1);
+        return java.time.LocalDate.now().isAfter(effet.plusMonths(1));
+    }
+    public boolean objectifsSignes(Users u) { FicheObjectifs f = ficheObjectifs(u); return f != null && f.isSignee(); }
+
+    /** Étape courante sur 4 : objectifs fixés → auto-évaluation → évaluation N+1 → validation DCHT. */
+    public int etape(Users u) {
+        Evaluation e = fiche(u);
+        if (e == null) return objectifsSignes(u) ? 1 : 0;
+        return switch (e.getStatut()) {
+            case Evaluation.VALIDEE -> 4;
+            case Evaluation.EVALUEE -> 3;
+            case Evaluation.SOUMISE, Evaluation.RETOURNEE -> 2;
+            default -> objectifsSignes(u) ? 1 : 0;
+        };
+    }
+
+    public String etapeLabel(Users u) {
+        return switch (etape(u)) {
+            case 4 -> "Validée DCHT";
+            case 3 -> "Évaluée par le N+1";
+            case 2 -> "Auto-évaluation soumise";
+            case 1 -> "Objectifs signés";
+            default -> nbObjectifs(u) > 0 ? "Objectifs en cours" : "Aucun objectif";
+        };
+    }
+
+    public long getNbSansObjectifs() { return membres.stream().filter(u -> u.getEvaluable() == 1 && isDirect(u) && !objectifsSignes(u)).count(); }
+    public long getNbPropositions() { return membres.stream().filter(this::isDirect).mapToInt(this::nbProposes).sum(); }
+    public long getNbDirects() { return membres.stream().filter(this::isDirect).count(); }
+    public long getNbEvaluables() { return membres.stream().filter(u -> u.getEvaluable() == 1).count(); }
+    public long getNbInitiees() { return fiches.size(); }
+    public long getNbATraiter() { return fiches.values().stream().filter(e -> Evaluation.SOUMISE.equals(e.getStatut())).count(); }
+    public long getNbFinalisees() { return fiches.values().stream().filter(Evaluation::isFinalisee).count(); }
+    public long getNbRetard() { return membres.stream().filter(this::enRetard).count(); }
+    public int getTauxAvancement() { long ev = getNbEvaluables(); return ev == 0 ? 0 : (int) Math.round(100.0 * getNbFinalisees() / ev); }
+
+    public String initiales(Users u) {
+        String p = s(u.getPrenom()), n = s(u.getNom());
+        return ((p.isEmpty() ? "" : p.substring(0, 1)) + (n.isEmpty() ? "" : n.substring(0, 1))).toUpperCase(Locale.ROOT);
+    }
+
+    // actions
+    public void initier(Users u) {
+        authorization.requireAnyPrivilege("EVAL_N1", "EVAL_DCHT");
+        if (campagne == null) { error("Aucune campagne ouverte", "La DCHT doit d'abord lancer une campagne."); return; }
+        if (fiche(u) != null) return;
+        FicheObjectifs fo = ficheObjectifs(u);
+        if (!aObjectifsEnCours(u)) { error("Collaborateur non éligible", u.getNomComplet() + " n'a aucun objectif validé pour l'exercice " + exercice + " : fixez et validez ses objectifs avant de l'intégrer à la campagne."); return; }
+        ModeleFiche m = modeleFicheDAO.findPourCategorie(u.getCategorie());
+        if (m == null) m = campagne.getModeleParDefaut();
+        if (m == null) { List<ModeleFiche> actifs = modeleFicheDAO.findActifs(); if (!actifs.isEmpty()) m = actifs.get(0); }
+        Evaluation e = evaluationService.initier(campagne, u, loginBean.getUsers(), m, fo);
+        auditService.created("Évaluations", "Evaluation", e.getId(), "Initiation de la fiche d'évaluation", u.getNomComplet() + " : " + campagne.getLibelle());
+        try { notifications.ficheInitiee(evaluationService.charger(e.getId())); } catch (Exception ex) { }
+        info("Fiche initiée", u.getNomComplet() + " peut renseigner son auto-évaluation" + (m == null ? " (aucun modèle de compétences affecté)" : "") + ".");
+        charger();
+    }
+
+    /** Collaborateurs directs, évaluables, pas encore intégrés à la campagne ouverte. */
+    public List<Users> getCandidats() {
+        if (campagne == null) return List.of();
+        return membres.stream().filter(u -> isDirect(u) && u.getEvaluable() == 1 && fiche(u) == null).toList();
+    }
+    /** Éligible à la campagne : au moins un objectif validé pour l'exercice (fiche de fixation en cours ou signée). */
+    public boolean aObjectifsEnCours(Users u) { FicheObjectifs f = ficheObjectifs(u); return f != null && f.getNbValides() > 0; }
+    public List<Users> getCandidatsEligibles() { return getCandidats().stream().filter(this::aObjectifsEnCours).toList(); }
+    public List<Users> getCandidatsBloques() { return getCandidats().stream().filter(u -> !aObjectifsEnCours(u)).toList(); }
+    public void preparerSelection() { selectionIds = new ArrayList<>(getCandidatsEligibles().stream().map(Users::getId).toList()); }
+    public void integrerSelection() {
+        authorization.requireAnyPrivilege("EVAL_N1", "EVAL_DCHT");
+        if (campagne == null) { error("Aucune campagne ouverte", "La DCHT doit d'abord lancer une campagne."); return; }
+        int n = 0; List<String> refuses = new ArrayList<>();
+        for (Users u : getCandidats()) {
+            if (!selectionIds.contains(u.getId())) continue;
+            if (!aObjectifsEnCours(u)) { refuses.add(u.getNomComplet()); continue; }
+            FicheObjectifs fo = ficheObjectifs(u);
+            ModeleFiche m = modeleFicheDAO.findPourCategorie(u.getCategorie());
+            if (m == null) m = campagne.getModeleParDefaut();
+            if (m == null) { List<ModeleFiche> actifs = modeleFicheDAO.findActifs(); if (!actifs.isEmpty()) m = actifs.get(0); }
+            Evaluation e = evaluationService.initier(campagne, u, loginBean.getUsers(), m, fo);
+            auditService.created("Évaluations", "Evaluation", e.getId(), "Intégration à la campagne", u.getNomComplet() + " : " + campagne.getLibelle());
+            try { notifications.ficheInitiee(evaluationService.charger(e.getId())); } catch (Exception ex) { }
+            n++;
+        }
+        if (!refuses.isEmpty()) error("Non intégré(s) : objectifs manquants", String.join(", ", refuses) + " - fixez et validez d'abord leurs objectifs.");
+        if (n == 0) { if (refuses.isEmpty()) error("Aucune sélection", "Cochez au moins un collaborateur."); return; }
+        info(n + " collaborateur" + (n > 1 ? "s intégrés" : " intégré") + " à la campagne", "Chacun reçoit un e-mail et peut remplir son auto-évaluation depuis « Mes évaluations ».");
+        org.primefaces.PrimeFaces.current().ajax().addCallbackParam("ok", true);
+        charger();
+    }
+
+    private static String s(String v) { return v == null ? "" : v; }
+    private void info(String t, String d) { FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_INFO, t, d)); }
+    private void error(String t, String d) { FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, t, d)); }
+}

@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Modèles de fiche"/>
+    <ui:param name="pageSubtitle" value="Compétences et valeurs évaluées"/>
+    <ui:define name="title">Modèles de fiche</ui:define>
+
+    <ui:define name="content">
+        <h:form id="frmMdl" prependId="false">
+            <div class="hx-page-head">
+                <div>
+                    <h2>Modèles de fiche d'évaluation</h2>
+                    <p>Un modèle fixe la liste des compétences et des valeurs évaluées sur la fiche MAF 159. Il est choisi selon la catégorie du collaborateur. Les compétences ne sont évaluées que si la campagne le prévoit.</p>
+                </div>
+                <div class="hx-page-head__actions">
+                    <p:commandButton value="Nouveau modèle" icon="pi pi-plus" process="@this" rendered="#{modeleFicheAdminView.peutEditer}"
+                                     actionListener="#{modeleFicheAdminView.nouveau}" update=":dlgModele" oncomplete="PF('dlgModele').show()"/>
+                </div>
+            </div>
+
+            <h:panelGroup id="zone" layout="block" styleClass="hx-mdl">
+                <!-- Liste des modèles -->
+                <aside class="hx-mdl__list" aria-label="Modèles">
+                    <ui:fragment rendered="#{empty modeleFicheAdminView.modeles}">
+                        <div class="hx-card"><div class="hx-empty hx-empty--sm"><i class="pi pi-file"></i><strong>Aucun modèle</strong>Créez le premier modèle de fiche.</div></div>
+                    </ui:fragment>
+                    <ui:repeat value="#{modeleFicheAdminView.modeles}" var="m">
+                        <p:commandLink process="@this" update="zone" actionListener="#{modeleFicheAdminView.selectionner(m)}"
+                                       styleClass="hx-mdl__item #{modeleFicheAdminView.courant.id eq m.id ? 'is-active' : ''} #{m.statut eq 1 ? '' : 'is-off'}">
+                            <span class="hx-mdl__item-head">
+                                <code>#{m.code}</code>
+                                <span class="hx-badge #{m.statut eq 1 ? 'hx-badge--done' : 'hx-badge--draft'}">#{m.statut eq 1 ? 'Actif' : 'Inactif'}</span>
+                            </span>
+                            <strong>#{m.libelle}</strong>
+                            <span class="hx-mdl__item-meta">
+                                <span><i class="pi pi-users"></i> #{modeleFicheAdminView.categorieLabel(m.categorieCible)}</span>
+                                <span><i class="pi pi-file-edit"></i> #{modeleFicheAdminView.nbEvaluations(m)} fiche#{modeleFicheAdminView.nbEvaluations(m) gt 1 ? 's' : ''}</span>
+                            </span>
+                        </p:commandLink>
+                    </ui:repeat>
+                </aside>
+
+                <!-- Détail -->
+                <section class="hx-mdl__detail">
+                    <ui:fragment rendered="#{empty modeleFicheAdminView.courant}">
+                        <div class="hx-card"><div class="hx-empty"><i class="pi pi-arrow-left"></i><strong>Sélectionnez un modèle</strong></div></div>
+                    </ui:fragment>
+                    <ui:fragment rendered="#{not empty modeleFicheAdminView.courant}">
+                        <div class="hx-card hx-mdl__head">
+                            <div class="hx-mdl__head-main">
+                                <span class="hx-dash__eyebrow">Modèle #{modeleFicheAdminView.courant.code}</span>
+                                <h3>#{modeleFicheAdminView.courant.libelle}</h3>
+                                <p>#{empty modeleFicheAdminView.courant.description ? 'Aucune description.' : modeleFicheAdminView.courant.description}</p>
+                                <div class="hx-mdl__facts">
+                                    <span><small>Catégorie ciblée</small><b>#{modeleFicheAdminView.categorieLabel(modeleFicheAdminView.courant.categorieCible)}</b></span>
+                                    <span><small>Critères</small><b>#{modeleFicheAdminView.courant.criteres.size()}<ui:fragment rendered="#{modeleFicheAdminView.nbManagers gt 0}"> · dont #{modeleFicheAdminView.nbManagers} managériaux</ui:fragment></b></span>
+                                    <span><small>Utilisation</small><b>#{modeleFicheAdminView.nbEvaluations(modeleFicheAdminView.courant)} fiche(s) · #{modeleFicheAdminView.nbCampagnes(modeleFicheAdminView.courant)} campagne(s)</b></span>
+                                    <span><small>Statut</small><b class="#{modeleFicheAdminView.courant.statut eq 1 ? 'hx-ok' : 'hx-muted'}">#{modeleFicheAdminView.courant.statut eq 1 ? 'Actif' : 'Inactif'}</b></span>
+                                </div>
+                            </div>
+                            <h:panelGroup styleClass="hx-row-actions hx-mdl__head-actions" rendered="#{modeleFicheAdminView.peutEditer}">
+                                <p:commandButton value="Modifier" icon="pi pi-pencil" styleClass="hx-btn-secondary hx-btn-sm" process="@this"
+                                                 actionListener="#{modeleFicheAdminView.modifier(modeleFicheAdminView.courant)}" update=":dlgModele" oncomplete="PF('dlgModele').show()"/>
+                                <p:commandButton value="Dupliquer" icon="pi pi-copy" styleClass="hx-btn-secondary hx-btn-sm" process="@this" update="zone :globalGrowl"
+                                                 actionListener="#{modeleFicheAdminView.dupliquer(modeleFicheAdminView.courant)}"/>
+                                <p:commandButton value="#{modeleFicheAdminView.courant.statut eq 1 ? 'Désactiver' : 'Activer'}" icon="pi #{modeleFicheAdminView.courant.statut eq 1 ? 'pi-eye-slash' : 'pi-eye'}" styleClass="hx-btn-secondary hx-btn-sm"
+                                                 process="@this" update="zone :globalGrowl" actionListener="#{modeleFicheAdminView.basculer(modeleFicheAdminView.courant)}"/>
+                                <p:commandButton icon="pi pi-trash" title="Supprimer" styleClass="hx-icon-btn hx-icon-btn--danger" process="@this" update="zone :globalGrowl"
+                                                 actionListener="#{modeleFicheAdminView.supprimer(modeleFicheAdminView.courant)}">
+                                    <p:confirm header="Supprimer le modèle" message="Supprimer « #{modeleFicheAdminView.courant.libelle} » et ses critères ? Impossible s'il a déjà servi." icon="pi pi-exclamation-triangle"/>
+                                </p:commandButton>
+                            </h:panelGroup>
+                        </div>
+
+                        <ui:fragment rendered="#{modeleFicheAdminView.nbEvaluations(modeleFicheAdminView.courant) gt 0}">
+                            <p class="hx-mdl__note"><i class="pi pi-info-circle"></i> Ce modèle a déjà servi : les fiches initiées conservent la grille du jour de leur création. Pour un nouvel exercice, préférez <b>Dupliquer</b> puis ajuster la copie.</p>
+                        </ui:fragment>
+
+                        <ui:repeat value="#{['II', 'III']}" var="sec">
+                            <div class="hx-card hx-mdl__section">
+                                <div class="hx-card__head">
+                                    <div><h3>#{sec eq 'II' ? 'II. Évaluation des compétences' : 'III. Adhésion aux valeurs du Groupe'}</h3>
+                                        <small>#{sec eq 'II' ? 'Niveau A / EA / NA / NM par critère, auto-évaluation puis N+1' : 'Valeurs BGFI et respect de la discipline'}</small></div>
+                                </div>
+                                <ui:repeat value="#{modeleFicheAdminView.getFamillesSection(sec)}" var="fam">
+                                    <div class="hx-mdl__fam">
+                                        <div class="hx-mdl__fam-head">
+                                            <h4>#{fam[1]} <span class="hx-muted">(#{modeleFicheAdminView.criteresDe(fam[0]).size()})</span></h4>
+                                            <p:commandButton value="Ajouter" icon="pi pi-plus" styleClass="hx-btn-ghost hx-btn-sm" process="@this" rendered="#{modeleFicheAdminView.peutEditer}"
+                                                             actionListener="#{modeleFicheAdminView.nouveauCritere(fam[0])}" update=":dlgCritere" oncomplete="PF('dlgCritere').show()"/>
+                                        </div>
+                                        <ui:fragment rendered="#{empty modeleFicheAdminView.criteresDe(fam[0])}">
+                                            <p class="hx-mdl__vide">Aucun critère - cette rubrique n'apparaîtra pas sur la fiche.</p>
+                                        </ui:fragment>
+                                        <ui:repeat value="#{modeleFicheAdminView.criteresDe(fam[0])}" var="k" varStatus="st">
+                                            <div class="hx-mdl__crit">
+                                                <span class="hx-natrow__ordre">#{st.index + 1}</span>
+                                                <div class="hx-mdl__crit-text">
+                                                    <strong>#{k.libelle}</strong>
+                                                    <ui:fragment rendered="#{not empty k.description}"><small>#{k.description}</small></ui:fragment>
+                                                </div>
+                                                <div class="hx-mdl__crit-meta">
+                                                    <ui:fragment rendered="#{k.reserveManagers}"><span class="hx-badge hx-badge--info" title="Évalué uniquement pour les collaborateurs qui encadrent une équipe">Managers</span></ui:fragment>
+                                                    <ui:fragment rendered="#{k.poids gt 1}"><span class="hx-badge hx-badge--draft" title="Poids relatif">×#{k.poids}</span></ui:fragment>
+                                                </div>
+                                                <h:panelGroup styleClass="hx-row-actions" rendered="#{modeleFicheAdminView.peutEditer}">
+                                                    <p:commandLink process="@this" title="Monter" styleClass="hx-icon-btn" rendered="#{not st.first}" actionListener="#{modeleFicheAdminView.monter(k)}" update="zone"><i class="pi pi-chevron-up"></i></p:commandLink>
+                                                    <p:commandLink process="@this" title="Descendre" styleClass="hx-icon-btn" rendered="#{not st.last}" actionListener="#{modeleFicheAdminView.descendre(k)}" update="zone"><i class="pi pi-chevron-down"></i></p:commandLink>
+                                                    <p:commandLink process="@this" title="Modifier" styleClass="hx-icon-btn" actionListener="#{modeleFicheAdminView.modifierCritere(k)}" update=":dlgCritere" oncomplete="PF('dlgCritere').show()"><i class="pi pi-pencil"></i></p:commandLink>
+                                                    <p:commandLink process="@this" title="Supprimer" styleClass="hx-icon-btn hx-icon-btn--danger" actionListener="#{modeleFicheAdminView.supprimerCritere(k)}" update="zone :globalGrowl">
+                                                        <p:confirm header="Supprimer le critère" message="Retirer « #{k.libelle} » du modèle ?" icon="pi pi-exclamation-triangle"/>
+                                                        <i class="pi pi-trash"></i></p:commandLink>
+                                                </h:panelGroup>
+                                            </div>
+                                        </ui:repeat>
+                                    </div>
+                                </ui:repeat>
+                            </div>
+                        </ui:repeat>
+                    </ui:fragment>
+                </section>
+            </h:panelGroup>
+
+            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" responsive="true" width="440">
+                <p:commandButton value="Annuler" type="button" styleClass="ui-confirmdialog-no hx-btn-secondary" icon="pi pi-times"/>
+                <p:commandButton value="Confirmer" type="button" styleClass="ui-confirmdialog-yes hx-btn-danger" icon="pi pi-check"/>
+            </p:confirmDialog>
+        </h:form>
+
+        <!-- Modèle -->
+        <p:dialog id="dlgModele" widgetVar="dlgModele" header="#{modeleFicheAdminView.edit.id eq 0 ? 'Nouveau modèle de fiche' : 'Modifier le modèle'}"
+                  modal="true" responsive="true" width="620" fitViewport="true" closeOnEscape="true" showEffect="fade" hideEffect="fade">
+            <h:form id="frmModele">
+                <p:messages showDetail="true" closable="true"/>
+                <div class="hx-form">
+                    <div class="hx-field__grid hx-field__grid--ind">
+                        <div class="hx-field"><p:outputLabel for="mLib" value="Libellé"/><p:inputText id="mLib" value="#{modeleFicheAdminView.edit.libelle}" required="true" requiredMessage="Le libellé est obligatoire" maxlength="150" placeholder="Fiche d'évaluation - cadres"/></div>
+                        <div class="hx-field"><p:outputLabel for="mCode" value="Code"/><p:inputText id="mCode" value="#{modeleFicheAdminView.edit.code}" maxlength="30" placeholder="généré si vide" styleClass="hx-mono-plain"/></div>
+                    </div>
+                    <div class="hx-field">
+                        <p:outputLabel for="mCat" value="Catégorie de personnel ciblée"/>
+                        <p:selectOneMenu id="mCat" value="#{modeleFicheAdminView.edit.categorieCible}">
+                            <f:selectItems value="#{modeleFicheAdminView.categories}" var="c" itemValue="#{c[0]}" itemLabel="#{c[1]}"/>
+                        </p:selectOneMenu>
+                        <p class="hx-field__help">À l'intégration d'un collaborateur, HRX retient le modèle actif de sa catégorie ; à défaut, le premier modèle actif.</p>
+                    </div>
+                    <div class="hx-field"><p:outputLabel for="mDesc" value="Description"/><p:inputTextarea id="mDesc" value="#{modeleFicheAdminView.edit.description}" rows="3" autoResize="true" maxlength="1000"/></div>
+                    <div class="hx-field hx-field--inline">
+                        <p:selectBooleanCheckbox id="mActif" value="#{modeleFicheAdminView.editActif}"/>
+                        <p:outputLabel for="mActif" value="Modèle actif (proposé à l'intégration et aux campagnes)"/>
+                    </div>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgModele').hide()"/>
+                    <p:commandButton value="Enregistrer" icon="pi pi-check" process="@form" update="@form :zone :globalGrowl" actionListener="#{modeleFicheAdminView.enregistrer}"
+                                     oncomplete="if (args &amp;&amp; args.ok) PF('dlgModele').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <!-- Critère -->
+        <p:dialog id="dlgCritere" widgetVar="dlgCritere" header="#{modeleFicheAdminView.critere.id eq 0 ? 'Nouveau critère' : 'Modifier le critère'}"
+                  modal="true" responsive="true" width="580" fitViewport="true" closeOnEscape="true" showEffect="fade" hideEffect="fade">
+            <h:form id="frmCritere">
+                <p:messages showDetail="true" closable="true"/>
+                <div class="hx-form">
+                    <div class="hx-field">
+                        <p:outputLabel for="kFam" value="Rubrique"/>
+                        <p:selectOneMenu id="kFam" value="#{modeleFicheAdminView.critere.famille}">
+                            <f:selectItems value="#{modeleFicheAdminView.familles}" var="f" itemValue="#{f[0]}" itemLabel="#{f[2]}. #{f[1]}"/>
+                        </p:selectOneMenu>
+                    </div>
+                    <div class="hx-field"><p:outputLabel for="kLib" value="Libellé du critère"/><p:inputText id="kLib" value="#{modeleFicheAdminView.critere.libelle}" required="true" requiredMessage="Le libellé est obligatoire" maxlength="200" placeholder="Savoir appliquer les procédures"/></div>
+                    <div class="hx-field"><p:outputLabel for="kDesc" value="Précision (facultatif)"/><p:inputTextarea id="kDesc" value="#{modeleFicheAdminView.critere.description}" rows="2" autoResize="true" maxlength="500"/></div>
+                    <div class="hx-field__grid">
+                        <div class="hx-field"><p:outputLabel for="kPoids" value="Poids relatif"/><p:inputNumber id="kPoids" value="#{modeleFicheAdminView.critere.poids}" decimalPlaces="0" minValue="1" maxValue="10"/></div>
+                        <div class="hx-field hx-field--inline" style="align-self:end; padding-bottom:8px;">
+                            <p:selectBooleanCheckbox id="kMgr" value="#{modeleFicheAdminView.critere.reserveManagers}"/>
+                            <p:outputLabel for="kMgr" value="Réservé aux managers"/>
+                        </div>
+                    </div>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgCritere').hide()"/>
+                    <p:commandButton value="Enregistrer" icon="pi pi-check" process="@form" update="@form :zone :globalGrowl" actionListener="#{modeleFicheAdminView.enregistrerCritere}"
+                                     oncomplete="if (args &amp;&amp; args.ok) PF('dlgCritere').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>

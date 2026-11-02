@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<!-- Page d'erreur autonome : aucun bean métier, pour ne jamais échouer elle-même. -->
+<html xmlns="http://www.w3.org/1999/xhtml" lang="fr"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:ui="jakarta.faces.facelets">
+<h:head>
+    <f:facet name="first">
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+        <meta name="robots" content="noindex"/>
+    </f:facet>
+    <title>HRX - Page indisponible</title>
+    <link rel="icon" type="image/x-icon" href="#{resource['hrx:img/favicon-bgfi.ico']}"/>
+    <h:outputStylesheet name="primeicons/primeicons.css" library="primefaces"/>
+    <h:outputStylesheet library="hrx" name="css/hrx-tokens.css"/>
+    <style>
+        body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--hx-canvas, #f3f5f8); font-family: Inter, "Segoe UI", Arial, sans-serif; color: var(--hx-text, #1f2937); padding: 16px; box-sizing: border-box; }
+        .err { width: 100%; max-width: 560px; background: #fff; border: 1px solid var(--hx-border, #e3e8ee); border-radius: 18px; box-shadow: 0 12px 40px rgba(15, 31, 46, .08); overflow: hidden; position: relative; }
+        .err::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: linear-gradient(180deg, var(--hx-primary, #0a5c8f), var(--hx-gold, #b8872b)); }
+        .err__top { display: flex; align-items: center; gap: 12px; padding: 20px 28px; border-bottom: 1px solid var(--hx-border, #e3e8ee); }
+        .err__top img { height: 30px; }
+        .err__top span { font-size: 12px; color: var(--hx-muted, #6b7280); }
+        .err__body { padding: 28px; }
+        .err__code { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--hx-gold, #b8872b); background: rgba(184, 135, 43, .1); }
+        h1 { margin: 14px 0 8px; font-size: 22px; letter-spacing: -.01em; color: var(--hx-text-strong, #0f1f2e); }
+        p { margin: 0 0 10px; font-size: 14.5px; line-height: 1.6; color: var(--hx-muted, #4b5563); }
+        .err__ref { margin-top: 16px; padding: 10px 14px; border-radius: 10px; background: var(--hx-surface-2, #f6f8fa); font-size: 13px; }
+        .err__ref code { font-family: ui-monospace, Menlo, monospace; font-weight: 600; color: var(--hx-text-strong, #0f1f2e); }
+        .err__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+        .err__btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; border: 1px solid var(--hx-border, #d5dbe2); color: var(--hx-text, #1f2937); background: #fff; cursor: pointer; }
+        .err__btn--primary { background: var(--hx-primary, #0a5c8f); border-color: var(--hx-primary, #0a5c8f); color: #fff; }
+    </style>
+</h:head>
+<h:body>
+    <ui:param name="code" value="#{requestScope['jakarta.servlet.error.status_code']}"/>
+    <main class="err" role="main">
+        <div class="err__top">
+            <h:graphicImage library="hrx" name="img/logo_bgfi.png" alt="BGFIBank"/>
+            <span>HRX - Plateforme collaborative RH</span>
+        </div>
+        <div class="err__body">
+            <span class="err__code"><i class="pi #{code eq 404 ? 'pi-compass' : (code eq 403 ? 'pi-lock' : 'pi-exclamation-triangle')}"></i>
+                #{code eq 404 ? 'Page introuvable' : (code eq 403 ? 'Accès refusé' : (code eq 400 ? 'Requête invalide' : 'Incident technique'))}</span>
+            <h1>
+                <ui:fragment rendered="#{code eq 404}">Cette page n'existe pas ou a été déplacée.</ui:fragment>
+                <ui:fragment rendered="#{code eq 403}">Vous n'avez pas accès à cette page.</ui:fragment>
+                <ui:fragment rendered="#{code eq 400}">L'adresse demandée n'est pas valide.</ui:fragment>
+                <ui:fragment rendered="#{code ne 404 and code ne 403 and code ne 400}">Une erreur est survenue lors du traitement de votre demande.</ui:fragment>
+            </h1>
+            <p>Aucune donnée n'a été modifiée par cette opération. Vous pouvez revenir à l'accueil et réessayer.</p>
+            <ui:fragment rendered="#{code ne 404 and code ne 403 and code ne 400}">
+                <p>Si le problème persiste, contactez la DSI en communiquant la référence ci-dessous et l'heure de l'incident.</p>
+            </ui:fragment>
+            <ui:fragment rendered="#{not empty param.ref and param.ref.length() le 12}">
+                <div class="err__ref">Référence de l'incident : <code><h:outputText value="#{param.ref}"/></code></div>
+            </ui:fragment>
+            <div class="err__actions">
+                <a class="err__btn err__btn--primary" href="#{request.contextPath}/ui/home"><i class="pi pi-home"></i> Retour à l'accueil</a>
+                <a class="err__btn" href="javascript:history.back()"><i class="pi pi-arrow-left"></i> Page précédente</a>
+            </div>
+        </div>
+    </main>
+</h:body>
+</html>

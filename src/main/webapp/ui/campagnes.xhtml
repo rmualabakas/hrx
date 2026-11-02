@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Campagnes"/>
+    <ui:param name="pageSubtitle" value="Préparer, lancer et suivre les campagnes"/>
+    <ui:define name="title">Campagnes</ui:define>
+
+    <ui:define name="content">
+        <h:form id="frmCamp" prependId="false">
+            <div class="hx-page-head">
+                <div>
+                    <h2>Campagnes d'évaluation</h2>
+                    <p>Il y a deux campagnes par an : mi-parcours et fin d'année. Une seule peut être ouverte à la fois. Une fois lancée, chaque N+1 ouvre les fiches de son équipe.</p>
+                </div>
+                <div class="hx-page-head__actions">
+                    <p:commandButton value="Nouvelle campagne" icon="pi pi-plus" process="@this" rendered="#{privilegeBean.hasPrivilege('CAMP_CREATE')}"
+                                     actionListener="#{campagneAdminView.nouvelle}" update="dlgCamp" oncomplete="PF('dlgCamp').show()"/>
+                </div>
+            </div>
+
+            <h:panelGroup id="liste" layout="block">
+                <ui:fragment rendered="#{empty campagneAdminView.campagnes}">
+                    <div class="hx-card"><div class="hx-empty"><i class="pi pi-calendar"></i><strong>Aucune campagne</strong>Créez la campagne « Mi-parcours #{campagneAdminView.exercices[1]} » puis lancez-la lorsque les fiches d'objectifs sont signées.</div></div>
+                </ui:fragment>
+                <div class="hx-camps">
+                    <ui:repeat value="#{campagneAdminView.campagnes}" var="c">
+                        <article class="hx-campaign #{c.ouverte ? 'is-open' : ''} #{c.statut eq 'BROUILLON' ? 'is-draft' : ''} #{c.statut eq 'ARCHIVEE' ? 'is-off' : ''} #{c.enRetard ? 'is-late' : ''}">
+                            <header class="hx-campaign__head">
+                                <div class="hx-campaign__title">
+                                    <span class="hx-campaign__type #{c.type eq 'FIN_ANNEE' ? 'is-fa' : 'is-mp'}">#{c.type eq 'FIN_ANNEE' ? 'FA' : 'MP'}</span>
+                                    <div>
+                                        <h3>#{c.libelle}</h3>
+                                        <p>#{c.typeLabel} · exercice #{c.exercice}<ui:fragment rendered="#{c.evaluerCompetences}"> · objectifs + compétences</ui:fragment><ui:fragment rendered="#{not c.evaluerCompetences}"> · objectifs</ui:fragment></p>
+                                    </div>
+                                </div>
+                                <span class="hx-campaign__status hx-badge #{c.ouverte ? 'hx-badge--done' : (c.statut eq 'BROUILLON' ? 'hx-badge--draft' : (c.statut eq 'CLOTUREE' ? 'hx-badge--info' : 'hx-badge--draft'))}">#{c.statut eq 'BROUILLON' ? 'Brouillon' : (c.ouverte ? 'Ouverte' : (c.statut eq 'CLOTUREE' ? 'Clôturée' : 'Archivée'))}</span>
+                            </header>
+
+                            <div class="hx-campaign__body">
+                                <dl class="hx-campaign__facts">
+                                    <div><dt>Début</dt><dd><h:outputText value="#{c.dateDebut}" rendered="#{not empty c.dateDebut}"><f:convertDateTime type="localDate" pattern="dd MMM yyyy" locale="fr"/></h:outputText><ui:fragment rendered="#{empty c.dateDebut}">—</ui:fragment></dd></div>
+                                    <div><dt>Échéance</dt><dd class="#{c.enRetard ? 'hx-warn' : ''}"><h:outputText value="#{c.dateFin}" rendered="#{not empty c.dateFin}"><f:convertDateTime type="localDate" pattern="dd MMM yyyy" locale="fr"/></h:outputText><ui:fragment rendered="#{empty c.dateFin}">—</ui:fragment><ui:fragment rendered="#{c.enRetard}"> · dépassée</ui:fragment></dd></div>
+                                    <div><dt>Modèle de fiche</dt><dd>#{empty c.modeleParDefaut ? 'Selon la catégorie' : c.modeleParDefaut.libelle}</dd></div>
+                                    <div><dt>Attendues</dt><dd><b>#{c.effectifAttendu}</b> évaluation#{c.effectifAttendu gt 1 ? 's' : ''}<ui:fragment rendered="#{campagneAdminView.depassement(c) gt 0}"><small class="hx-warn" style="display:block;margin-top:4px"><i class="pi pi-exclamation-circle"></i> #{campagneAdminView.stat(c, 0)} fiches ont été ouvertes alors que #{c.effectifAttendu} étai#{c.effectifAttendu gt 1 ? 'ent' : 't'} prévue#{c.effectifAttendu gt 1 ? 's' : ''}.</small>
+                                        <p:commandLink value="Passer à #{campagneAdminView.stat(c, 0)}" process="@this" update="@form :globalGrowl" actionListener="#{campagneAdminView.ajusterAttendu(c)}" styleClass="hx-link-sm" rendered="#{privilegeBean.hasPrivilege('CAMP_CREATE') or loginBean.users.profil.id eq 1}"/></ui:fragment></dd></div>
+                                </dl>
+                                <ui:fragment rendered="#{not empty c.description}"><p class="hx-campaign__desc">#{c.description}</p></ui:fragment>
+
+                                <div class="hx-campaign__progress">
+                                    <div class="hx-campaign__bar" title="#{campagneAdminView.stat(c, 3)} validées · #{campagneAdminView.stat(c, 2)} à valider · #{campagneAdminView.stat(c, 1)} à évaluer · #{campagneAdminView.stat(c, 0) - campagneAdminView.stat(c, 1) - campagneAdminView.stat(c, 2) - campagneAdminView.stat(c, 3)} en auto-évaluation">
+                                        <span class="seg seg--done" style="width:#{campagneAdminView.pct(c, campagneAdminView.stat(c, 3))}%"></span>
+                                        <span class="seg seg--eval" style="width:#{campagneAdminView.pct(c, campagneAdminView.stat(c, 2))}%"></span>
+                                        <span class="seg seg--sub" style="width:#{campagneAdminView.pct(c, campagneAdminView.stat(c, 1))}%"></span>
+                                        <span class="seg seg--init" style="width:#{campagneAdminView.pct(c, (campagneAdminView.stat(c, 0) - campagneAdminView.stat(c, 1) - campagneAdminView.stat(c, 2) - campagneAdminView.stat(c, 3)))}%"></span>
+                                    </div>
+                                    <div class="hx-campaign__legend">
+                                        <span><i class="seg--done"></i>#{campagneAdminView.stat(c, 3)} validées</span>
+                                        <span><i class="seg--eval"></i>#{campagneAdminView.stat(c, 2)} à valider</span>
+                                        <span><i class="seg--sub"></i>#{campagneAdminView.stat(c, 1)} à évaluer</span>
+                                        <span><i class="seg--init"></i>#{campagneAdminView.stat(c, 0) - campagneAdminView.stat(c, 1) - campagneAdminView.stat(c, 2) - campagneAdminView.stat(c, 3)} en auto-évaluation</span>
+                                        <span class="hx-campaign__rest"><i class="seg--rest"></i>#{campagneAdminView.restantes(c)} non initiées</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <aside class="hx-campaign__side">
+                                <div class="hx-campaign__kpi">
+                                    <b>#{campagneAdminView.taux(c)}<small>%</small></b>
+                                    <span>taux de réalisation</span>
+                                    <em>#{campagneAdminView.stat(c, 3)} validée#{campagneAdminView.stat(c, 3) gt 1 ? 's' : ''} sur #{campagneAdminView.base(c)}</em>
+                                </div>
+                                <div class="hx-campaign__kpi hx-campaign__kpi--sub">
+                                    <b>#{campagneAdminView.tauxIntegration(c)}<small>%</small></b>
+                                    <span>population intégrée</span>
+                                    <em>#{campagneAdminView.stat(c, 0)} ouverte#{campagneAdminView.stat(c, 0) gt 1 ? 's' : ''} sur #{campagneAdminView.base(c)}</em>
+                                </div>
+                            </aside>
+
+                            <footer class="hx-campaign__actions">
+                                <ui:fragment rendered="#{privilegeBean.hasPrivilege('CAMP_CREATE') and c.statut eq 'BROUILLON'}">
+                                    <p:commandButton value="Modifier" icon="pi pi-pencil" styleClass="hx-btn-secondary hx-btn-sm" process="@this" actionListener="#{campagneAdminView.modifier(c)}" update=":dlgCamp" oncomplete="PF('dlgCamp').show()"/>
+                                    <p:commandButton value="Supprimer" icon="pi pi-trash" styleClass="hx-btn-secondary hx-btn-sm hx-btn-sm--danger" process="@this" actionListener="#{campagneAdminView.supprimer(c)}" update="liste :globalGrowl"><p:confirm header="Supprimer la campagne" message="Supprimer « #{c.libelle} » ?" icon="pi pi-exclamation-triangle"/></p:commandButton>
+                                </ui:fragment>
+                                <span class="hx-campaign__spacer"></span>
+                                <p:button value="Suivi des évaluations" icon="pi pi-chart-bar" styleClass="hx-btn-secondary hx-btn-sm" outcome="/ui/evaluations" rendered="#{c.statut ne 'BROUILLON'}"><f:param name="campagne" value="#{c.id}"/></p:button>
+                                <ui:fragment rendered="#{privilegeBean.hasPrivilege('CAMP_LAUNCH')}">
+                                    <p:commandButton value="Lancer la campagne" icon="pi pi-play" styleClass="hx-btn-sm" process="@this" rendered="#{c.statut eq 'BROUILLON'}" actionListener="#{campagneAdminView.lancer(c)}" update="liste :globalGrowl">
+                                        <p:confirm header="Lancer la campagne" message="Les N+1 pourront constituer la liste des collaborateurs évaluables et ceux-ci renseigner leur auto-évaluation." icon="pi pi-play"/>
+                                    </p:commandButton>
+                                    <p:commandButton value="Clôturer" icon="pi pi-lock" styleClass="hx-btn-secondary hx-btn-sm" process="@this" rendered="#{c.ouverte}" actionListener="#{campagneAdminView.cloturer(c)}" update="liste :globalGrowl">
+                                        <p:confirm header="Clôturer la campagne" message="Plus aucune fiche ne pourra être initiée ; les fiches en cours restent modifiables jusqu'à validation." icon="pi pi-lock"/>
+                                    </p:commandButton>
+                                    <p:commandButton value="Archiver" icon="pi pi-inbox" styleClass="hx-btn-secondary hx-btn-sm" process="@this" rendered="#{c.statut eq 'CLOTUREE'}" actionListener="#{campagneAdminView.archiver(c)}" update="liste :globalGrowl"/>
+                                </ui:fragment>
+                            </footer>
+                        </article>
+                    </ui:repeat>
+                </div>
+            </h:panelGroup>
+
+            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" responsive="true" width="460">
+                <p:commandButton value="Annuler" type="button" styleClass="ui-confirmdialog-no hx-btn-secondary" icon="pi pi-times"/>
+                <p:commandButton value="Confirmer" type="button" styleClass="ui-confirmdialog-yes" icon="pi pi-check"/>
+            </p:confirmDialog>
+        </h:form>
+
+        <p:dialog id="dlgCamp" widgetVar="dlgCamp" header="#{campagneAdminView.edit.id eq 0 ? 'Nouvelle campagne' : 'Modifier la campagne'}" modal="true" responsive="true" width="640" fitViewport="true" closeOnEscape="true" showEffect="fade" hideEffect="fade">
+            <h:form id="frmCampEdit">
+                <p:messages showDetail="true" closable="true"/>
+                <div class="hx-form">
+                    <div class="hx-field__grid hx-field__grid--3">
+                        <div class="hx-field"><p:outputLabel for="cType" value="Type"/>
+                            <p:selectOneMenu id="cType" value="#{campagneAdminView.edit.type}" styleClass="hx-select"><f:selectItem itemLabel="Mi-parcours (6 mois)" itemValue="MI_PARCOURS"/><f:selectItem itemLabel="Fin d'année (12 mois)" itemValue="FIN_ANNEE"/></p:selectOneMenu></div>
+                        <div class="hx-field"><p:outputLabel for="cEx" value="Exercice"/>
+                            <p:selectOneMenu id="cEx" value="#{campagneAdminView.edit.exercice}" styleClass="hx-select"><f:selectItems value="#{campagneAdminView.exercices}" var="y" itemLabel="#{y}" itemValue="#{y}"/></p:selectOneMenu></div>
+                        <div class="hx-field"><p:outputLabel for="cMod" value="Modèle de fiche par défaut"/>
+                            <p:selectOneMenu id="cMod" value="#{campagneAdminView.editModeleId}" styleClass="hx-select" converter="jakarta.faces.Integer"><f:selectItem itemLabel="Selon la catégorie" itemValue="#{null}" noSelectionOption="true"/><f:selectItems value="#{campagneAdminView.modeles}" var="m" itemLabel="#{m.libelle}" itemValue="#{m.id}"/></p:selectOneMenu></div>
+                    </div>
+                    <div class="hx-field__grid hx-field__grid--ind">
+                        <div class="hx-field"><p:outputLabel for="cLib" value="Libellé"/><p:inputText id="cLib" value="#{campagneAdminView.edit.libelle}" required="true" requiredMessage="Le libellé est obligatoire" maxlength="150"/></div>
+                        <div class="hx-field">
+                            <p:outputLabel for="cAtt" value="Nombre d'évaluations attendues"/>
+                            <p:inputNumber id="cAtt" value="#{campagneAdminView.edit.effectifAttendu}" decimalPlaces="0" thousandSeparator=" " minValue="0" maxValue="100000"/>
+                            <p class="hx-field__help">Nombre de collaborateurs à évaluer sur cette campagne (#{campagneAdminView.evaluablesActifs} comptes évaluables aujourd'hui). Sert au calcul du taux de réalisation.</p>
+                        </div>
+                    </div>
+                    <div class="hx-field__grid">
+                        <div class="hx-field"><p:outputLabel for="cDeb" value="Début de la campagne"/><p:datePicker id="cDeb" value="#{campagneAdminView.edit.dateDebut}" pattern="dd/MM/yyyy" locale="fr" showIcon="true" styleClass="hx-date"/></div>
+                        <div class="hx-field"><p:outputLabel for="cFin" value="Échéance de remise des fiches"/><p:datePicker id="cFin" value="#{campagneAdminView.edit.dateFin}" pattern="dd/MM/yyyy" locale="fr" showIcon="true" styleClass="hx-date"/></div>
+                    </div>
+                    <div class="hx-field hx-field--inline">
+                        <p:selectBooleanCheckbox id="cComp" value="#{campagneAdminView.edit.evaluerCompetences}"/>
+                        <p:outputLabel for="cComp" value="Évaluer aussi les compétences et l'adhésion aux valeurs du Groupe (sections II et III - fin d'année)"/>
+                    </div>
+                    <div class="hx-field"><p:outputLabel for="cDesc" value="Consignes (affichées aux évaluateurs)"/><p:inputTextarea id="cDesc" value="#{campagneAdminView.edit.description}" rows="3" autoResize="true" maxlength="1000"/></div>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgCamp').hide()"/>
+                    <p:commandButton value="Enregistrer" icon="pi pi-check" process="@form" update="@form :liste :globalGrowl" actionListener="#{campagneAdminView.enregistrer}" oncomplete="if (args &amp;&amp; args.ok) PF('dlgCamp').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>

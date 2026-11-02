@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fiche de fixation des objectifs (MAF 066) -->
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui">
+
+            <div class="hx-fiche__bar">
+                <div class="hx-fiche__bar-left">
+                    <p:selectOneMenu value="#{objectifsView.exercice}" styleClass="hx-select hx-toolbar__select" converter="jakarta.faces.Integer">
+                        <f:selectItems value="#{objectifsView.exercices}" var="ex" itemLabel="Exercice #{ex}" itemValue="#{ex}"/>
+                        <p:ajax listener="#{objectifsView.changerExercice}" update="@form"/>
+                    </p:selectOneMenu>
+                </div>
+                <div class="hx-fiche__bar-right">
+                    <p:commandButton value="Word" icon="pi pi-file-word" styleClass="hx-btn-secondary hx-btn-sm" ajax="false" disabled="#{empty objectifsView.fiche}" title="Télécharger la fiche au format Word (.docx)">
+                        <p:fileDownload value="#{objectifsView.exportDocx}"/>
+                    </p:commandButton>
+                    <p:commandButton value="PDF" icon="pi pi-file-pdf" styleClass="hx-btn-secondary hx-btn-sm" ajax="false" disabled="#{empty objectifsView.fiche}" title="Télécharger la fiche au format PDF">
+                        <p:fileDownload value="#{objectifsView.exportPdf}"/>
+                    </p:commandButton>
+                </div>
+            </div>
+
+            <div class="hx-fiche">
+                <!-- Colonne principale -->
+                <div class="hx-fiche__main">
+                    <ui:fragment rendered="#{objectifsView.verrouEvaluation}">
+                        <p class="hx-mdl__note hx-lock"><i class="pi pi-lock"></i><span>#{objectifsView.motifVerrou}</span></p>
+                    </ui:fragment>
+                    <ui:fragment rendered="#{not objectifsView.verrouEvaluation and objectifsView.figee and not objectifsView.fiche.signee}">
+                        <p class="hx-mdl__note hx-lock"><i class="pi pi-lock"></i><span>Fiche signée par #{objectifsView.fiche.signeeN1 ? 'le N+1' : 'le collaborateur'}, en attente de la seconde signature : le contenu est figé. Pour le modifier, le N+1 doit d'abord rouvrir la fiche (les signatures seront annulées).</span></p>
+                    </ui:fragment>
+
+                    <!-- Identité -->
+                    <div class="hx-card hx-fiche__id">
+                        <span class="hx-avatar hx-avatar--lg">#{objectifsView.initiales()}</span>
+                        <dl class="hx-fiche__facts">
+                            <div><dt>Nom et prénom du salarié</dt><dd><strong>#{objectifsView.salarie.nomComplet}</strong></dd></div>
+                            <div><dt>Poste occupé</dt><dd>#{empty objectifsView.salarie.fonction ? '—' : objectifsView.salarie.fonction}</dd></div>
+                            <div><dt>Date d'embauche</dt><dd><h:outputText value="#{objectifsView.salarie.dateEmbauche}" rendered="#{not empty objectifsView.salarie.dateEmbauche}"><f:convertDateTime pattern="dd/MM/yyyy"/></h:outputText><ui:fragment rendered="#{empty objectifsView.salarie.dateEmbauche}">—</ui:fragment></dd></div>
+                            <div><dt>Ancienneté</dt><dd>#{objectifsView.anciennete}</dd></div>
+                            <div><dt>Direction</dt><dd>#{empty objectifsView.salarie.direction ? '—' : objectifsView.salarie.direction.nom}</dd></div>
+                            <div><dt>Supérieur hiérarchique</dt><dd>#{empty objectifsView.salarie.superieurHierarchique ? '—' : objectifsView.salarie.superieurHierarchique.nomComplet}</dd></div>
+                        </dl>
+                        <div class="hx-fiche__state">
+                            <span class="hx-fiche__ctx #{objectifsView.recrueExercice ? 'is-recrue' : ''}">
+                                <i class="pi #{objectifsView.recrueExercice ? 'pi-user-plus' : 'pi-calendar'}"></i>
+                                <span><b>#{objectifsView.contexteFixation}</b><small>Objectifs à compter du <h:outputText value="#{objectifsView.dateEffet}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText> (T#{objectifsView.trimestreDebut}–T4)</small></span>
+                            </span>
+                            <ui:fragment rendered="#{objectifsView.fixationEnRetard}"><span class="hx-badge hx-badge--late"><i class="pi pi-clock"></i> Fenêtre de fixation dépassée</span></ui:fragment>
+                            <ui:fragment rendered="#{not empty objectifsView.fiche and objectifsView.fiche.signee}"><span class="hx-badge hx-badge--done"><i class="pi pi-verified"></i> Fiche signée</span></ui:fragment>
+                            <ui:fragment rendered="#{empty objectifsView.fiche or not objectifsView.fiche.signee}"><span class="hx-badge hx-badge--pending">En cours de fixation</span></ui:fragment>
+                            <ui:fragment rendered="#{objectifsView.nbProposes gt 0}"><span class="hx-badge hx-badge--info">#{objectifsView.nbProposes} proposition#{objectifsView.nbProposes gt 1 ? 's' : ''} à traiter</span></ui:fragment>
+                        </div>
+                    </div>
+
+                    <!-- Mission -->
+                    <div class="hx-card hx-fiche__block">
+                        <h3 class="hx-fiche__h">Mission</h3>
+                        <ui:fragment rendered="#{objectifsView.peutFixer}">
+                            <p:inputTextarea value="#{objectifsView.fiche.mission}" rows="3" autoResize="true" maxlength="3000" styleClass="hx-fiche__mission"
+                                             placeholder="Mission du poste : apporter un support informatique de qualité ; réduire le niveau des incidents… (une ligne par point)" rendered="#{not empty objectifsView.fiche}"/>
+                            <ui:fragment rendered="#{empty objectifsView.fiche}"><p class="hx-muted">La mission pourra être saisie dès le premier objectif ajouté.</p></ui:fragment>
+                            <ui:fragment rendered="#{not empty objectifsView.fiche}">
+                            <div class="hx-fiche__inline-actions">
+                                <p:commandButton value="Enregistrer la mission" icon="pi pi-check" styleClass="hx-btn-secondary hx-btn-sm" process="@form" partialSubmit="true" update="@form :globalGrowl" actionListener="#{objectifsView.enregistrerMission}"/>
+                            </div>
+                            </ui:fragment>
+                        </ui:fragment>
+                        <ui:fragment rendered="#{not objectifsView.peutFixer}">
+                            <p class="hx-fiche__mission-ro">#{empty objectifsView.fiche or empty objectifsView.fiche.mission ? 'Mission non renseignée.' : objectifsView.fiche.mission}</p>
+                        </ui:fragment>
+                    </div>
+
+                    <!-- Objectifs par groupe / rubrique (paramétrés par la DCHT) -->
+                    <ui:fragment rendered="#{empty objectifsView.groupes}">
+                        <div class="hx-card"><div class="hx-empty"><i class="pi pi-list"></i><strong>Aucune rubrique d'objectifs pour l'exercice #{objectifsView.exercice}</strong>La DCHT définit les rubriques de la fiche (Tronc commun, Management…) dans Évaluations → Rubriques d'objectifs.</div></div>
+                    </ui:fragment>
+                    <ui:repeat value="#{objectifsView.groupes}" var="g">
+                        <div class="hx-card hx-fiche__block">
+                            <h3 class="hx-fiche__h hx-fiche__h--groupe">#{g}</h3>
+                            <ui:repeat value="#{objectifsView.naturesDu(g)}" var="n">
+                                <section class="hx-nature #{empty objectifsView.objectifsDe(n) ? 'is-empty' : ''}">
+                                    <header class="hx-nature__head">
+                                        <div>
+                                            <strong>#{n.libelle}</strong>
+                                            <small><ui:fragment rendered="#{not empty n.aide}">#{n.aide}</ui:fragment><ui:fragment rendered="#{not empty n.condition}"><ui:fragment rendered="#{not empty n.aide}"> · </ui:fragment><em>#{n.condition}</em></ui:fragment></small>
+                                        </div>
+                                        <p:commandButton value="#{objectifsView.peutFixer ? 'Ajouter' : 'Proposer'}" icon="pi pi-plus" styleClass="hx-btn-secondary hx-btn-sm" process="@this"
+                                                         rendered="#{objectifsView.peutFixer or objectifsView.peutProposer}"
+                                                         actionListener="#{objectifsView.nouveau(n.id)}" update=":dlgObjectif" oncomplete="PF('dlgObjectif').show()"/>
+                                    </header>
+                                    <ui:fragment rendered="#{not empty objectifsView.objectifsDe(n)}">
+                                        <div class="hx-objtab">
+                                            <div class="hx-objtab__head"><span>Objectif</span><span>Moyens</span><span>Indicateur · cible</span><span>Période</span><span>Poids</span><span></span></div>
+                                            <ui:repeat value="#{objectifsView.objectifsDe(n)}" var="o" varStatus="st">
+                                                <div class="hx-objtab__row #{o.propose ? 'is-proposed' : ''} #{o.statut eq 'REFUSE' ? 'is-refused' : ''}">
+                                                    <div class="hx-objtab__obj">
+                                                        <ui:fragment rendered="#{not empty o.activite}"><small class="hx-objtab__act">#{o.activite}</small></ui:fragment>
+                                                        <span><b>Objectif #{st.index + 1} :</b> #{o.libelle}</span>
+                                                        <div class="hx-objtab__tags">
+                                                            <ui:fragment rendered="#{o.parSalarie}"><span class="hx-tag">proposé par le collaborateur</span></ui:fragment>
+                                                            <ui:fragment rendered="#{o.propose}"><span class="hx-badge hx-badge--pending">à valider</span></ui:fragment>
+                                                            <ui:fragment rendered="#{o.statut eq 'REFUSE'}"><span class="hx-badge hx-badge--late" title="#{o.motifRefus}">refusé</span></ui:fragment>
+                                                        </div>
+                                                        <ui:fragment rendered="#{o.statut eq 'REFUSE' and not empty o.motifRefus}"><small class="hx-objtab__motif"><i class="pi pi-comment"></i> #{o.motifRefus}</small></ui:fragment>
+                                                    </div>
+                                                    <div class="hx-objtab__cell">#{empty o.moyens ? '—' : o.moyens}</div>
+                                                    <div class="hx-objtab__cell">
+                                                        <span>#{empty o.indicateur ? '—' : o.indicateur}</span>
+                                                        <ui:fragment rendered="#{not empty o.cible}"><b class="hx-objtab__cible">Cible : #{o.cible}</b></ui:fragment>
+                                                    </div>
+                                                    <div class="hx-objtab__cell">
+                                                        <span class="hx-periode"><i class="#{o.t1 ? 'on' : ''}">T1</i><i class="#{o.t2 ? 'on' : ''}">T2</i><i class="#{o.t3 ? 'on' : ''}">T3</i><i class="#{o.t4 ? 'on' : ''}">T4</i></span>
+                                                        <small class="hx-muted">#{o.periodiciteEnum.libelle}<ui:fragment rendered="#{not empty o.echeance}"> · <h:outputText value="#{o.echeance}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText></ui:fragment></small>
+                                                    </div>
+                                                    <div class="hx-objtab__cell hx-objtab__poids"><ui:fragment rendered="#{o.poids gt 0}">#{o.poids} %</ui:fragment><ui:fragment rendered="#{o.poids le 0}">—</ui:fragment></div>
+                                                    <div class="hx-row-actions">
+                                                        <p:commandLink process="@this" title="Valider" styleClass="hx-icon-btn hx-icon-btn--ok" rendered="#{o.propose and objectifsView.peutFixer}"
+                                                                       actionListener="#{objectifsView.valider(o)}" update="@form :globalGrowl"><i class="pi pi-check"></i></p:commandLink>
+                                                        <p:commandLink process="@this" title="Refuser" styleClass="hx-icon-btn hx-icon-btn--danger" rendered="#{o.propose and objectifsView.peutFixer}"
+                                                                       actionListener="#{objectifsView.preparerRefus(o)}" update=":dlgRefus" oncomplete="PF('dlgRefus').show()"><i class="pi pi-ban"></i></p:commandLink>
+                                                        <p:commandLink process="@this" title="Modifier" styleClass="hx-icon-btn" rendered="#{objectifsView.isPeutModifier(o)}"
+                                                                       actionListener="#{objectifsView.modifier(o)}" update=":dlgObjectif" oncomplete="PF('dlgObjectif').show()"><i class="pi pi-pencil"></i></p:commandLink>
+                                                        <p:commandLink process="@this" title="Supprimer" styleClass="hx-icon-btn hx-icon-btn--danger" rendered="#{objectifsView.isPeutSupprimer(o)}"
+                                                                       actionListener="#{objectifsView.supprimer(o)}" update="@form :globalGrowl">
+                                                            <p:confirm header="Supprimer l'objectif" message="Supprimer « #{o.libelle} » ?" icon="pi pi-exclamation-triangle"/>
+                                                            <i class="pi pi-trash"></i></p:commandLink>
+                                                    </div>
+                                                </div>
+                                            </ui:repeat>
+                                        </div>
+                                    </ui:fragment>
+                                </section>
+                            </ui:repeat>
+                        </div>
+                    </ui:repeat>
+
+                    <!-- Signatures -->
+                    <div class="hx-card hx-fiche__block hx-sign">
+                        <div class="hx-sign__col">
+                            <small>Signature du salarié</small>
+                            <ui:fragment rendered="#{not empty objectifsView.fiche and objectifsView.fiche.signeeSalarie}"><strong><i class="pi pi-check-circle"></i> #{objectifsView.salarie.nomComplet}</strong><span><h:outputText value="#{objectifsView.fiche.dateSignatureSalarie}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></span></ui:fragment>
+                            <ui:fragment rendered="#{empty objectifsView.fiche or not objectifsView.fiche.signeeSalarie}"><span class="hx-muted">En attente</span></ui:fragment>
+                        </div>
+                        <div class="hx-sign__col">
+                            <small>Signature du N+1</small>
+                            <ui:fragment rendered="#{not empty objectifsView.fiche and objectifsView.fiche.signeeN1}"><strong><i class="pi pi-check-circle"></i> #{empty objectifsView.fiche.n1 ? 'N+1' : objectifsView.fiche.n1.nomComplet}</strong><span><h:outputText value="#{objectifsView.fiche.dateSignatureN1}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></span></ui:fragment>
+                            <ui:fragment rendered="#{empty objectifsView.fiche or not objectifsView.fiche.signeeN1}"><span class="hx-muted">En attente</span></ui:fragment>
+                        </div>
+                        <div class="hx-sign__actions">
+                            <p:commandButton value="Signer la fiche" icon="pi pi-pencil" process="@this" update="@form :globalGrowl" actionListener="#{objectifsView.signer}"
+                                             rendered="#{not empty objectifsView.fiche and not objectifsView.fiche.signee and ((objectifsView.moi and not objectifsView.fiche.signeeSalarie) or ((objectifsView.n1 or objectifsView.dcht) and not objectifsView.fiche.signeeN1))}">
+                                <p:confirm header="Signer la fiche d'objectifs" message="Vous attestez avoir pris connaissance des objectifs de l'exercice #{objectifsView.exercice}. Une fois signée par les deux parties, la fiche est figée." icon="pi pi-pencil"/>
+                            </p:commandButton>
+                            <p:commandButton value="Rouvrir la fiche" icon="pi pi-unlock" styleClass="hx-btn-secondary" process="@this" update="@form :globalGrowl" actionListener="#{objectifsView.rouvrir}"
+                                             rendered="#{objectifsView.peutRouvrir}">
+                                <p:confirm header="Rouvrir la fiche" message="Les signatures seront annulées et les objectifs redeviendront modifiables." icon="pi pi-exclamation-triangle"/>
+                            </p:commandButton>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Colonne latérale -->
+                <aside class="hx-fiche__side">
+                    <div class="hx-card hx-fiche__block">
+                        <h3 class="hx-fiche__h">Synthèse</h3>
+                        <ul class="hx-synth">
+                            <li><span>Objectifs validés</span><b>#{objectifsView.nbValides}</b></li>
+                            <li><span>Propositions en attente</span><b>#{objectifsView.nbProposes}</b></li>
+                            <li><span>Pondération</span><b class="#{objectifsView.ponderationLibre or objectifsView.poidsTotal eq 100 ? 'hx-ok' : 'hx-warn'}"><ui:fragment rendered="#{objectifsView.ponderationLibre}">égale</ui:fragment><ui:fragment rendered="#{not objectifsView.ponderationLibre}">#{objectifsView.poidsTotal} %</ui:fragment></b></li>
+                        </ul>
+                        <p class="hx-field__help"><i class="pi pi-info-circle"></i> Laissez tous les poids à 0 pour une pondération égale, ou répartissez 100 % entre les objectifs validés.</p>
+                    </div>
+                    <div class="hx-card hx-fiche__block">
+                        <h3 class="hx-fiche__h">Grille de notation</h3>
+                        <table class="hx-grille">
+                            <thead><tr><th>Performance</th><th>Note /20</th><th>Appréciation</th></tr></thead>
+                            <tbody>
+                                <tr><td>100 %</td><td>20</td><td>Excellent</td></tr>
+                                <tr><td>85 à 99 %</td><td>17 à 19</td><td>Bon</td></tr>
+                                <tr><td>70 à 84 %</td><td>15 à 16</td><td>Moyennement bon</td></tr>
+                                <tr><td>51 à 69 %</td><td>10 à 14</td><td>Insuffisant</td></tr>
+                                <tr><td>&lt; 50 %</td><td>&lt; 10</td><td>Mauvais</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="hx-card hx-fiche__block">
+                        <h3 class="hx-fiche__h">Calendrier de fixation</h3>
+                        <ul class="hx-cal">
+                            <li><i class="pi pi-calendar"></i><span><b>Début d'exercice</b><small>Fiche à signer en janvier pour tous les collaborateurs en poste au 1er janvier.</small></span></li>
+                            <li><i class="pi pi-user-plus"></i><span><b>Recrutement / prise de poste</b><small>Pour une recrue de l'année, fiche à signer dans le mois suivant l'embauche ; les objectifs courent de la date d'embauche à la fin de l'exercice.</small></span></li>
+                            <li><i class="pi pi-sync"></i><span><b>Mi-parcours</b><small>Les objectifs peuvent être révisés par le N+1 (réouverture puis nouvelle signature).</small></span></li>
+                        </ul>
+                        <p class="hx-field__help">T1 à T4 : les trimestres où l'objectif s'applique. La périodicité indique à quel rythme on le mesure.</p>
+                    </div>
+                </aside>
+            </div>
+
+            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" responsive="true" width="460">
+                <p:commandButton value="Annuler" type="button" styleClass="ui-confirmdialog-no hx-btn-secondary" icon="pi pi-times"/>
+                <p:commandButton value="Confirmer" type="button" styleClass="ui-confirmdialog-yes" icon="pi pi-check"/>
+            </p:confirmDialog>
+</ui:composition>

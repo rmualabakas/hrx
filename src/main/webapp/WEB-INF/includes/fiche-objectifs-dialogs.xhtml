@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Dialogues de la fiche d'objectifs : à inclure HORS du formulaire principal. -->
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui">
+        <!-- Objectif -->
+        <p:dialog id="dlgObjectif" widgetVar="dlgObjectif" header="#{objectifsView.edit.id eq 0 ? (objectifsView.peutFixer ? 'Nouvel objectif' : 'Proposer un objectif') : 'Modifier l’objectif'}"
+                  modal="true" responsive="true" width="760" fitViewport="true" closeOnEscape="true" showEffect="fade" hideEffect="fade" styleClass="hx-dialog-lg">
+            <h:form id="frmObjectif">
+                <p:messages showDetail="true" closable="true"/>
+                <div class="hx-form">
+                    <div class="hx-field__grid">
+                        <div class="hx-field">
+                            <p:outputLabel for="oNature" value="Nature de l'objectif"/>
+                            <p:selectOneMenu id="oNature" value="#{objectifsView.editNatureId}" styleClass="hx-select" converter="jakarta.faces.Integer">
+                                <f:selectItems value="#{objectifsView.natures}" var="n" itemLabel="#{n.groupe} - #{n.libelle}" itemValue="#{n.id}"/>
+                            </p:selectOneMenu>
+                        </div>
+                        <div class="hx-field"><p:outputLabel for="oAct" value="Activité / axe"/><p:inputText id="oAct" value="#{objectifsView.edit.activite}" maxlength="200" placeholder="Ex. Gestion du parc informatique"/></div>
+                    </div>
+                    <div class="hx-field"><p:outputLabel for="oLib" value="Objectif"/><p:inputTextarea id="oLib" value="#{objectifsView.edit.libelle}" rows="2" autoResize="true" maxlength="600" required="true" requiredMessage="Formulez l'objectif" placeholder="Ex. 100 % des incidents informatiques traités dans les délais selon la procédure"/></div>
+                    <div class="hx-field"><p:outputLabel for="oMoy" value="Moyens"/><p:inputTextarea id="oMoy" value="#{objectifsView.edit.moyens}" rows="2" autoResize="true" maxlength="1000" placeholder="Procédures, outils, tableau de bord, budget…"/></div>
+                    <div class="hx-field__grid hx-field__grid--ind">
+                        <div class="hx-field"><p:outputLabel for="oInd" value="Indicateur"/><p:inputText id="oInd" value="#{objectifsView.edit.indicateur}" maxlength="400" placeholder="Nombre d'incidents traités dans les délais / total"/></div>
+                        <div class="hx-field"><p:outputLabel for="oCible" value="Cible"/><p:inputText id="oCible" value="#{objectifsView.edit.cible}" maxlength="100" placeholder="Ex. 100 %, 0 incident, 5 jours"/></div>
+                    </div>
+                    <div class="hx-field__grid hx-field__grid--3">
+                        <div class="hx-field">
+                            <p:outputLabel for="oPer" value="Périodicité de mesure"/>
+                            <p:selectOneMenu id="oPer" value="#{objectifsView.edit.periodicite}" styleClass="hx-select">
+                                <f:selectItems value="#{objectifsView.periodicites}" var="pe" itemLabel="#{pe.libelle}" itemValue="#{pe.code}"/>
+                            </p:selectOneMenu>
+                        </div>
+                        <div class="hx-field">
+                            <p:outputLabel value="Période d'atteinte"/>
+                            <div class="hx-quarters">
+                                <p:selectBooleanButton value="#{objectifsView.edit.t1}" onLabel="T1" offLabel="T1" styleClass="hx-day"/>
+                                <p:selectBooleanButton value="#{objectifsView.edit.t2}" onLabel="T2" offLabel="T2" styleClass="hx-day"/>
+                                <p:selectBooleanButton value="#{objectifsView.edit.t3}" onLabel="T3" offLabel="T3" styleClass="hx-day"/>
+                                <p:selectBooleanButton value="#{objectifsView.edit.t4}" onLabel="T4" offLabel="T4" styleClass="hx-day"/>
+                            </div>
+                        </div>
+                        <div class="hx-field"><p:outputLabel for="oEch" value="Échéance (facultatif)"/><p:datePicker id="oEch" value="#{objectifsView.edit.echeance}" pattern="dd/MM/yyyy" locale="fr" showIcon="true" styleClass="hx-date"/></div>
+                    </div>
+                    <ui:fragment rendered="#{objectifsView.peutFixer}">
+                    <div class="hx-field__grid hx-field__grid--3">
+                        <div class="hx-field"><p:outputLabel for="oPoids" value="Poids dans la note (%)"/><p:inputNumber id="oPoids" value="#{objectifsView.edit.poids}" minValue="0" maxValue="100" decimalPlaces="0"/></div>
+                    </div>
+                    </ui:fragment>
+                    <ui:fragment rendered="#{not objectifsView.peutFixer}">
+                        <p class="hx-field__help"><i class="pi pi-info-circle"></i> Votre proposition sera soumise à votre N+1, qui la validera ou la refusera avec un motif.</p>
+                    </ui:fragment>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgObjectif').hide()"/>
+                    <p:commandButton value="#{objectifsView.edit.id eq 0 and not objectifsView.peutFixer ? 'Envoyer la proposition' : 'Enregistrer'}" icon="pi pi-check" process="@form" update="@form :frmFiche :globalGrowl"
+                                     actionListener="#{objectifsView.enregistrer}" oncomplete="if (!args.validationFailed) PF('dlgObjectif').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <!-- Refus -->
+        <p:dialog id="dlgRefus" widgetVar="dlgRefus" header="Refuser la proposition" modal="true" responsive="true" width="520" closeOnEscape="true" showEffect="fade" hideEffect="fade">
+            <h:form id="frmRefus">
+                <div class="hx-form">
+                    <p class="hx-field__help" style="margin:0"><b>#{objectifsView.edit.libelle}</b></p>
+                    <div class="hx-field"><p:outputLabel for="rMotif" value="Motif communiqué au collaborateur"/><p:inputTextarea id="rMotif" value="#{objectifsView.motifRefus}" rows="3" autoResize="true" maxlength="500" required="true" requiredMessage="Indiquez le motif du refus"/></div>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgRefus').hide()"/>
+                    <p:commandButton value="Refuser" icon="pi pi-ban" styleClass="hx-btn-danger" process="@form" update="@form :frmFiche :globalGrowl" actionListener="#{objectifsView.refuser}" oncomplete="if (!args.validationFailed) PF('dlgRefus').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+</ui:composition>

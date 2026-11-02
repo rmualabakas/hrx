@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Paramètres"/>
+    <ui:param name="pageSubtitle" value="Application, annuaire, messagerie"/>
+    <ui:define name="title">Paramètres</ui:define>
+
+    <ui:define name="head">
+        <h:outputStylesheet library="hrx" name="css/hrx-admin.css"/>
+    </ui:define>
+
+    <ui:define name="content">
+        <h:form id="frmParam" prependId="false">
+            <div class="hx-page-head">
+                <div>
+                    <h2>Paramètres</h2>
+                    <p>Réglages communs à toute la plateforme, appliqués dès l'enregistrement.</p>
+                </div>
+                <div class="hx-page-head__actions">
+                    <p:commandButton value="Enregistrer" icon="pi pi-check" process="@form" update="@form"
+                                     actionListener="#{appBean.enregistrer}" rendered="#{privilegeBean.hasPrivilege('CFG_EDIT')}"/>
+                </div>
+            </div>
+
+            <p:messages id="msgParam" showDetail="true" closable="true"/>
+
+            <p:tabView id="tabsParam" activeIndex="#{appBean.ongletActif}" styleClass="hx-tabs hx-card">
+                <p:tab title="Identité" titleStyleClass="hx-tabs__title">
+                    <f:facet name="title"><i class="pi pi-id-card"></i> Identité</f:facet>
+                    <p class="hx-tab__intro">Nom affiché, adresse publique et contact administrateur</p>
+<div class="hx-tab__body hx-form">
+                        <div class="hx-field__grid">
+                            <div class="hx-field">
+                                <p:outputLabel for="nomApp" value="Nom de l'application"/>
+                                <p:inputText id="nomApp" value="#{appBean.app1.nomApp}" required="true" requiredMessage="Le nom est obligatoire" maxlength="60"/>
+                            </div>
+                            <div class="hx-field">
+                                <p:outputLabel for="url" value="Adresse (URL) de la plateforme"/>
+                                <p:inputText id="url" value="#{appBean.app1.url}" placeholder="https://hrx.bgfi.local/hrx"/>
+                                <small class="hx-field__help">Utilisée dans les liens des e-mails de relance.</small>
+                            </div>
+                        </div>
+                        <div class="hx-field__grid">
+                            <div class="hx-field">
+                                <p:outputLabel for="adminMail" value="E-mail de l'administrateur"/>
+                                <p:inputText id="adminMail" value="#{appBean.app1.adminMail}" placeholder="dsim@bgfi.com"/>
+                            </div>
+                            <div class="hx-field">
+                                <p:outputLabel for="modeDefaut" value="Connexion proposée par défaut"/>
+                                <p:selectOneButton id="modeDefaut" value="#{appBean.app1.modeConnexionDefaut}" unselectable="false" styleClass="hx-segment">
+                                    <f:selectItem itemLabel="Compte réseau" itemValue="2"/>
+                                    <f:selectItem itemLabel="Compte local" itemValue="1"/>
+                                </p:selectOneButton>
+                                <small class="hx-field__help">Onglet sélectionné à l'ouverture de la page de connexion. L'utilisateur peut toujours changer.</small>
+                            </div>
+                        </div>
+                    </div>
+                </p:tab>
+                <p:tab title="Annuaire LDAP" titleStyleClass="hx-tabs__title">
+                    <f:facet name="title"><i class="pi pi-building"></i> Annuaire LDAP</f:facet>
+                    <p class="hx-tab__intro">Authentification des comptes réseau et import des collaborateurs</p>
+<div class="hx-tab__body hx-form">
+                        <div class="hx-field__grid hx-field__grid--3">
+                            <div class="hx-field">
+                                <p:outputLabel for="ldapServer" value="Serveur"/>
+                                <p:inputText id="ldapServer" value="#{appBean.app1.ldapServerName}" placeholder="192.168.115.60"/>
+                            </div>
+                            <div class="hx-field">
+                                <p:outputLabel for="ldapPort" value="Port"/>
+                                <p:inputText id="ldapPort" value="#{appBean.app1.ldapPort}" placeholder="389"/>
+                            </div>
+                            <div class="hx-field">
+                                <p:outputLabel for="ldapDomain" value="Domaine"/>
+                                <p:inputText id="ldapDomain" value="#{appBean.app1.ldapDomainName}" placeholder="bgfi.local"/>
+                            </div>
+                        </div>
+                        <div class="hx-field">
+                            <p:outputLabel for="ldapBase" value="Base de recherche (DN)"/>
+                            <p:inputText id="ldapBase" value="#{appBean.app1.ldapBaseDn}" placeholder="OU=Utilisateurs,DC=bgfi,DC=local" styleClass="hx-mono-plain"/>
+                        </div>
+                        <div class="hx-field__grid">
+                            <div class="hx-field">
+                                <p:outputLabel for="ldapBindUser" value="Compte de service"/>
+                                <p:inputText id="ldapBindUser" value="#{appBean.app1.ldapBindUser}" placeholder="svc_hrx@bgfi.local" autocomplete="off"/>
+                            </div>
+                            <div class="hx-field">
+                                <p:outputLabel for="ldapBindPwd" value="Mot de passe du compte de service"/>
+                                <p:password id="ldapBindPwd" value="#{appBean.app1.ldapBindPassword}" redisplay="true" feedback="false" toggleMask="true" autocomplete="new-password"/>
+                            </div>
+                        </div>
+                        <div class="hx-test">
+                            <p:commandButton value="Tester la connexion" icon="pi pi-link" styleClass="hx-btn-secondary hx-btn-sm"
+                                             process="@form" update="ldapTest msgParam" actionListener="#{appBean.testLdap}"/>
+                            <h:panelGroup id="ldapTest" layout="block" styleClass="hx-test__result #{appBean.ldapTestOk ? 'is-ok' : 'is-ko'}">
+                                <ui:fragment rendered="#{not empty appBean.ldapTestResult}">
+                                    <i class="pi #{appBean.ldapTestOk ? 'pi-check-circle' : 'pi-times-circle'}"></i> #{appBean.ldapTestResult}
+                                </ui:fragment>
+                            </h:panelGroup>
+                        </div>
+                        <small class="hx-field__help">Sans compte de service, la connexion se fait par <code>login@domaine</code> et le contrôle d'état des comptes est désactivé.</small>
+                    </div>
+                </p:tab>
+                <p:tab title="Messagerie" titleStyleClass="hx-tabs__title">
+                    <f:facet name="title"><i class="pi pi-envelope"></i> Messagerie</f:facet>
+                    <p class="hx-tab__intro">Notifications de campagne et relances</p>
+<div class="hx-tab__body hx-form">
+                        <div class="hx-field__grid hx-field__grid--3">
+                            <div class="hx-field" style="grid-column: span 2;">
+                                <p:outputLabel for="smtpHost" value="Serveur SMTP"/>
+                                <p:inputText id="smtpHost" value="#{appBean.app1.hostSmtp}" placeholder="smtp.bgfi.local"/>
+                            </div>
+                            <div class="hx-field">
+                                <p:outputLabel for="smtpPort" value="Port"/>
+                                <p:inputText id="smtpPort" value="#{appBean.app1.portSmtp}" placeholder="587"/>
+                            </div>
+                        </div>
+                        <div class="hx-field__grid hx-field__grid--3">
+                            <div class="hx-field">
+                                <p:outputLabel for="smtpType" value="Sécurité"/>
+                                <p:selectOneMenu id="smtpType" value="#{appBean.app1.typeSmtp}" styleClass="hx-select">
+                                    <f:selectItem itemLabel="Aucune" itemValue="NONE"/>
+                                    <f:selectItem itemLabel="STARTTLS" itemValue="TLS"/>
+                                    <f:selectItem itemLabel="SSL" itemValue="SSL"/>
+                                </p:selectOneMenu>
+                            </div>
+                            <div class="hx-field">
+                                <p:outputLabel for="smtpUser" value="Utilisateur"/>
+                                <p:inputText id="smtpUser" value="#{appBean.app1.userSmpt}" autocomplete="off"/>
+                            </div>
+                            <div class="hx-field">
+                                <p:outputLabel for="smtpPwd" value="Mot de passe"/>
+                                <p:password id="smtpPwd" value="#{appBean.app1.passwordSmtp}" redisplay="true" feedback="false" toggleMask="true" autocomplete="new-password"/>
+                            </div>
+                        </div>
+                        <div class="hx-field__grid">
+                            <div class="hx-field">
+                                <p:outputLabel for="smtpFromName" value="Nom de l'expéditeur"/>
+                                <p:inputText id="smtpFromName" value="#{appBean.app1.expediteurSmtp}" placeholder="HRX - Évaluations"/>
+                            </div>
+                            <div class="hx-field">
+                                <p:outputLabel for="smtpFrom" value="Adresse de l'expéditeur"/>
+                                <p:inputText id="smtpFrom" value="#{appBean.app1.emailExpediteurSmtp}" placeholder="hrx@bgfi.com"/>
+                            </div>
+                        </div>
+                        <div class="hx-test">
+                            <div class="hx-test__row">
+                                <p:inputText id="smtpDest" value="#{appBean.smtpTestDestinataire}" placeholder="Destinataire du test (par défaut : administrateur)" styleClass="hx-test__input"/>
+                                <p:commandButton value="Envoyer un test" icon="pi pi-send" styleClass="hx-btn-secondary hx-btn-sm"
+                                                 process="@form" update="smtpTest msgParam" actionListener="#{appBean.testSmtp}"/>
+                            </div>
+                            <h:panelGroup id="smtpTest" layout="block" styleClass="hx-test__result #{appBean.smtpTestOk ? 'is-ok' : 'is-ko'}">
+                                <ui:fragment rendered="#{not empty appBean.smtpTestResult}">
+                                    <i class="pi #{appBean.smtpTestOk ? 'pi-check-circle' : 'pi-times-circle'}"></i> #{appBean.smtpTestResult}
+                                </ui:fragment>
+                            </h:panelGroup>
+                        </div>
+                    </div>
+                </p:tab>
+                <p:tab title="Relances" titleStyleClass="hx-tabs__title">
+                    <f:facet name="title"><i class="pi pi-bell"></i> Relances</f:facet>
+                    <p class="hx-tab__intro">Rappels envoyés automatiquement aux jours et à l'heure choisis</p>
+<div class="hx-tab__body hx-form">
+                        <div class="hx-field hx-field--inline">
+                            <p:selectBooleanCheckbox id="notifActives" value="#{appBean.app1.notificationsActives}">
+                                <p:ajax update="relancesDetail"/>
+                            </p:selectBooleanCheckbox>
+                            <p:outputLabel for="notifActives" value="Activer l'envoi automatique des e-mails"/>
+                        </div>
+                        <h:panelGroup id="relancesDetail" layout="block" styleClass="hx-form">
+                            <div class="hx-field hx-field--inline">
+                                <p:selectBooleanCheckbox id="rappelsObj" value="#{appBean.app1.rappelsObjectifs}"/>
+                                <p:outputLabel for="rappelsObj" value="Rappels de fixation des objectifs : liste de leurs collaborateurs sans fiche signée aux N+1, synthèse par direction à la DCHT"/>
+                            </div>
+                            <div class="hx-field">
+                                <label>Jours d'envoi</label>
+                                <div class="hx-days">
+                                    <p:selectBooleanButton value="#{appBean.notificationLundi}" onLabel="Lun" offLabel="Lun" styleClass="hx-day"/>
+                                    <p:selectBooleanButton value="#{appBean.notificationMardi}" onLabel="Mar" offLabel="Mar" styleClass="hx-day"/>
+                                    <p:selectBooleanButton value="#{appBean.notificationMercredi}" onLabel="Mer" offLabel="Mer" styleClass="hx-day"/>
+                                    <p:selectBooleanButton value="#{appBean.notificationJeudi}" onLabel="Jeu" offLabel="Jeu" styleClass="hx-day"/>
+                                    <p:selectBooleanButton value="#{appBean.notificationVendredi}" onLabel="Ven" offLabel="Ven" styleClass="hx-day"/>
+                                    <p:selectBooleanButton value="#{appBean.notificationSamedi}" onLabel="Sam" offLabel="Sam" styleClass="hx-day"/>
+                                    <p:selectBooleanButton value="#{appBean.notificationDimanche}" onLabel="Dim" offLabel="Dim" styleClass="hx-day"/>
+                                </div>
+                            </div>
+                            <div class="hx-field__grid">
+                                <div class="hx-field">
+                                    <p:outputLabel for="notifHeure" value="Heure"/>
+                                    <p:selectOneMenu id="notifHeure" value="#{appBean.app1.notificationHeure}" styleClass="hx-select">
+                                        <f:selectItems value="#{appBean.heures}" var="hh" itemLabel="#{hh} h" itemValue="#{hh}"/>
+                                    </p:selectOneMenu>
+                                </div>
+                                <div class="hx-field">
+                                    <p:outputLabel for="notifMinute" value="Minute"/>
+                                    <p:selectOneMenu id="notifMinute" value="#{appBean.app1.notificationMinute}" styleClass="hx-select" filter="true" filterMatchMode="startsWith">
+                                        <f:selectItems value="#{appBean.minutesArray}" var="mi" itemLabel="#{mi}" itemValue="#{mi}"/>
+                                    </p:selectOneMenu>
+                                </div>
+                            </div>
+                            <p class="hx-field__help"><i class="pi pi-clock"></i> Prochain envoi : <strong>#{appBean.prochaineLancement}</strong> - la planification est appliquée à l'enregistrement.</p>
+                        </h:panelGroup>
+                    </div>
+                </p:tab>
+                <p:tab title="Fichiers" titleStyleClass="hx-tabs__title">
+                    <f:facet name="title"><i class="pi pi-folder"></i> Fichiers</f:facet>
+                    <p class="hx-tab__intro">Archivage des fiches, exports et logo</p>
+<div class="hx-tab__body hx-form">
+                        <div class="hx-field">
+                            <p:outputLabel for="repBase" value="Répertoire racine sur le serveur"/>
+                            <p:inputText id="repBase" value="#{appBean.app1.repBaseFichier}" placeholder="/opt/hrx/fichiers" styleClass="hx-mono-plain"/>
+                            <small class="hx-field__help">Dossier où sont rangés les fiches signées et les exports, par campagne. WildFly doit avoir le droit d'y écrire.</small>
+                        </div>
+                        <div class="hx-field">
+                            <p:outputLabel for="logo" value="Logo (chemin ou URL)"/>
+                            <p:inputText id="logo" value="#{appBean.app1.logo}" placeholder="logo_bgfi.png"/>
+                        </div>
+                    </div>
+                </p:tab>
+                <p:ajax event="tabChange" process="@this"/>
+            </p:tabView>
+
+            <div class="hx-settings__foot" >
+                <span class="hx-field__help">
+                    <ui:fragment rendered="#{appBean.app1.id gt 0}">Dernière modification : <h:outputText value="#{appBean.app1.dateMaj}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm" timeZone="Africa/Kinshasa"/></h:outputText></ui:fragment>
+                    <ui:fragment rendered="#{appBean.app1.id le 0}">Configuration non encore enregistrée.</ui:fragment>
+                </span>
+                <p:commandButton value="Enregistrer" icon="pi pi-check" process="@form" update="@form"
+                                 actionListener="#{appBean.enregistrer}" rendered="#{privilegeBean.hasPrivilege('CFG_EDIT')}"/>
+            </div>
+        </h:form>
+    </ui:define>
+</ui:composition>

@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Directions"/>
+    <ui:param name="pageSubtitle" value="Directions, entités et directeurs"/>
+    <ui:define name="title">Directions</ui:define>
+
+    <ui:define name="content">
+        <h:form id="frmDir" prependId="false">
+
+            <div class="hx-page-head">
+                <div>
+                    <h2>Directions</h2>
+                    <p>Chaque collaborateur appartient à une direction. Le directeur désigné donne son avis sur les évaluations de sa direction.</p>
+                </div>
+                <div class="hx-page-head__actions">
+                    <p:commandButton value="Nouvelle direction" icon="pi pi-plus" process="@this"
+                                     rendered="#{privilegeBean.hasPrivilege('DIR_EDIT')}"
+                                     actionListener="#{directionAdminView.nouveau}" update="dlgDir" oncomplete="PF('dlgDir').show()"/>
+                </div>
+            </div>
+
+            <div class="hx-grid hx-grid--kpi hx-kpis-compact">
+                <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-building"></i> Directions</span><span class="hx-kpi__value">#{directionAdminView.directions.size()}</span></div>
+                <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-users"></i> Collaborateurs rattachés</span><span class="hx-kpi__value hx-kpi__value--gold">#{directionAdminView.totalEffectif}</span></div>
+            </div>
+
+            <h:panelGroup id="barre" layout="block" styleClass="hx-toolbar">
+                <div class="hx-pane__search hx-toolbar__search">
+                    <i class="pi pi-search"></i>
+                    <p:inputText value="#{directionAdminView.filtre}" placeholder="Nom ou abrégé">
+                        <p:ajax event="keyup" update="grille" delay="250"/>
+                    </p:inputText>
+                </div>
+                <div class="hx-viewsw" role="group" aria-label="Affichage">
+                    <p:commandLink process="@this" update="grille barre" action="#{directionAdminView.choisirVue('cartes')}" styleClass="hx-viewsw__btn #{directionAdminView.vue eq 'cartes' ? 'is-active' : ''}" title="Cartes"><i class="pi pi-th-large"></i><span>Cartes</span></p:commandLink>
+                    <p:commandLink process="@this" update="grille barre" action="#{directionAdminView.choisirVue('liste')}" styleClass="hx-viewsw__btn #{directionAdminView.vue eq 'liste' ? 'is-active' : ''}" title="Liste"><i class="pi pi-list"></i><span>Liste</span></p:commandLink>
+                </div>
+            </h:panelGroup>
+
+            <h:panelGroup id="grille" layout="block">
+                <ui:fragment rendered="#{empty directionAdminView.directionsFiltrees}">
+                    <div class="hx-card"><div class="hx-empty"><i class="pi pi-building"></i><strong>Aucune direction</strong>Créez la première direction pour pouvoir y rattacher les collaborateurs.</div></div>
+                </ui:fragment>
+                <ui:fragment rendered="#{directionAdminView.vue eq 'cartes'}">
+                <div class="hx-grid hx-grid--cards">
+                    <ui:repeat value="#{directionAdminView.directionsFiltrees}" var="d">
+                        <div class="hx-card hx-dir #{d.statut eq 1 ? '' : 'is-off'}">
+                            <div class="hx-dir__head">
+                                <span class="hx-dir__abrege">#{d.abrege}</span>
+                                <span class="hx-badge #{d.statut eq 1 ? 'hx-badge--done' : 'hx-badge--draft'}">#{d.statut eq 1 ? 'Active' : 'Inactive'}</span>
+                            </div>
+                            <h3 class="hx-dir__nom">#{d.nom}</h3>
+                            <p class="hx-dir__desc">#{empty d.description ? 'Aucune description.' : d.description}</p>
+                            <div class="hx-dir__meta">
+                                <span><i class="pi pi-users"></i> #{directionAdminView.effectif(d)} collaborateur#{directionAdminView.effectif(d) gt 1 ? 's' : ''}</span>
+                                <span><i class="pi pi-user"></i>
+                                    <ui:fragment rendered="#{not empty directionAdminView.dirigeant(d)}">Directeur : <b>#{directionAdminView.dirigeant(d).nomComplet}</b></ui:fragment>
+                                    <ui:fragment rendered="#{empty directionAdminView.dirigeant(d)}"><span class="hx-muted" title="L'avis sur les fiches est donné par la DCHT">Sans directeur</span></ui:fragment>
+                                </span>
+                            </div>
+                            <div class="hx-dir__actions" >
+                                <ui:fragment rendered="#{privilegeBean.hasPrivilege('DIR_EDIT')}">
+                                    <p:commandLink process="@this" title="Modifier" styleClass="hx-icon-btn"
+                                                   actionListener="#{directionAdminView.modifier(d)}" update="dlgDir" oncomplete="PF('dlgDir').show()"><i class="pi pi-pencil"></i></p:commandLink>
+                                    <p:commandLink process="@this" title="#{d.statut eq 1 ? 'Désactiver' : 'Activer'}" styleClass="hx-icon-btn"
+                                                   actionListener="#{directionAdminView.basculerStatut(d)}" update="grille"><i class="pi #{d.statut eq 1 ? 'pi-eye-slash' : 'pi-eye'}"></i></p:commandLink>
+                                    <p:commandLink process="@this" title="Supprimer" styleClass="hx-icon-btn hx-icon-btn--danger"
+                                                   actionListener="#{directionAdminView.supprimer(d)}" update="grille barre">
+                                        <p:confirm header="Supprimer la direction" message="Supprimer définitivement « #{d.nom} » ?" icon="pi pi-exclamation-triangle"/>
+                                        <i class="pi pi-trash"></i></p:commandLink>
+                                </ui:fragment>
+                            </div>
+                        </div>
+                    </ui:repeat>
+                </div>
+                </ui:fragment>
+
+                <!-- Liste -->
+                <ui:fragment rendered="#{directionAdminView.vue eq 'liste' and not empty directionAdminView.directionsFiltrees}">
+                    <div class="hx-card hx-teamlist-card">
+                        <div class="hx-teamlist-scroll">
+                            <table class="hx-dirtable hx-teamlist hx-dirlist">
+                                <thead><tr><th>Direction</th><th>Directeur</th><th>Collaborateurs</th><th>Statut</th><th class="hx-teamlist__act">Actions</th></tr></thead>
+                                <tbody>
+                                <ui:repeat value="#{directionAdminView.directionsFiltrees}" var="d">
+                                    <tr class="#{d.statut eq 1 ? '' : 'is-off'}">
+                                        <td>
+                                            <div class="hx-teamlist__who">
+                                                <span class="hx-dir__abrege">#{d.abrege}</span>
+                                                <div>
+                                                    <strong>#{d.nom}</strong>
+                                                    <ui:fragment rendered="#{not empty d.description}"><small>#{d.description}</small></ui:fragment>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <ui:fragment rendered="#{not empty directionAdminView.dirigeant(d)}"><strong>#{directionAdminView.dirigeant(d).nomComplet}</strong></ui:fragment>
+                                            <ui:fragment rendered="#{empty directionAdminView.dirigeant(d)}"><small class="hx-muted" title="L'avis sur les fiches est donné par la DCHT">Sans directeur</small></ui:fragment>
+                                        </td>
+                                        <td><strong>#{directionAdminView.effectif(d)}</strong></td>
+                                        <td><span class="hx-badge #{d.statut eq 1 ? 'hx-badge--done' : 'hx-badge--draft'}">#{d.statut eq 1 ? 'Active' : 'Inactive'}</span></td>
+                                        <td class="hx-teamlist__act">
+                                            <ui:fragment rendered="#{privilegeBean.hasPrivilege('DIR_EDIT')}">
+                                                <p:commandLink process="@this" title="Modifier" styleClass="hx-icon-btn"
+                                                               actionListener="#{directionAdminView.modifier(d)}" update="dlgDir" oncomplete="PF('dlgDir').show()"><i class="pi pi-pencil"></i></p:commandLink>
+                                                <p:commandLink process="@this" title="#{d.statut eq 1 ? 'Désactiver' : 'Activer'}" styleClass="hx-icon-btn"
+                                                               actionListener="#{directionAdminView.basculerStatut(d)}" update="grille"><i class="pi #{d.statut eq 1 ? 'pi-eye-slash' : 'pi-eye'}"></i></p:commandLink>
+                                                <p:commandLink process="@this" title="Supprimer" styleClass="hx-icon-btn hx-icon-btn--danger"
+                                                               actionListener="#{directionAdminView.supprimer(d)}" update="grille barre">
+                                                    <p:confirm header="Supprimer la direction" message="Supprimer définitivement « #{d.nom} » ?" icon="pi pi-exclamation-triangle"/>
+                                                    <i class="pi pi-trash"></i></p:commandLink>
+                                            </ui:fragment>
+                                        </td>
+                                    </tr>
+                                </ui:repeat>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </ui:fragment>
+            </h:panelGroup>
+
+            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" responsive="true" width="440">
+                <p:commandButton value="Annuler" type="button" styleClass="ui-confirmdialog-no hx-btn-secondary" icon="pi pi-times"/>
+                <p:commandButton value="Supprimer" type="button" styleClass="ui-confirmdialog-yes hx-btn-danger" icon="pi pi-trash"/>
+            </p:confirmDialog>
+        </h:form>
+
+        <p:dialog id="dlgDir" widgetVar="dlgDir" header="#{directionAdminView.edit.id eq 0 ? 'Nouvelle direction' : 'Modifier la direction'}"
+                  modal="true" responsive="true" width="560" closeOnEscape="true" showEffect="fade" hideEffect="fade">
+            <h:form id="frmDirEdit">
+                <p:messages showDetail="true" closable="true"/>
+                <div class="hx-form">
+                    <div class="hx-field__grid hx-field__grid--abrege">
+                        <div class="hx-field"><p:outputLabel for="dAbrege" value="Abrégé"/><p:inputText id="dAbrege" value="#{directionAdminView.edit.abrege}" required="true" requiredMessage="L'abrégé est obligatoire" maxlength="15" placeholder="DCHT" style="text-transform: uppercase;"/></div>
+                        <div class="hx-field"><p:outputLabel for="dNom" value="Nom complet"/><p:inputText id="dNom" value="#{directionAdminView.edit.nom}" required="true" requiredMessage="Le nom est obligatoire" maxlength="150" placeholder="Direction du Capital Humain et de la Transformation"/></div>
+                    </div>
+                    <div class="hx-field"><p:outputLabel for="dDesc" value="Description"/><p:inputTextarea id="dDesc" value="#{directionAdminView.edit.description}" rows="3" autoResize="false" maxlength="500"/></div>
+                    <div class="hx-field">
+                        <p:outputLabel for="dResp" value="Directeur (facultatif)"/>
+                        <p:selectOneMenu id="dResp" value="#{directionAdminView.editDirigePar}" styleClass="hx-select" filter="true" filterMatchMode="contains" converter="jakarta.faces.Integer">
+                            <f:selectItem itemLabel="Aucun directeur" itemValue="#{null}"/>
+                            <f:selectItems value="#{directionAdminView.utilisateurs}" var="u" itemLabel="#{u.nomComplet}" itemValue="#{u.id}"/>
+                        </p:selectOneMenu>
+                        <small class="hx-field__help">Sans directeur, l'avis du directeur n'est pas attendu : les fiches de la direction passent directement à la validation de la DCHT.</small>
+                    </div>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgDir').hide()"/>
+                    <p:commandButton value="Enregistrer" icon="pi pi-check" process="@form" update="@form :grille :barre :globalGrowl"
+                                     actionListener="#{directionAdminView.enregistrer}"
+                                     oncomplete="if (!args.validationFailed) PF('dlgDir').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>

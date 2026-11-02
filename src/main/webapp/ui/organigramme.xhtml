@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Organigramme"/>
+    <ui:param name="pageSubtitle" value="Qui rend compte à qui, dans la banque ou dans une direction"/>
+    <ui:define name="title">Organigramme</ui:define>
+
+    <ui:define name="content">
+        <h:form id="frmOrg" prependId="false">
+
+            <div class="hx-page-head">
+                <div>
+                    <h2>Organigramme</h2>
+                    <p>
+                        <ui:fragment rendered="#{organigrammeView.peutEditer}">Glissez une case sur une autre pour changer le N+1, ou cliquez sur une case pour modifier le N+1, la direction ou le rôle de directeur. Chaque changement est confirmé avant d'être appliqué et inscrit au journal.</ui:fragment>
+                        <ui:fragment rendered="#{not organigrammeView.peutEditer}">Cliquez sur une case pour voir le rattachement d'un collaborateur. Les changements d'organisation sont faits par la DCHT.</ui:fragment>
+                    </p>
+                </div>
+            </div>
+
+            <h:panelGroup id="kpis" layout="block" styleClass="hx-grid hx-grid--kpi hx-kpis-compact">
+                <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-building"></i> Périmètre</span><span class="hx-kpi__value hx-kpi__value--sm">#{organigrammeView.titreDirection}</span></div>
+                <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-users"></i> Collaborateurs</span><span class="hx-kpi__value">#{organigrammeView.effectif}</span></div>
+                <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-sitemap"></i> Managers</span><span class="hx-kpi__value">#{organigrammeView.nbManagers}</span></div>
+                <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-bars"></i> Niveaux</span><span class="hx-kpi__value">#{organigrammeView.profondeurMax}</span></div>
+                <div class="hx-kpi" title="Collaborateurs sans supérieur hiérarchique renseigné"><span class="hx-kpi__label"><i class="pi pi-exclamation-circle"></i> Sans N+1</span><span class="hx-kpi__value #{organigrammeView.nbSansN1 gt 1 ? 'hx-kpi__value--gold' : ''}">#{organigrammeView.nbSansN1}</span></div>
+            </h:panelGroup>
+
+            <h:panelGroup id="barre" layout="block" styleClass="hx-toolbar">
+                <p:selectOneMenu value="#{organigrammeView.directionId}" styleClass="hx-org__dir" filter="true" filterMatchMode="contains" converter="jakarta.faces.Integer">
+                    <f:selectItem itemLabel="Toute la banque" itemValue="#{null}" noSelectionOption="true"/>
+                    <f:selectItems value="#{organigrammeView.directions}" var="d" itemValue="#{d.id}" itemLabel="#{d.nom}#{empty d.abrege ? '' : ' ('.concat(d.abrege).concat(')')}"/>
+                    <p:ajax listener="#{organigrammeView.changerDirection}" update="kpis zone barre"/>
+                </p:selectOneMenu>
+
+                <ui:fragment rendered="#{organigrammeView.vue eq 'arbre'}">
+                    <p:selectOneMenu value="#{organigrammeView.profondeur}" styleClass="hx-org__depth" title="Niveaux dépliés à l'ouverture">
+                        <f:selectItem itemLabel="2 niveaux dépliés" itemValue="2"/>
+                        <f:selectItem itemLabel="3 niveaux dépliés" itemValue="3"/>
+                        <f:selectItem itemLabel="4 niveaux dépliés" itemValue="4"/>
+                        <f:selectItem itemLabel="Tout déplier" itemValue="20"/>
+                        <p:ajax listener="#{organigrammeView.changerProfondeur}" update="zone"/>
+                    </p:selectOneMenu>
+                </ui:fragment>
+                <ui:fragment rendered="#{organigrammeView.vue eq 'liste'}">
+                    <div class="hx-pane__search hx-toolbar__search">
+                        <i class="pi pi-search"></i>
+                        <p:inputText value="#{organigrammeView.recherche}" placeholder="Nom, fonction, direction, N+1">
+                            <p:ajax event="keyup" update="zone" delay="250"/>
+                        </p:inputText>
+                    </div>
+                </ui:fragment>
+
+                <div style="margin-left:auto" class="hx-viewsw" role="group" aria-label="Affichage">
+                    <p:commandLink process="@this" update="zone barre" styleClass="hx-viewsw__btn #{organigrammeView.vue eq 'arbre' ? 'is-active' : ''}" title="Arbre graphique">
+                        <f:setPropertyActionListener target="#{organigrammeView.vue}" value="arbre"/><i class="pi pi-sitemap"></i><span>Arbre</span>
+                    </p:commandLink>
+                    <p:commandLink process="@this" update="zone barre" styleClass="hx-viewsw__btn #{organigrammeView.vue eq 'liste' ? 'is-active' : ''}" title="Liste hiérarchique">
+                        <f:setPropertyActionListener target="#{organigrammeView.vue}" value="liste"/><i class="pi pi-list"></i><span>Liste</span>
+                    </p:commandLink>
+                </div>
+                <p:commandButton value="PDF paysage" icon="pi pi-file-pdf" ajax="false" styleClass="hx-btn-secondary" rendered="#{organigrammeView.effectif gt 0}"
+                                 title="Organigramme du périmètre affiché, tous niveaux dépliés, sur une page en paysage">
+                    <p:fileDownload value="#{organigrammeView.exportPdf}"/>
+                </p:commandButton>
+            </h:panelGroup>
+
+            <h:panelGroup id="zone" layout="block">
+                <ui:fragment rendered="#{organigrammeView.effectif eq 0}">
+                    <div class="hx-card"><div class="hx-empty"><i class="pi pi-sitemap"></i><strong>Personne dans ce périmètre</strong>Aucun collaborateur actif n'est rattaché à cette direction.</div></div>
+                </ui:fragment>
+
+                <!-- Arbre graphique -->
+                <ui:fragment rendered="#{organigrammeView.vue eq 'arbre' and organigrammeView.effectif gt 0}">
+                    <div class="hx-card hx-org-card">
+                        <p:organigram id="org" widgetVar="org" value="#{organigrammeView.racine}" var="n" selection="#{organigrammeView.selection}"
+                                      zoom="true" leafNodeConnectorHeight="0" styleClass="hx-org #{organigrammeView.peutEditer ? 'is-edit' : ''}">
+                            <p:ajax event="dragdrop" process="@this" listener="#{organigrammeView.onDragDrop}"/>
+                            <p:ajax event="select" process="@this" listener="#{organigrammeView.onSelect}"/>
+
+                            <p:organigramNode type="racine" skipLeafHandling="true" expandedIcon="pi pi-chevron-up" collapsedIcon="pi pi-chevron-down" styleClass="hx-org__root">
+                                <div class="hx-org__card">
+                                    <span class="hx-org__logo"><i class="pi pi-building"></i></span>
+                                    <div class="hx-org__txt"><strong>#{n.data.nom()}</strong><small>#{n.data.fonction()}</small></div>
+                                </div>
+                            </p:organigramNode>
+
+                            <p:organigramNode type="directeur" skipLeafHandling="true" expandedIcon="pi pi-chevron-up" collapsedIcon="pi pi-chevron-down" styleClass="hx-org__node hx-org__node--dir">
+                                <div class="hx-org__card">
+                                    <span class="hx-avatar hx-avatar--sm">#{n.data.initiales()}</span>
+                                    <div class="hx-org__txt">
+                                        <strong>#{n.data.nom()}</strong>
+                                        <small>#{empty n.data.fonction() ? 'Fonction non renseignée' : n.data.fonction()}</small>
+                                        <span class="hx-org__meta"><b class="hx-org__badge">Directeur#{empty n.data.direction() ? '' : ' '.concat(n.data.direction())}</b><ui:fragment rendered="#{n.data.effectif() gt 0}"><span title="#{n.data.directs()} direct(s), #{n.data.effectif()} au total"><i class="pi pi-users"></i> #{n.data.effectif()}</span></ui:fragment></span>
+                                    </div>
+                                </div>
+                            </p:organigramNode>
+
+                            <p:organigramNode type="salarie" skipLeafHandling="true" expandedIcon="pi pi-chevron-up" collapsedIcon="pi pi-chevron-down" styleClass="hx-org__node">
+                                <div class="hx-org__card">
+                                    <span class="hx-avatar hx-avatar--sm">#{n.data.initiales()}</span>
+                                    <div class="hx-org__txt">
+                                        <strong>#{n.data.nom()}</strong>
+                                        <small>#{empty n.data.fonction() ? 'Fonction non renseignée' : n.data.fonction()}</small>
+                                        <span class="hx-org__meta">
+                                            <ui:fragment rendered="#{not empty n.data.direction()}"><span>#{n.data.direction()}</span></ui:fragment>
+                                            <ui:fragment rendered="#{n.data.effectif() gt 0}"><span title="#{n.data.directs()} direct(s), #{n.data.effectif()} au total"><i class="pi pi-users"></i> #{n.data.effectif()}</span></ui:fragment>
+                                        </span>
+                                        <ui:fragment rendered="#{not empty n.data.n1Externe()}"><span class="hx-org__ext"><i class="pi pi-arrow-up-right"></i> N+1 : #{n.data.n1Externe()}</span></ui:fragment>
+                                    </div>
+                                </div>
+                            </p:organigramNode>
+                        </p:organigram>
+                    </div>
+                </ui:fragment>
+
+                <!-- Liste hiérarchique -->
+                <ui:fragment rendered="#{organigrammeView.vue eq 'liste' and organigrammeView.effectif gt 0}">
+                    <ui:fragment rendered="#{empty organigrammeView.lignesFiltrees}">
+                        <div class="hx-card"><div class="hx-empty hx-empty--sm"><i class="pi pi-filter"></i><strong>Aucun collaborateur ne correspond à la recherche</strong></div></div>
+                    </ui:fragment>
+                    <ui:fragment rendered="#{not empty organigrammeView.lignesFiltrees}">
+                        <div class="hx-card hx-teamlist-card">
+                            <div class="hx-teamlist-scroll">
+                                <table class="hx-dirtable hx-teamlist #{empty organigrammeView.recherche ? 'is-tree' : ''}">
+                                    <thead><tr><th>Collaborateur</th><th>Direction</th><th>N+1</th><th>Encadre</th><th class="hx-teamlist__act"></th></tr></thead>
+                                    <tbody>
+                                    <ui:repeat value="#{organigrammeView.lignesFiltrees}" var="l">
+                                        <tr class="#{l.niveau() gt 0 ? 'is-indirect' : ''}" style="--hx-level:#{l.niveau()}">
+                                            <td>
+                                                <div class="hx-teamlist__who">
+                                                    <span class="hx-avatar hx-avatar--sm">#{l.poste().initiales()}</span>
+                                                    <div>
+                                                        <strong>#{l.poste().nom()}<ui:fragment rendered="#{l.poste().directeur()}"> <span class="hx-tag hx-tag--gold">directeur</span></ui:fragment></strong>
+                                                        <small>#{empty l.poste().fonction() ? 'Fonction non renseignée' : l.poste().fonction()}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td><small>#{empty l.poste().direction() ? '-' : l.poste().direction()}</small></td>
+                                            <td><small>#{empty l.n1() ? 'Aucun' : l.n1()}</small></td>
+                                            <td>
+                                                <ui:fragment rendered="#{l.poste().effectif() gt 0}"><strong>#{l.poste().directs()}</strong> <small>direct#{l.poste().directs() gt 1 ? 's' : ''}<ui:fragment rendered="#{l.poste().effectif() gt l.poste().directs()}"> · #{l.poste().effectif()} au total</ui:fragment></small></ui:fragment>
+                                                <ui:fragment rendered="#{l.poste().effectif() eq 0}"><small class="hx-muted">-</small></ui:fragment>
+                                            </td>
+                                            <td class="hx-teamlist__act">
+                                                <p:commandButton icon="pi #{organigrammeView.peutEditer ? 'pi-pencil' : 'pi-eye'}" title="#{organigrammeView.peutEditer ? 'Modifier le rattachement' : 'Voir le rattachement'}"
+                                                                 styleClass="hx-icon-btn #{organigrammeView.peutEditer ? 'hx-icon-btn--primary' : ''}" process="@this"
+                                                                 actionListener="#{organigrammeView.ouvrir(l.poste().id())}" update=":dlgOrg" oncomplete="PF('dlgOrg').show()"/>
+                                            </td>
+                                        </tr>
+                                    </ui:repeat>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </ui:fragment>
+                </ui:fragment>
+            </h:panelGroup>
+        </h:form>
+
+        <!-- Rattachement d'un collaborateur -->
+        <p:dialog id="dlgOrg" widgetVar="dlgOrg" header="#{organigrammeView.peutEditer ? 'Modifier le rattachement' : 'Rattachement'}"
+                  modal="true" responsive="true" width="620" fitViewport="true" closeOnEscape="true" showEffect="fade" hideEffect="fade" styleClass="hx-dialog-lg">
+            <p:ajax event="close" listener="#{organigrammeView.annuler}" update=":zone :kpis"/>
+            <h:form id="frmRatt">
+                <ui:fragment rendered="#{not empty organigrammeView.edite}">
+                    <div class="hx-org__who">
+                        <span class="hx-avatar">#{organigrammeView.initialesEdite}</span>
+                        <div>
+                            <strong>#{organigrammeView.edite.nomComplet}</strong>
+                            <small>#{empty organigrammeView.edite.fonction ? 'Fonction non renseignée' : organigrammeView.edite.fonction}<ui:fragment rendered="#{not empty organigrammeView.edite.direction}"> · #{organigrammeView.edite.direction.nom}</ui:fragment></small>
+                        </div>
+                    </div>
+
+                    <ul class="hx-org__impact">
+                        <li><i class="pi pi-users"></i>
+                            <ui:fragment rendered="#{organigrammeView.impact.branche() eq 0}">N'encadre personne.</ui:fragment>
+                            <ui:fragment rendered="#{organigrammeView.impact.branche() gt 0}">Encadre <b>#{organigrammeView.impact.directs()}</b> collaborateur#{organigrammeView.impact.directs() gt 1 ? 's' : ''} en direct, <b>#{organigrammeView.impact.branche()}</b> au total.<ui:fragment rendered="#{organigrammeView.peutEditer}"> Ils restent rattachés à lui et le suivent.</ui:fragment></ui:fragment>
+                        </li>
+                        <li><i class="pi pi-file"></i>
+                            <ui:fragment rendered="#{organigrammeView.impact.evaluationsOuvertes() + organigrammeView.impact.fichesObjectifsOuvertes() eq 0}">Aucune fiche en cours.</ui:fragment>
+                            <ui:fragment rendered="#{organigrammeView.impact.evaluationsOuvertes() + organigrammeView.impact.fichesObjectifsOuvertes() gt 0}">Fiches en cours : <b>#{organigrammeView.impact.evaluationsOuvertes()}</b> évaluation(s) non encore évaluée(s), <b>#{organigrammeView.impact.fichesObjectifsOuvertes()}</b> fiche(s) d'objectifs non signée(s).</ui:fragment>
+                        </li>
+                    </ul>
+
+                    <!-- Lecture seule -->
+                    <ui:fragment rendered="#{not organigrammeView.peutEditer}">
+                        <div class="hx-org__ro">
+                            <div><span class="hx-field__lbl">N+1</span><strong>#{empty organigrammeView.edite.superieurHierarchique ? 'Aucun' : organigrammeView.edite.superieurHierarchique.nomComplet}</strong></div>
+                            <div><span class="hx-field__lbl">Direction</span><strong>#{empty organigrammeView.edite.direction ? 'Aucune' : organigrammeView.edite.direction.nom}</strong></div>
+                        </div>
+                        <div class="hx-form__actions"><p:commandButton value="Fermer" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgOrg').hide()"/></div>
+                    </ui:fragment>
+
+                    <!-- Édition -->
+                    <ui:fragment rendered="#{organigrammeView.peutEditer}">
+                        <p:messages showDetail="true" closable="true"/>
+                        <div class="hx-form">
+                            <div class="hx-field">
+                                <p:outputLabel for="rN1" value="N+1 (supérieur hiérarchique)"/>
+                                <p:selectOneMenu id="rN1" value="#{organigrammeView.editN1Id}" filter="true" filterMatchMode="contains" converter="jakarta.faces.Integer" style="width:100%">
+                                    <f:selectItem itemLabel="Aucun : en tête de l'organigramme" itemValue="#{null}" noSelectionOption="true"/>
+                                    <f:selectItems value="#{organigrammeView.n1Possibles}" var="c" itemValue="#{c.id}" itemLabel="#{organigrammeView.libelleUser(c)}"/>
+                                    <p:ajax update="effet"/>
+                                </p:selectOneMenu>
+                                <small class="hx-field__help">Ses propres collaborateurs ne sont pas proposés, pour éviter une boucle.</small>
+                            </div>
+                            <div class="hx-field">
+                                <p:outputLabel for="rDir" value="Direction"/>
+                                <p:selectOneMenu id="rDir" value="#{organigrammeView.editDirectionId}" filter="true" filterMatchMode="contains" converter="jakarta.faces.Integer" style="width:100%">
+                                    <f:selectItem itemLabel="Aucune" itemValue="#{null}" noSelectionOption="true"/>
+                                    <f:selectItems value="#{organigrammeView.directions}" var="d" itemValue="#{d.id}" itemLabel="#{d.nom}"/>
+                                </p:selectOneMenu>
+                            </div>
+                            <div class="hx-field">
+                                <p:selectBooleanCheckbox value="#{organigrammeView.editDirecteur}" itemLabel="Dirige cette direction (il donne l'avis du directeur sur les fiches)"/>
+                            </div>
+                            <h:panelGroup id="effet" layout="block">
+                                <ui:fragment rendered="#{organigrammeView.n1Modifie}">
+                                    <div class="hx-alert hx-alert--info">
+                                        <i class="pi pi-info-circle"></i>
+                                        <div>
+                                            <strong>Changement de N+1</strong>
+                                            <span>Le nouveau N+1 fixera ses objectifs et l'évaluera. Les fiches déjà évaluées, validées ou signées ne changent pas.</span>
+                                            <ui:fragment rendered="#{organigrammeView.impact.evaluationsOuvertes() + organigrammeView.impact.fichesObjectifsOuvertes() gt 0 and not empty organigrammeView.editN1Id}">
+                                                <p:selectBooleanCheckbox value="#{organigrammeView.editTransferer}" itemLabel="Confier ses fiches en cours au nouveau N+1" styleClass="hx-org__transfer"/>
+                                            </ui:fragment>
+                                        </div>
+                                    </div>
+                                </ui:fragment>
+                            </h:panelGroup>
+                        </div>
+                        <div class="hx-form__actions">
+                            <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgOrg').hide()"/>
+                            <p:commandButton value="Enregistrer" icon="pi pi-check" process="@form" update="@form :zone :kpis :globalGrowl"
+                                             actionListener="#{organigrammeView.enregistrer}" oncomplete="if (args &amp;&amp; args.ok) PF('dlgOrg').hide()"/>
+                        </div>
+                    </ui:fragment>
+                </ui:fragment>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>

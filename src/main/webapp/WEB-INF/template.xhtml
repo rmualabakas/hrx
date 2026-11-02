@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="fr"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:ui="jakarta.faces.facelets"
+      xmlns:p="http://primefaces.org/ui">
+
+<h:head>
+    <f:facet name="first">
+        <meta charset="UTF-8"/>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    </f:facet>
+    <title>#{appBean.app1.nomApp} - <ui:insert name="title">Tableau de bord</ui:insert></title>
+    <meta name="theme-color" content="#07294a"/>
+    <link rel="icon" type="image/x-icon" href="#{resource['hrx:img/favicon-bgfi.ico']}"/>
+    <link rel="icon" type="image/png" sizes="32x32" href="#{resource['hrx:img/favicon-bgfi-32.png']}"/>
+    <link rel="icon" type="image/png" sizes="16x16" href="#{resource['hrx:img/favicon-bgfi-16.png']}"/>
+    <link rel="apple-touch-icon" sizes="180x180" href="#{resource['hrx:img/apple-touch-icon.png']}"/>
+
+    <!-- Anti-flash : pas de transition tant que la page n'est pas prête  -->
+    <script>document.documentElement.className += ' hx-preload';</script>
+    <style>html.hx-preload *, html.hx-preload *::before, html.hx-preload *::after { transition: none !important; animation-duration: 0s !important; }</style>
+
+    <ui:include src="/WEB-INF/includes/fonts.xhtml"/>
+    <h:outputStylesheet name="primeicons/primeicons.css" library="primefaces"/>
+    <h:outputStylesheet library="hrx" name="css/hrx-tokens.css"/>
+    <h:outputStylesheet library="hrx" name="css/hrx-shell.css"/>
+    <h:outputStylesheet library="hrx" name="css/hrx-admin.css"/>
+
+    <script>
+        PrimeFaces.locales['fr'] = {
+            closeText: 'Fermer', prevText: 'Précédent', nextText: 'Suivant',
+            monthNames: ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'],
+            monthNamesShort: ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'],
+            dayNames: ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'],
+            dayNamesShort: ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'],
+            dayNamesMin: ['D','L','M','M','J','V','S'],
+            weekHeader: 'Sem.', firstDay: 1, isRTL: false, showMonthAfterYear: false, yearSuffix: '',
+            timeOnlyTitle: 'Heure', timeText: 'Heure', hourText: 'Heure', minuteText: 'Minute', secondText: 'Seconde',
+            currentText: 'Aujourd\'hui', ampm: false, today: 'Aujourd\'hui', clear: 'Effacer',
+            aria: { 'paginator.PAGE': 'Page {0}', 'calendar.BUTTON': 'Afficher le calendrier' }
+        };
+        if (window.PrimeFaces) { PrimeFaces.zindex = Math.max(Number(PrimeFaces.zindex) || 1000, 1050); }
+    </script>
+    <ui:insert name="head"/>
+</h:head>
+
+<h:body styleClass="#{accountBean.bodyPreferenceClass}" dir="#{accountBean.layoutDirection}">
+    <f:view encoding="UTF-8" contentType="text/html; charset=UTF-8">
+        <ui:insert name="metadata"/>
+        <div class="hx-app">
+            <ui:include src="/WEB-INF/includes/sidebar.xhtml"/>
+            <div class="hx-scrim" aria-hidden="true"></div>
+
+            <ui:include src="/WEB-INF/includes/topbar.xhtml">
+                <ui:param name="pageTitle" value="#{pageTitle}"/>
+                <ui:param name="pageSubtitle" value="#{pageSubtitle}"/>
+            </ui:include>
+
+            <main id="content" class="hx-main">
+                <div class="hx-main__inner">
+                    <ui:fragment rendered="#{param.conflit eq 'true'}">
+                        <div class="hx-alert hx-alert--warn" role="alert">
+                            <i class="pi pi-refresh" aria-hidden="true"></i>
+                            <div><strong>La fiche a été modifiée par un autre utilisateur.</strong>
+                                <span>La version la plus récente a été rechargée. Vérifiez les informations avant de recommencer.</span></div>
+                        </div>
+                    </ui:fragment>
+                    <ui:insert name="breadcrumb"/>
+                    <ui:insert name="content"/>
+                    <ui:include src="/WEB-INF/includes/footer.xhtml"/>
+                </div>
+            </main>
+        </div>
+
+        <p:growl id="globalGrowl" showDetail="true" life="6000" globalOnly="false"><p:autoUpdate/></p:growl>
+
+        <h:outputScript library="hrx" name="js/hrx-shell.js" target="body"/>
+        <ui:insert name="scripts"/>
+    </f:view>
+</h:body>
+</html>

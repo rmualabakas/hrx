@@ -1,0 +1,37 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui">
+
+    <header class="hx-topbar">
+        <button type="button" class="hx-topbar__toggle" onclick="hrxToggleSidebar();" aria-label="Afficher ou masquer le menu">
+            <i class="pi pi-bars"></i>
+        </button>
+
+        <div class="hx-topbar__title">
+            <h1>#{empty pageTitle ? 'Tableau de bord' : pageTitle}</h1>
+            <ui:fragment rendered="#{not empty pageSubtitle}"><small>#{pageSubtitle}</small></ui:fragment>
+        </div>
+
+        <div class="hx-topbar__spacer"></div>
+
+        <!-- État de la campagne ouverte (CampagneStatusBean, rafraîchi à chaque requête) -->
+        <h:link outcome="/ui/#{campagneStatusBean.ouverte ? 'equipe' : 'campagnes'}" styleClass="hx-campaign-pill #{campagneStatusBean.ouverte ? (campagneStatusBean.enRetard ? 'is-late' : 'is-open') : ''}" title="#{campagneStatusBean.ouverte ? 'Campagne en cours - ouvrir Mon équipe' : 'Campagnes d\'évaluation'}">
+            <span class="hx-campaign-pill__dot #{campagneStatusBean.ouverte ? (campagneStatusBean.enRetard ? 'hx-campaign-pill__dot--late' : 'hx-campaign-pill__dot--open') : 'hx-campaign-pill__dot--closed'}"></span>
+            <strong>#{campagneStatusBean.ouverte ? campagneStatusBean.campagne.libelle : 'Campagnes'}</strong>
+            <span class="hx-campaign-pill__detail">#{campagneStatusBean.detail}</span>
+        </h:link>
+
+        <h:form id="frmTopbar" prependId="false">
+            <p:commandButton id="btnUser" type="button" styleClass="hx-topbar__user ui-button-flat"
+                             value="#{loginBean.users.nomComplet}" icon="pi pi-user" title="Menu du compte"/>
+            <p:menu id="userMenu" widgetVar="userMenu" overlay="true" trigger="btnUser" my="right top" at="right bottom" styleClass="hx-user-menu">
+                <p:menuitem value="Mon compte" icon="pi pi-user" action="#{accountBean.openProfile}" ajax="false"/>
+                <p:menuitem value="Préférences" icon="pi pi-sliders-h" action="#{accountBean.openSettings}" ajax="false"/>
+                <p:separator/>
+                <p:menuitem value="Se déconnecter" icon="pi pi-sign-out" action="#{loginBean.deconnection}" ajax="false"/>
+            </p:menu>
+        </h:form>
+    </header>
+</ui:composition>

@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="fr"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:ui="jakarta.faces.facelets"
+      xmlns:p="http://primefaces.org/ui">
+<h:head>
+    <f:facet name="first">
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    </f:facet>
+    <title>Nouveau mot de passe - #{appBean.app1.nomApp}</title>
+    <link rel="icon" type="image/x-icon" href="#{resource['hrx:img/favicon-bgfi.ico']}"/>
+    <link rel="apple-touch-icon" sizes="180x180" href="#{resource['hrx:img/apple-touch-icon.png']}"/>
+    <ui:include src="/WEB-INF/includes/fonts.xhtml"/>
+    <h:outputStylesheet name="primeicons/primeicons.css" library="primefaces"/>
+    <h:outputStylesheet library="hrx" name="css/hrx-tokens.css"/>
+    <h:outputStylesheet library="hrx" name="css/hrx-auth.css"/>
+</h:head>
+
+<h:body styleClass="hx-auth-body">
+    <main class="hx-auth">
+        <header class="hx-auth__top">
+            <span class="hx-auth__lockup">
+                <span class="hx-auth__logo"><h:graphicImage library="hrx" name="img/logo_bgfi.png" alt="BGFIBank"/></span>
+                <span class="hx-auth__brand-copy">
+                    <strong>#{appBean.app1.nomApp}</strong>
+                    <small>Plateforme collaborative RH</small>
+                </span>
+            </span>
+            <nav class="hx-auth__top-links" aria-label="Liens utiles">
+                <span>#{loginBean.users.prenom} #{loginBean.users.nom}</span>
+            </nav>
+        </header>
+
+        <div class="hx-auth__body">
+            <section class="hx-auth__visual" aria-label="Sécurité de la plateforme">
+                <ui:include src="/WEB-INF/includes/dial.xhtml">
+                    <ui:param name="dialDash" value="1000"/>
+                </ui:include>
+                <div class="hx-auth__copy">
+                    <h2>Avant la première fiche, un mot de passe qui vous appartient.</h2>
+                    <p>Vous vous connectez avec un mot de passe provisoire. Choisissez le vôtre : il protège des évaluations que seuls vous, votre responsable et la DCHT pouvez consulter.</p>
+                    <ul class="hx-auth__steps">
+                        <li><i class="pi pi-eye-slash"></i><span><strong>Confidentialité</strong> : droits par rôle, aucun accès transverse non autorisé.</span></li>
+                        <li><i class="pi pi-history"></i><span><strong>Traçabilité</strong> : chaque consultation et modification est journalisée.</span></li>
+                        <li><i class="pi pi-box"></i><span><strong>Archivage</strong> : fiches et rapports conservés selon la politique interne.</span></li>
+                    </ul>
+                </div>
+            </section>
+
+            <section class="hx-auth__card" aria-labelledby="passHeading">
+                <div class="hx-auth__heading">
+                    <h1 id="passHeading">Nouveau mot de passe</h1>
+                    <p>Obligatoire avant d'accéder à votre espace.</p>
+                </div>
+
+                <div class="hx-auth__policy" role="note">
+                    <i class="pi pi-key"></i>
+                    <div>
+                        <strong>Ce qu'il doit contenir</strong>
+                        <ul class="hx-auth__rules">
+                            <li><i class="pi pi-check"></i> 8 caractères minimum</li>
+                            <li><i class="pi pi-check"></i> Majuscules et minuscules</li>
+                            <li><i class="pi pi-check"></i> Au moins un chiffre</li>
+                            <li><i class="pi pi-check"></i> Un symbole (@#$%&amp;*)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h:form id="frmPass" styleClass="hx-auth__form">
+                    <p:messages id="msgPass" showDetail="true" closable="true"><p:autoUpdate/></p:messages>
+
+                    <div class="hx-auth__field">
+                        <label for="frmPass:oldpass">Mot de passe actuel</label>
+                        <div class="hx-auth__input">
+                            <p:password id="oldpass" value="#{userBean.currentPassword}" feedback="false" required="true"
+                                        requiredMessage="Saisissez votre mot de passe actuel" placeholder="Mot de passe provisoire"/>
+                        </div>
+                    </div>
+                    <div class="hx-auth__field">
+                        <label for="frmPass:newpass">Nouveau mot de passe</label>
+                        <div class="hx-auth__input">
+                            <p:password id="newpass" value="#{userBean.newPassword}" toggleMask="true" feedback="true" required="true"
+                                        promptLabel="Saisissez un mot de passe" weakLabel="Faible" goodLabel="Correct" strongLabel="Robuste"
+                                        requiredMessage="Saisissez un nouveau mot de passe" placeholder="••••••••"/>
+                        </div>
+                    </div>
+                    <div class="hx-auth__field">
+                        <label for="frmPass:confirm">Confirmation</label>
+                        <div class="hx-auth__input">
+                            <p:password id="confirm" value="#{userBean.confirmPassword}" toggleMask="true" required="true"
+                                        requiredMessage="Confirmez votre mot de passe" placeholder="••••••••"/>
+                        </div>
+                    </div>
+
+                    <p:commandButton value="Enregistrer le mot de passe" update="frmPass msgPass" process="@form"
+                                     action="#{userBean.changeMyPassword()}" styleClass="hx-auth__submit"/>
+
+                    <p:commandLink styleClass="hx-auth__back" process="@this" actionListener="#{loginBean.deconnection()}">
+                        <i class="pi pi-arrow-left"></i> Revenir à la connexion
+                    </p:commandLink>
+                </h:form>
+            </section>
+        </div>
+
+        <footer class="hx-auth__footer">
+            <span>© BGFIBank RDC SA, Direction du Capital Humain et de la Transformation</span>
+            <span class="hx-auth__footer-links"><span>Des objectifs partagés, une performance reconnue.</span><span>v1.0</span></span>
+        </footer>
+    </main>
+</h:body>
+</html>

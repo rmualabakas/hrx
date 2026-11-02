@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Mes évaluations"/>
+    <ui:param name="pageSubtitle" value="Vos objectifs et vos évaluations"/>
+    <ui:define name="title">Mes évaluations</ui:define>
+
+    <ui:define name="metadata">
+        <f:metadata>
+            <f:viewParam name="exercice" value="#{objectifsView.exerciceParam}"/>
+            <f:viewParam name="onglet" value="#{mesEvaluationsView.onglet}"/>
+            <f:viewAction action="#{objectifsView.charger}"/>
+            <f:viewAction action="#{mesEvaluationsView.charger}"/>
+        </f:metadata>
+    </ui:define>
+
+    <ui:define name="content">
+        <div class="hx-page-head">
+            <div>
+                <h2>Mes évaluations</h2>
+                <p>Vos objectifs de l'année et vos fiches d'évaluation. Vous pouvez proposer des objectifs ; votre N+1 les valide.</p>
+            </div>
+        </div>
+
+        <p:tabView id="tabs" styleClass="hx-tabs hx-card" activeIndex="#{mesEvaluationsView.onglet}" dynamic="false">
+            <p:tab title="Mes objectifs">
+                <h:form id="frmFiche" prependId="false">
+                    <ui:include src="/WEB-INF/includes/fiche-objectifs.xhtml"/>
+                </h:form>
+            </p:tab>
+            <p:tab title="Mes évaluations">
+                <h:form id="frmEvals" prependId="false">
+                    <ui:fragment rendered="#{empty mesEvaluationsView.evaluations}">
+                        <div class="hx-empty"><i class="pi pi-user-edit"></i><strong>Aucune fiche d'évaluation</strong>Vos fiches apparaîtront ici dès que la DCHT ouvrira une campagne (mi-parcours ou fin d'année) et que votre N+1 initiera votre évaluation.</div>
+                    </ui:fragment>
+                    <ui:fragment rendered="#{not empty mesEvaluationsView.evaluations}">
+                        <div class="hx-camps">
+                            <ui:repeat value="#{mesEvaluationsView.evaluations}" var="e">
+                                <article class="hx-myeval #{e.finalisee ? 'is-done' : ''} #{e.statut eq 'RETOURNEE' ? 'is-returned' : ''} #{e.enRetard ? 'is-late' : ''}">
+                                    <div class="hx-myeval__main">
+                                        <header class="hx-myeval__head">
+                                            <span class="hx-campaign__type #{e.campagne.type eq 'FIN_ANNEE' ? 'is-fa' : 'is-mp'}">#{e.campagne.type eq 'FIN_ANNEE' ? 'FA' : 'MP'}</span>
+                                            <div>
+                                                <h3>#{e.campagne.libelle}</h3>
+                                                <p>#{e.campagne.typeLabel} · exercice #{e.campagne.exercice} · évaluateur : <b>#{empty e.evaluateur ? '—' : e.evaluateur.nomComplet}</b></p>
+                                            </div>
+                                            <span class="hx-badge #{e.finalisee ? 'hx-badge--done' : (e.statut eq 'RETOURNEE' ? 'hx-badge--late' : (e.statut eq 'INITIEE' ? 'hx-badge--pending' : 'hx-badge--info'))}">#{e.statutLabel}</span>
+                                        </header>
+
+                                        <ol class="hx-steps hx-steps--wide">
+                                            <li class="#{e.statut ne 'INITIEE' and e.statut ne 'RETOURNEE' ? 'is-done' : 'is-current'}"><i class="pi pi-user-edit"></i><span>Mon auto-évaluation</span><small><ui:fragment rendered="#{not empty e.dateSoumission}">soumise le <h:outputText value="#{e.dateSoumission}"><f:convertDateTime pattern="dd/MM/yyyy"/></h:outputText></ui:fragment><ui:fragment rendered="#{empty e.dateSoumission}">à renseigner</ui:fragment></small></li>
+                                            <li class="#{e.statut eq 'EVALUEE' or e.statut eq 'VALIDEE' ? 'is-done' : (e.statut eq 'SOUMISE' ? 'is-current' : '')}"><i class="pi pi-star"></i><span>Évaluation N+1</span><small><ui:fragment rendered="#{not empty e.dateEvaluation}">le <h:outputText value="#{e.dateEvaluation}"><f:convertDateTime pattern="dd/MM/yyyy"/></h:outputText></ui:fragment><ui:fragment rendered="#{empty e.dateEvaluation}">#{e.statut eq 'SOUMISE' ? 'en cours' : 'à venir'}</ui:fragment></small></li>
+                                            <li class="#{not empty e.dateAvisDirecteur ? 'is-done' : (e.statut eq 'EVALUEE' ? 'is-current' : '')}"><i class="pi pi-briefcase"></i><span>Avis du directeur</span><small>#{empty e.dateAvisDirecteur ? (e.statut eq 'EVALUEE' ? 'en attente' : 'à venir') : 'rendu'}</small></li>
+                                            <li class="#{e.finalisee ? 'is-done' : (e.statut eq 'EVALUEE' ? 'is-current' : '')}"><i class="pi pi-verified"></i><span>Validation DCHT</span><small><ui:fragment rendered="#{e.finalisee}">le <h:outputText value="#{e.dateValidation}"><f:convertDateTime pattern="dd/MM/yyyy"/></h:outputText></ui:fragment><ui:fragment rendered="#{not e.finalisee}">à venir</ui:fragment></small></li>
+                                        </ol>
+
+                                        <ui:fragment rendered="#{e.statut eq 'RETOURNEE' and not empty e.motifRetour}">
+                                            <div class="hx-alert hx-alert--warn" style="margin:0"><i class="pi pi-exclamation-triangle"></i><div><strong>Votre N+1 vous a retourné la fiche</strong><span>#{e.motifRetour}</span></div></div>
+                                        </ui:fragment>
+
+                                        <footer class="hx-myeval__foot">
+                                            <span class="hx-myeval__deadline #{e.enRetard ? 'is-late' : ''}"><i class="pi pi-calendar"></i>
+                                                <ui:fragment rendered="#{not empty e.campagne.dateFin}">Échéance le <b><h:outputText value="#{e.campagne.dateFin}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText></b>
+                                                    <ui:fragment rendered="#{not e.finalisee and e.joursRestants ge 0}"> · J-#{e.joursRestants}</ui:fragment>
+                                                    <ui:fragment rendered="#{not e.finalisee and e.joursRestants lt 0}"> · dépassée de #{-e.joursRestants} j</ui:fragment>
+                                                </ui:fragment>
+                                                <ui:fragment rendered="#{not empty e.dateSoumission}"> · <span class="#{e.soumiseATemps ? 'hx-ok' : 'hx-warn'}">#{e.soumiseATemps ? 'remise à temps' : 'remise hors délai'}</span></ui:fragment>
+                                            </span>
+                                            <span class="hx-campaign__spacer"></span>
+                                            <p:button value="#{e.statut eq 'INITIEE' or e.statut eq 'RETOURNEE' ? 'Renseigner mon auto-évaluation' : (e.finalisee ? 'Consulter ma fiche' : 'Suivre ma fiche')}" icon="pi #{e.statut eq 'INITIEE' or e.statut eq 'RETOURNEE' ? 'pi-pencil' : 'pi-eye'}" styleClass="#{e.statut eq 'INITIEE' or e.statut eq 'RETOURNEE' ? '' : 'hx-btn-secondary'} hx-btn-sm" outcome="/ui/fiche"><f:param name="id" value="#{e.id}"/></p:button>
+                                        </footer>
+                                    </div>
+                                    <aside class="hx-myeval__side">
+                                        <ui:fragment rendered="#{not empty e.noteGlobale}">
+                                            <div class="hx-campaign__kpi"><b>#{e.noteGlobale}<small>/20</small></b><span>note #{e.finalisee ? 'définitive' : 'provisoire'}</span><em>#{e.appreciation} · #{e.scoreObjectifs} %</em></div>
+                                        </ui:fragment>
+                                        <ui:fragment rendered="#{empty e.noteGlobale}">
+                                            <div class="hx-campaign__kpi hx-campaign__kpi--sub"><b>#{e.objectifs.size()}</b><span>objectif#{e.objectifs.size() gt 1 ? 's' : ''} à apprécier</span><em>#{e.statut eq 'INITIEE' or e.statut eq 'RETOURNEE' ? 'indiquez votre % de réalisation' : 'note attribuée par le N+1'}</em></div>
+                                        </ui:fragment>
+                                    </aside>
+                                </article>
+                            </ui:repeat>
+                        </div>
+                    </ui:fragment>
+                </h:form>
+            </p:tab>
+        </p:tabView>
+        <ui:include src="/WEB-INF/includes/fiche-objectifs-dialogs.xhtml"/>
+    </ui:define>
+</ui:composition>

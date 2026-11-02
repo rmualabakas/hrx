@@ -1,0 +1,425 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Fiche d'évaluation"/>
+    <ui:param name="pageSubtitle" value="Fiche MAF 159"/>
+    <ui:define name="title">Fiche d'évaluation</ui:define>
+
+    <ui:define name="metadata">
+        <f:metadata>
+            <f:viewParam name="id" value="#{ficheView.idParam}"/>
+            <f:viewAction action="#{ficheView.charger}"/>
+        </f:metadata>
+    </ui:define>
+
+    <ui:define name="content">
+        <h:form id="frmEval" prependId="false">
+            <div class="hx-page-head">
+                <div>
+                    <p class="hx-crumb"><a href="#{request.contextPath}/ui/#{ficheView.moi ? 'mesEvaluations' : 'equipe'}"><i class="pi pi-arrow-left"></i> #{ficheView.moi ? 'Mes évaluations' : 'Mon équipe'}</a></p>
+                    <h2>Fiche d'évaluation individuelle <span class="hx-muted">#{ficheView.e.campagne.typeLabel} #{ficheView.e.campagne.exercice}</span></h2>
+                    <p>Le collaborateur s'auto-évalue, le N+1 évalue, puis la fiche passe au N+2, au directeur et à la DCHT pour validation.</p>
+                </div>
+                <div class="hx-page-head__actions">
+                    <p:commandButton value="Word" icon="pi pi-file-word" styleClass="hx-btn-secondary hx-btn-sm" ajax="false"><p:fileDownload value="#{ficheView.exportDocx}"/></p:commandButton>
+                    <p:commandButton value="PDF" icon="pi pi-file-pdf" styleClass="hx-btn-secondary hx-btn-sm" ajax="false"><p:fileDownload value="#{ficheView.exportPdf}"/></p:commandButton>
+                </div>
+            </div>
+
+            <!-- Étapes -->
+            <ol class="hx-flow">
+                <li class="#{ficheView.e.statut ne 'INITIEE' ? 'is-done' : 'is-current'}"><i class="pi pi-user-edit"></i><span>Auto-évaluation</span><small>#{ficheView.e.salarie.nomComplet}</small></li>
+                <li class="#{ficheView.e.statut eq 'EVALUEE' or ficheView.e.statut eq 'VALIDEE' ? 'is-done' : (ficheView.e.statut eq 'SOUMISE' ? 'is-current' : '')}"><i class="pi pi-star"></i><span>Évaluation N+1</span><small>#{empty ficheView.e.evaluateur ? '—' : ficheView.e.evaluateur.nomComplet}</small></li>
+                <li class="#{not empty ficheView.e.dateVisaN2 ? 'is-done' : (ficheView.e.statut eq 'EVALUEE' ? 'is-current' : '')}"><i class="pi pi-check"></i><span>Visa N+2</span><small>#{empty ficheView.e.n2 ? 'facultatif' : ficheView.e.n2.nomComplet}</small></li>
+                <li class="#{not empty ficheView.e.dateAvisDirecteur ? 'is-done' : (ficheView.e.statut eq 'EVALUEE' ? 'is-current' : '')}"><i class="pi pi-briefcase"></i><span>Avis du directeur</span><small>#{empty ficheView.e.directeur ? (empty ficheView.directeurAttendu ? 'direction sans directeur' : ficheView.directeurAttendu.nomComplet) : ficheView.e.directeur.nomComplet}</small></li>
+                <li class="#{ficheView.e.statut eq 'VALIDEE' ? 'is-done' : (ficheView.e.statut eq 'EVALUEE' ? 'is-current' : '')}"><i class="pi pi-verified"></i><span>Validation DCHT</span><small>#{ficheView.e.statut eq 'VALIDEE' ? 'validée' : 'en attente'}</small></li>
+            </ol>
+
+            <ui:fragment rendered="#{ficheView.e.statut eq 'RETOURNEE' and not empty ficheView.e.motifRetour}">
+                <div class="hx-alert hx-alert--warn"><i class="pi pi-exclamation-triangle"></i><div><strong>Fiche retournée pour correction</strong><span>#{ficheView.e.motifRetour}</span></div></div>
+            </ui:fragment>
+
+            <div class="hx-fiche">
+                <div class="hx-fiche__main">
+
+                    <!-- Renseignements -->
+                    <div class="hx-card hx-fiche__id">
+                        <span class="hx-avatar hx-avatar--lg">#{ficheView.initiales()}</span>
+                        <dl class="hx-fiche__facts">
+                            <div><dt>Nom et prénom du salarié</dt><dd><strong>#{ficheView.e.salarie.nomComplet}</strong></dd></div>
+                            <div><dt>Poste occupé</dt><dd>#{empty ficheView.e.salarie.fonction ? '—' : ficheView.e.salarie.fonction}</dd></div>
+                            <div><dt>Date de l'évaluation</dt><dd>
+                                <ui:fragment rendered="#{ficheView.saisieN1}"><p:datePicker value="#{ficheView.e.dateEntretien}" pattern="dd/MM/yyyy" locale="fr" styleClass="hx-date hx-date--inline" placeholder="jj/mm/aaaa"/></ui:fragment>
+                                <ui:fragment rendered="#{not ficheView.saisieN1}"><h:outputText value="#{ficheView.e.dateEvaluationRetenue}" rendered="#{not empty ficheView.e.dateEvaluationRetenue}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText><ui:fragment rendered="#{empty ficheView.e.dateEvaluationRetenue}">—</ui:fragment></ui:fragment>
+                            </dd></div>
+                            <div><dt>Supérieur hiérarchique direct</dt><dd>#{empty ficheView.e.evaluateur ? '—' : ficheView.e.evaluateur.nomComplet}</dd></div>
+                            <div><dt>Ancienneté dans le poste</dt><dd>#{ficheView.anciennete}</dd></div>
+                            <div><dt>Statut</dt><dd>#{empty ficheView.e.salarie.categorie ? '—' : ficheView.e.salarie.categorie}</dd></div>
+                            <div class="hx-fiche__facts-wide"><dt>Direction / Département / Service / Agence</dt><dd>#{empty ficheView.e.salarie.direction ? '—' : ficheView.e.salarie.direction.nom}</dd></div>
+                        </dl>
+                        <div class="hx-fiche__state">
+                            <span class="hx-fiche__ctx"><i class="pi pi-calendar"></i><span><b>Campagne du <h:outputText value="#{ficheView.e.campagne.dateDebut}" rendered="#{not empty ficheView.e.campagne.dateDebut}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText> au <h:outputText value="#{ficheView.e.campagne.dateFin}" rendered="#{not empty ficheView.e.campagne.dateFin}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText></b><small><ui:fragment rendered="#{not ficheView.e.finalisee and ficheView.e.joursRestants ge 0}">#{ficheView.e.joursRestants} jour#{ficheView.e.joursRestants gt 1 ? 's' : ''} restant#{ficheView.e.joursRestants gt 1 ? 's' : ''}</ui:fragment><ui:fragment rendered="#{not ficheView.e.finalisee and ficheView.e.joursRestants lt 0}">échéance dépassée de #{-ficheView.e.joursRestants} jour#{-ficheView.e.joursRestants gt 1 ? 's' : ''}</ui:fragment><ui:fragment rendered="#{ficheView.e.finalisee}">clôturée</ui:fragment></small></span></span>
+                            <span class="hx-badge #{ficheView.e.statut eq 'VALIDEE' ? 'hx-badge--done' : (ficheView.e.statut eq 'RETOURNEE' ? 'hx-badge--late' : 'hx-badge--pending')}">#{ficheView.e.statutLabel}</span>
+                            <ui:fragment rendered="#{not empty ficheView.e.dateSoumission}"><span class="hx-badge #{ficheView.e.soumiseATemps ? 'hx-badge--done' : 'hx-badge--late'}" title="Auto-évaluation soumise le #{ficheView.e.dateSoumission}"><i class="pi #{ficheView.e.soumiseATemps ? 'pi-check' : 'pi-clock'}"></i> Salarié : #{ficheView.e.soumiseATemps ? 'à temps' : 'hors délai'}</span></ui:fragment>
+                            <ui:fragment rendered="#{not empty ficheView.e.dateEvaluation}"><span class="hx-badge #{ficheView.e.evalueeATemps ? 'hx-badge--done' : 'hx-badge--late'}" title="Évaluation transmise le #{ficheView.e.dateEvaluation}"><i class="pi #{ficheView.e.evalueeATemps ? 'pi-check' : 'pi-clock'}"></i> N+1 : #{ficheView.e.evalueeATemps ? 'à temps' : 'hors délai'}</span></ui:fragment>
+                        </div>
+                    </div>
+
+                    <!-- Mission -->
+                    <div class="hx-card hx-fiche__block">
+                        <h3 class="hx-fiche__h">Mission</h3>
+                        <p class="hx-fiche__mission-ro">#{empty ficheView.e.ficheObjectifs or empty ficheView.e.ficheObjectifs.mission ? 'Mission non renseignée sur la fiche de fixation des objectifs.' : ficheView.e.ficheObjectifs.mission}</p>
+                    </div>
+
+                    <!-- I. Objectifs -->
+                    <div class="hx-card hx-fiche__block">
+                        <h3 class="hx-fiche__h hx-fiche__h--groupe">I. Appréciation de la performance réalisée #{ficheView.e.campagne.typeLabel.toLowerCase()} #{ficheView.e.campagne.exercice} (suivant les objectifs fixés)</h3>
+                        <ui:fragment rendered="#{ficheView.revisionDirecteur}"><p class="hx-mdl__note hx-lock" style="margin-bottom:10px"><i class="pi pi-pencil"></i><span>En tant que directeur, vous pouvez corriger les pourcentages retenus, les « non applicable », les commentaires et les niveaux de compétences du N+1. Chaque correction est tracée et la note /20 est recalculée lorsque vous rendez votre avis (partie V).</span></p></ui:fragment>
+                        <ui:fragment rendered="#{ficheView.saisieN1}"><p class="hx-field__help" style="margin-bottom:8px"><i class="pi pi-info-circle"></i> Votre colonne reprend l'auto-évaluation du collaborateur. Laissez-la si vous êtes d'accord, sinon corrigez et expliquez pourquoi.<ui:fragment rendered="#{ficheView.nbEcarts gt 0}"> <b class="hx-warn">#{ficheView.nbEcarts} écart#{ficheView.nbEcarts gt 1 ? 's' : ''}</b> actuellement.</ui:fragment></p></ui:fragment>
+                        <ui:fragment rendered="#{empty ficheView.e.objectifs}"><div class="hx-empty hx-empty--sm"><i class="pi pi-flag"></i><strong>Aucun objectif repris</strong>La fiche de fixation ne contenait pas d'objectif validé à l'initiation.</div></ui:fragment>
+                        <ui:fragment rendered="#{not empty ficheView.e.objectifs}">
+                            <div class="hx-evtab">
+                                <div class="hx-evtab__head"><span>Objectifs</span><span>Indicateurs de performance</span><span>Attendu</span><span>Réalisé<br/><small>salarié</small></span><span>Réalisé<br/><small>N+1</small></span><span>Commentaires</span></div>
+                                <ui:repeat value="#{ficheView.activites}" var="act" varStatus="as">
+                                    <ui:fragment rendered="#{not empty act}"><div class="hx-evtab__act">Activité #{as.index + 1} : #{act}</div></ui:fragment>
+                                    <ui:repeat value="#{ficheView.objectifsDe(act)}" var="o" varStatus="st">
+                                        <div class="hx-evtab__row hx-row-o#{o.id} #{o.nonApplicableN1 or (o.nonApplicableSalarie and empty o.realisationN1) ? 'is-na' : ''}">
+                                            <div class="hx-evtab__obj"><b>#{st.index + 1}.</b> #{o.objectif.libelle}<small class="hx-muted"> · #{o.objectif.periodiciteEnum.libelle} · #{o.objectif.periodeLabel}<ui:fragment rendered="#{o.objectif.poids gt 0}"> · poids #{o.objectif.poids} %</ui:fragment></small></div>
+                                            <div class="hx-evtab__cell">#{empty o.objectif.indicateur ? '—' : o.objectif.indicateur}<ui:fragment rendered="#{not empty o.objectif.cible}"><br/><b>Cible : #{o.objectif.cible}</b></ui:fragment></div>
+                                            <div class="hx-evtab__cell hx-evtab__num">
+                                                <ui:fragment rendered="#{ficheView.saisieN1}"><p:inputNumber value="#{o.attendu}" minValue="0" maxValue="100" decimalPlaces="0" symbol=" %" symbolPosition="s" styleClass="hx-pct"/></ui:fragment>
+                                                <ui:fragment rendered="#{not ficheView.saisieN1}">#{o.attendu} %</ui:fragment>
+                                            </div>
+                                            <div class="hx-evtab__cell hx-evtab__num">
+                                                <ui:fragment rendered="#{ficheView.saisieSalarie}">
+                                                    <p:inputNumber value="#{o.realisationSalarie}" minValue="0" maxValue="100" decimalPlaces="0" symbol=" %" symbolPosition="s" styleClass="hx-pct" placeholder="—" disabled="#{o.nonApplicableSalarie}"><p:ajax event="blur" process="@this @(.hx-com-s#{o.id})" update="@(.hx-row-o#{o.id})"/></p:inputNumber>
+                                                    <span class="hx-na"><p:selectBooleanCheckbox value="#{o.nonApplicableSalarie}" styleClass="hx-na__box" itemLabel="Non applicable"><p:ajax process="@(.hx-row-o#{o.id})" listener="#{ficheView.basculerNaSalarie(o)}" update="@(.hx-row-o#{o.id})"/></p:selectBooleanCheckbox></span>
+                                                </ui:fragment>
+                                                <ui:fragment rendered="#{not ficheView.saisieSalarie}">
+                                                    <ui:fragment rendered="#{o.nonApplicableSalarie}"><span class="hx-tag hx-tag--na" title="Déclaré non applicable par le salarié">NA</span></ui:fragment>
+                                                    <ui:fragment rendered="#{not o.nonApplicableSalarie}"><span class="#{empty o.realisationSalarie ? 'hx-muted' : ''}">#{empty o.realisationSalarie ? '—' : o.realisationSalarie.toString().concat(' %')}</span></ui:fragment>
+                                                </ui:fragment>
+                                            </div>
+                                            <div class="hx-evtab__cell hx-evtab__num">
+                                                <ui:fragment rendered="#{ficheView.revisionN1}">
+                                                    <p:inputNumber value="#{o.realisationN1}" minValue="0" maxValue="100" decimalPlaces="0" symbol=" %" symbolPosition="s" styleClass="hx-pct hx-pct--n1 #{ficheView.isEcart(o) ? 'is-ecart' : ''}" placeholder="—" disabled="#{o.nonApplicableN1}"><p:ajax event="blur" process="@(.hx-row-o#{o.id})" update="@(.hx-row-o#{o.id}) :synth"/></p:inputNumber>
+                                                    <ui:fragment rendered="#{ficheView.isEcart(o)}"><small class="hx-warn hx-n1state"><i class="pi pi-exclamation-circle"></i> écart avec le salarié - commentez</small></ui:fragment>
+                                                    <span class="hx-na"><p:selectBooleanCheckbox value="#{o.nonApplicableN1}" styleClass="hx-na__box" itemLabel="Non applicable"><p:ajax process="@(.hx-row-o#{o.id})" listener="#{ficheView.basculerNaN1(o)}" update="@(.hx-row-o#{o.id}) :synth"/></p:selectBooleanCheckbox></span>
+                                                </ui:fragment>
+                                                <ui:fragment rendered="#{not ficheView.revisionN1}">
+                                                    <ui:fragment rendered="#{o.nonApplicableN1}"><span class="hx-tag hx-tag--na" title="Retenu non applicable par le N+1 - exclu du calcul">NA</span></ui:fragment>
+                                                    <ui:fragment rendered="#{not o.nonApplicableN1}"><b class="#{empty o.realisationN1 ? 'hx-muted' : ''}">#{empty o.realisationN1 ? '—' : o.realisationN1.toString().concat(' %')}</b></ui:fragment>
+                                                </ui:fragment>
+                                            </div>
+                                            <div class="hx-evtab__cell hx-evtab__com">
+                                                <ui:fragment rendered="#{ficheView.saisieSalarie}"><p:inputTextarea value="#{o.commentaireSalarie}" rows="2" autoResize="true" maxlength="2000" styleClass="hx-com-s#{o.id} #{o.commentaireSalarieRequis and empty o.commentaireSalarie ? 'hx-required' : ''}" placeholder="#{o.nonApplicableSalarie ? 'Obligatoire : pourquoi cet objectif n\'est pas applicable sur la période' : (o.commentaireSalarieRequis ? 'Obligatoire : expliquez l\'écart par rapport à l\'attendu' : 'Commentaire (facultatif si 100 %)')}"/></ui:fragment>
+                                                <ui:fragment rendered="#{ficheView.revisionN1 and empty o.commentaireN1 and not empty o.commentaireSalarie}"><p class="hx-com hx-com--s"><small>Salarié</small>#{o.commentaireSalarie}</p></ui:fragment>
+                                                <ui:fragment rendered="#{ficheView.revisionN1}"><p:inputTextarea value="#{o.commentaireN1}" rows="2" autoResize="true" maxlength="2000" styleClass="#{o.commentaireN1Requis and empty o.commentaireN1 ? 'hx-required' : ''}" placeholder="#{o.nonApplicableN1 ? 'Obligatoire : motif de non-applicabilité' : (o.commentaireN1Requis ? 'Obligatoire : objectif non atteint à 100 % ou écart avec l\'auto-évaluation' : 'Commentaire du N+1 (facultatif si 100 %)')}"/></ui:fragment>
+                                                <ui:fragment rendered="#{not ficheView.saisieSalarie and not ficheView.revisionN1 and not empty o.commentaireRetenu}"><p class="hx-com #{o.commentaireRetenuN1 ? 'hx-com--n1' : 'hx-com--s'}"><small>#{o.commentaireRetenuN1 ? 'N+1' : 'Salarié'}</small>#{o.commentaireRetenu}</p></ui:fragment>
+                                            </div>
+                                        </div>
+                                    </ui:repeat>
+                                </ui:repeat>
+                            </div>
+                        </ui:fragment>
+                    </div>
+
+                    <!-- I bis. Travaux hors objectifs -->
+                    <h:panelGroup id="secTravaux" layout="block">
+                    <div class="hx-card hx-fiche__block">
+                        <div class="hx-nature__head">
+                            <div><strong>#{ficheView.e.avecCompetences ? '' : 'II. '}Appréciation des travaux réalisés en dehors des objectifs assignés</strong><small>Facultatif - missions, projets, contributions non prévues dans la fiche de fixation.</small></div>
+                            <p:commandButton value="Ajouter" icon="pi pi-plus" styleClass="hx-btn-secondary hx-btn-sm" process="@form" rendered="#{ficheView.saisieSalarie or ficheView.saisieN1}"
+                                             actionListener="#{ficheView.nouveauTravail}" update=":dlgTravail" oncomplete="PF('dlgTravail').show()"/>
+                        </div>
+                        <ui:fragment rendered="#{not empty ficheView.e.travauxHorsObjectifs}">
+                            <div class="hx-evtab hx-evtab--travaux">
+                                <div class="hx-evtab__head"><span>Type de travaux</span><span>Indicateurs</span><span>Attendu</span><span>Réalisé</span><span>Commentaires</span><span></span></div>
+                                <ui:repeat value="#{ficheView.e.travauxHorsObjectifs}" var="t">
+                                    <div class="hx-evtab__row">
+                                        <div class="hx-evtab__obj"><ui:fragment rendered="#{not empty t.activite}"><small class="hx-objtab__act">#{t.activite}</small><br/></ui:fragment>#{t.libelle}<small class="hx-muted"> · déclaré par #{t.origine eq 'N1' ? 'le N+1' : 'le salarié'}</small></div>
+                                        <div class="hx-evtab__cell">#{empty t.indicateur ? '—' : t.indicateur}</div>
+                                        <div class="hx-evtab__cell hx-evtab__num">#{t.attendu} %</div>
+                                        <div class="hx-evtab__cell hx-evtab__num"><b>#{empty t.realise ? '—' : t.realise.toString().concat(' %')}</b></div>
+                                        <div class="hx-evtab__cell">#{empty t.commentaire ? '—' : t.commentaire}</div>
+                                        <div class="hx-row-actions">
+                                            <ui:fragment rendered="#{(ficheView.saisieSalarie and t.origine eq 'SALARIE') or ficheView.saisieN1}">
+                                                <p:commandLink process="@form" styleClass="hx-icon-btn" title="Modifier" actionListener="#{ficheView.modifierTravail(t)}" update=":dlgTravail" oncomplete="PF('dlgTravail').show()"><i class="pi pi-pencil"></i></p:commandLink>
+                                                <p:commandLink process="@form" styleClass="hx-icon-btn hx-icon-btn--danger" title="Supprimer" actionListener="#{ficheView.supprimerTravail(t)}" update="secTravaux"><i class="pi pi-trash"></i></p:commandLink>
+                                            </ui:fragment>
+                                        </div>
+                                    </div>
+                                </ui:repeat>
+                            </div>
+                        </ui:fragment>
+                    </div>
+                    </h:panelGroup>
+
+                    <!-- II. Compétences (si la campagne les évalue) -->
+                    <ui:fragment rendered="#{ficheView.e.avecCompetences}">
+                    <div class="hx-card hx-fiche__block">
+                        <h3 class="hx-fiche__h hx-fiche__h--groupe">II. Évaluation des compétences</h3>
+                        <p class="hx-field__help" style="margin-bottom:10px"><i class="pi pi-info-circle"></i> A = acquis · EA = en cours d'acquisition · NA = non acquis · NM = non mesuré. Le collaborateur se positionne, puis le N+1 fixe le niveau et propose des axes de progrès.</p>
+                        <ui:fragment rendered="#{empty ficheView.famillesII}"><div class="hx-empty hx-empty--sm"><i class="pi pi-list"></i><strong>Aucune compétence dans le modèle de fiche</strong></div></ui:fragment>
+                        <ui:repeat value="#{ficheView.famillesII}" var="fam">
+                            <ui:include src="/WEB-INF/includes/fiche-eval-competences.xhtml"><ui:param name="fam" value="#{fam}"/><ui:param name="niveaux" value="#{ficheView.niveaux}"/></ui:include>
+                        </ui:repeat>
+                    </div>
+
+                    <!-- III. Valeurs -->
+                    <div class="hx-card hx-fiche__block">
+                        <h3 class="hx-fiche__h hx-fiche__h--groupe">III. Évaluation de l'adhésion aux valeurs du Groupe</h3>
+                        <p class="hx-field__help" style="margin-bottom:10px"><i class="pi pi-info-circle"></i> Le salarié fait-il preuve de transparence, d'intégrité, de travail, de responsabilité et d'esprit d'équipe ? Respecte-t-il le Règlement intérieur et le Code de déontologie ?</p>
+                        <ui:repeat value="#{ficheView.famillesIII}" var="fam">
+                            <ui:include src="/WEB-INF/includes/fiche-eval-competences.xhtml"><ui:param name="fam" value="#{fam}"/><ui:param name="niveaux" value="#{ficheView.niveauxIII}"/></ui:include>
+                        </ui:repeat>
+                    </div>
+
+                    </ui:fragment>
+
+                    <!-- IV. Formations -->
+                    <h:panelGroup id="secFormations" layout="block">
+                    <div class="hx-card hx-fiche__block">
+                        <h3 class="hx-fiche__h hx-fiche__h--groupe">#{ficheView.e.avecCompetences ? 'IV.' : 'III.'} Souhaits de formation</h3>
+                        <div class="hx-form-rows">
+                            <ui:repeat value="#{ficheView.origines}" var="origDem">
+                                <div class="hx-formrow">
+                                    <div class="hx-formrow__org"><strong>#{ficheView.origineLabel(origDem)}</strong>
+                                        <p:commandLink process="@form" styleClass="hx-icon-btn" title="Ajouter un souhait" rendered="#{ficheView.peutAjouterFormation(origDem)}" actionListener="#{ficheView.nouvelleFormation(origDem)}" update=":dlgFormation" oncomplete="PF('dlgFormation').show()"><i class="pi pi-plus"></i></p:commandLink>
+                                    </div>
+                                    <div class="hx-formrow__list">
+                                        <ui:fragment rendered="#{empty ficheView.formationsDe(origDem)}"><span class="hx-muted">—</span></ui:fragment>
+                                        <ui:repeat value="#{ficheView.formationsDe(origDem)}" var="b">
+                                            <div class="hx-formrow__item">
+                                                <span><b>#{b.intitule}</b><ui:fragment rendered="#{not empty b.justification}"> - #{b.justification}</ui:fragment><span class="hx-tag">#{b.priorite eq 'HAUTE' ? 'priorité haute' : (b.priorite eq 'BASSE' ? 'priorité basse' : 'priorité moyenne')}</span></span>
+                                                <ui:fragment rendered="#{ficheView.peutAjouterFormation(origDem)}">
+                                                    <p:commandLink process="@form" styleClass="hx-icon-btn" actionListener="#{ficheView.modifierFormation(b)}" update=":dlgFormation" oncomplete="PF('dlgFormation').show()"><i class="pi pi-pencil"></i></p:commandLink>
+                                                    <p:commandLink process="@form" styleClass="hx-icon-btn hx-icon-btn--danger" actionListener="#{ficheView.supprimerFormation(b)}" update="secFormations"><i class="pi pi-times"></i></p:commandLink>
+                                                </ui:fragment>
+                                            </div>
+                                        </ui:repeat>
+                                    </div>
+                                </div>
+                            </ui:repeat>
+                        </div>
+                    </div>
+                    </h:panelGroup>
+
+                    <!-- V. Appréciations -->
+                    <div class="hx-card hx-fiche__block">
+                        <h3 class="hx-fiche__h hx-fiche__h--groupe">#{ficheView.e.avecCompetences ? 'V.' : 'IV.'} Appréciations et commentaires</h3>
+
+                        <section class="hx-appr">
+                            <header><strong>Appréciation générale du supérieur hiérarchique direct (N+1)</strong><small>#{empty ficheView.e.evaluateur ? '' : ficheView.e.evaluateur.nomComplet}<ui:fragment rendered="#{not empty ficheView.e.dateEvaluation}"> · <h:outputText value="#{ficheView.e.dateEvaluation}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></ui:fragment></small></header>
+                            <ui:fragment rendered="#{ficheView.saisieN1}">
+                                <p:selectOneRadio value="#{ficheView.e.niveauAtteinte}" layout="responsive" columns="2" styleClass="hx-check" unselectable="true">
+                                    <f:selectItems value="#{ficheView.niveauxAtteinte}" var="na" itemLabel="#{ficheView.niveauAtteinteLabel(na)}" itemValue="#{na}"/>
+                                </p:selectOneRadio>
+                                <ui:fragment rendered="#{not empty ficheView.niveauAtteinteSuggere}"><p class="hx-field__help"><i class="pi pi-info-circle"></i> Suggestion d'après le taux de réalisation : <b>#{ficheView.niveauAtteinteLabel(ficheView.niveauAtteinteSuggere)}</b> (cochée automatiquement si vous ne choisissez pas).</p></ui:fragment>
+                                <p:inputTextarea value="#{ficheView.e.commentaireEvaluateur}" rows="4" autoResize="true" maxlength="4000" styleClass="hx-appr__ta" placeholder="Bilan de l'entretien : points forts, points de vigilance, atteinte globale des objectifs…"/>
+                                <p:outputLabel value="Propositions – recommandations" styleClass="hx-appr__lbl"/>
+                                <p:inputTextarea value="#{ficheView.e.propositions}" rows="2" autoResize="true" maxlength="4000" styleClass="hx-appr__ta" placeholder="Mutation, formation, avancement catégoriel, accompagnement…"/>
+                            </ui:fragment>
+                            <ui:fragment rendered="#{not ficheView.saisieN1}">
+                                <ul class="hx-checks"><ui:repeat value="#{ficheView.niveauxAtteinte}" var="na"><li class="#{na eq ficheView.e.niveauAtteinte ? 'is-on' : ''}"><i class="pi #{na eq ficheView.e.niveauAtteinte ? 'pi-check-square' : 'pi-stop'}"></i> #{ficheView.niveauAtteinteLabel(na)}</li></ui:repeat></ul>
+                                <p class="hx-appr__txt #{empty ficheView.e.commentaireEvaluateur ? 'hx-muted' : ''}">#{empty ficheView.e.commentaireEvaluateur ? 'Non renseignée.' : ficheView.e.commentaireEvaluateur}</p>
+                                <ui:fragment rendered="#{not empty ficheView.e.propositions}"><p class="hx-appr__txt"><b>Propositions – recommandations :</b> #{ficheView.e.propositions}</p></ui:fragment>
+                            </ui:fragment>
+                        </section>
+
+                        <section class="hx-appr">
+                            <header><strong>Visa du N+2</strong><small>#{empty ficheView.e.n2 ? '' : ficheView.e.n2.nomComplet}<ui:fragment rendered="#{not empty ficheView.e.dateVisaN2}"> · <h:outputText value="#{ficheView.e.dateVisaN2}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></ui:fragment></small></header>
+                            <ui:fragment rendered="#{ficheView.saisieN2}">
+                                <p:inputTextarea value="#{ficheView.e.visaN2}" rows="2" autoResize="true" maxlength="2000" styleClass="hx-appr__ta" placeholder="Observations du supérieur hiérarchique intermédiaire (facultatif)"/>
+                                <div class="hx-appr__act"><p:commandButton value="Apposer mon visa" icon="pi pi-check" process="@form" update="@form :globalGrowl" actionListener="#{ficheView.viser}"/></div>
+                            </ui:fragment>
+                            <ui:fragment rendered="#{not ficheView.saisieN2}"><p class="hx-appr__txt #{empty ficheView.e.dateVisaN2 ? 'hx-muted' : ''}">#{empty ficheView.e.dateVisaN2 ? 'En attente.' : (empty ficheView.e.visaN2 ? 'Visé sans observation.' : ficheView.e.visaN2)}</p></ui:fragment>
+                        </section>
+
+                        <section class="hx-appr">
+                            <header><strong>Commentaires et propositions du salarié (N)</strong><small>#{ficheView.e.salarie.nomComplet}</small></header>
+                            <ui:fragment rendered="#{ficheView.commentaireSalarie}">
+                                <p:selectOneRadio value="#{ficheView.e.souhaitSalarie}" layout="responsive" columns="2" styleClass="hx-check" unselectable="true">
+                                    <f:selectItems value="#{ficheView.souhaits}" var="so" itemLabel="#{ficheView.souhaitLabel(so)}" itemValue="#{so}"/>
+                                </p:selectOneRadio>
+                                <p:inputTextarea value="#{ficheView.e.commentaireSalarie}" rows="3" autoResize="true" maxlength="4000" styleClass="hx-appr__ta" placeholder="Votre point de vue sur l'évaluation, vos propositions, vos souhaits d'évolution…"/>
+                            </ui:fragment>
+                            <ui:fragment rendered="#{not ficheView.commentaireSalarie}">
+                                <ul class="hx-checks"><ui:repeat value="#{ficheView.souhaits}" var="so"><li class="#{so eq ficheView.e.souhaitSalarie ? 'is-on' : ''}"><i class="pi #{so eq ficheView.e.souhaitSalarie ? 'pi-check-square' : 'pi-stop'}"></i> #{ficheView.souhaitLabel(so)}</li></ui:repeat></ul>
+                                <p class="hx-appr__txt #{empty ficheView.e.commentaireSalarie ? 'hx-muted' : ''}">#{empty ficheView.e.commentaireSalarie ? 'Non renseignés.' : ficheView.e.commentaireSalarie}</p>
+                            </ui:fragment>
+                        </section>
+
+                        <section class="hx-appr">
+                            <header><strong>Avis du directeur</strong><small>#{empty ficheView.e.directeur ? '' : ficheView.e.directeur.nomComplet}<ui:fragment rendered="#{not empty ficheView.e.dateAvisDirecteur}"> · <h:outputText value="#{ficheView.e.dateAvisDirecteur}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></ui:fragment></small></header>
+                            <ui:fragment rendered="#{ficheView.saisieDirecteur}">
+                                <p:outputLabel value="Appréciation générale du travail du collaborateur" styleClass="hx-appr__lbl"/>
+                                <p:inputTextarea value="#{ficheView.e.avisDirecteur}" rows="3" autoResize="true" maxlength="4000" styleClass="hx-appr__ta"/>
+                                <p:outputLabel value="Demandes à valider" styleClass="hx-appr__lbl"/>
+                                <p:inputTextarea value="#{ficheView.e.demandesAValider}" rows="2" autoResize="true" maxlength="4000" styleClass="hx-appr__ta" placeholder="Formations, mutation, avancement… validés ou non"/>
+                                <p:outputLabel value="Autres propositions" styleClass="hx-appr__lbl"/>
+                                <p:inputTextarea value="#{ficheView.e.autresPropositions}" rows="2" autoResize="true" maxlength="4000" styleClass="hx-appr__ta"/>
+                                <div class="hx-appr__act"><p:commandButton value="#{ficheView.revisionDirecteur ? 'Rendre mon avis (avec mes corrections)' : 'Enregistrer mon avis'}" icon="pi pi-check" process="@form" update="@form :globalGrowl" actionListener="#{ficheView.donnerAvis}"/></div>
+                            </ui:fragment>
+                            <ui:fragment rendered="#{not ficheView.saisieDirecteur}">
+                                <p class="hx-appr__txt #{empty ficheView.e.dateAvisDirecteur ? 'hx-muted' : ''}"><b>Appréciation générale :</b> #{empty ficheView.e.dateAvisDirecteur ? 'En attente.' : (empty ficheView.e.avisDirecteur ? 'Avis favorable sans observation.' : ficheView.e.avisDirecteur)}</p>
+                                <ui:fragment rendered="#{not empty ficheView.e.demandesAValider}"><p class="hx-appr__txt"><b>Demandes à valider :</b> #{ficheView.e.demandesAValider}</p></ui:fragment>
+                                <ui:fragment rendered="#{not empty ficheView.e.autresPropositions}"><p class="hx-appr__txt"><b>Autres propositions :</b> #{ficheView.e.autresPropositions}</p></ui:fragment>
+                            </ui:fragment>
+                        </section>
+
+                        <ui:fragment rendered="#{ficheView.validationDcht or not empty ficheView.e.commentaireDcht}">
+                            <section class="hx-appr">
+                                <header><strong>Contrôle DCHT</strong><small><ui:fragment rendered="#{not empty ficheView.e.dateValidation}">validée le <h:outputText value="#{ficheView.e.dateValidation}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></ui:fragment></small></header>
+                                <ui:fragment rendered="#{ficheView.validationDcht}"><p:inputTextarea value="#{ficheView.e.commentaireDcht}" rows="2" autoResize="true" maxlength="4000" styleClass="hx-appr__ta" placeholder="Observation de conformité (facultatif)"/></ui:fragment>
+                                <ui:fragment rendered="#{not ficheView.validationDcht}"><p class="hx-appr__txt">#{ficheView.e.commentaireDcht}</p></ui:fragment>
+                            </section>
+                        </ui:fragment>
+                    </div>
+                </div>
+
+                <!-- Latéral -->
+                <aside class="hx-fiche__side">
+                    <h:panelGroup id="synth" layout="block" styleClass="hx-card hx-fiche__block hx-score">
+                        <h3 class="hx-fiche__h">Synthèse</h3>
+                        <ui:fragment rendered="#{not empty ficheView.noteApercu}">
+                            <div class="hx-score__note"><b>#{ficheView.noteApercu}</b><span>/20</span></div>
+                            <div class="hx-score__appr hx-score__appr--#{ficheView.appreciationApercu eq 'Excellent' or ficheView.appreciationApercu eq 'Bon' ? 'ok' : (ficheView.appreciationApercu eq 'Moyennement bon' ? 'mid' : 'ko')}">#{ficheView.appreciationApercu}</div>
+                            <ul class="hx-synth">
+                                <li><span>Taux de réalisation (N+1)</span><b>#{ficheView.scoreApercu} %</b></li>
+                                <li><span>Objectifs notés</span><b>#{ficheView.nbObjectifsNotes} / #{ficheView.e.objectifs.size()}</b></li>
+                                <ui:fragment rendered="#{ficheView.nbNonApplicables gt 0}"><li><span>Non applicables (exclus)</span><b>#{ficheView.nbNonApplicables}</b></li></ui:fragment>
+                                <li><span>Auto-évalués</span><b>#{ficheView.nbAutoEval} / #{ficheView.e.objectifs.size()}</b></li>
+                            </ul>
+                            <ui:fragment rendered="#{ficheView.e.statut ne 'EVALUEE' and ficheView.e.statut ne 'VALIDEE'}"><p class="hx-field__help"><i class="pi pi-info-circle"></i> Note provisoire, figée à la clôture de l'évaluation par le N+1.</p></ui:fragment>
+                        </ui:fragment>
+                        <ui:fragment rendered="#{empty ficheView.noteApercu}">
+                            <ul class="hx-synth">
+                                <li><span>Objectifs à apprécier</span><b>#{ficheView.e.objectifs.size()}</b></li>
+                                <li><span>Auto-évalués</span><b>#{ficheView.nbAutoEval} / #{ficheView.e.objectifs.size()}</b></li>
+                                <li><span>Compétences</span><b>#{ficheView.e.criteres.size()}</b></li>
+                            </ul>
+                            <p class="hx-field__help"><i class="pi pi-info-circle"></i> La note /20 apparaît dès que le N+1 renseigne les pourcentages réalisés.</p>
+                        </ui:fragment>
+                    </h:panelGroup>
+
+                    <!-- Actions -->
+                    <div class="hx-card hx-fiche__block hx-actions">
+                        <h3 class="hx-fiche__h">Actions</h3>
+                        <ui:fragment rendered="#{ficheView.saisieSalarie}">
+                            <p:commandButton value="Enregistrer le brouillon" icon="pi pi-save" styleClass="hx-btn-secondary" process="@form" update="@form :globalGrowl" actionListener="#{ficheView.enregistrer}"/>
+                            <p:commandButton value="Soumettre mon auto-évaluation" icon="pi pi-send" process="@form" update="@form :globalGrowl" actionListener="#{ficheView.soumettre}">
+                                <p:confirm header="Soumettre l'auto-évaluation" message="Votre auto-évaluation sera transmise à votre N+1. Vous ne pourrez plus la modifier sauf retour pour correction." icon="pi pi-send"/>
+                            </p:commandButton>
+                        </ui:fragment>
+                        <ui:fragment rendered="#{ficheView.commentaireSalarie and not ficheView.saisieSalarie}">
+                            <p:commandButton value="Enregistrer mes commentaires" icon="pi pi-save" styleClass="hx-btn-secondary" process="@form" update="@form :globalGrowl" actionListener="#{ficheView.enregistrer}"/>
+                        </ui:fragment>
+                        <ui:fragment rendered="#{ficheView.saisieN1}">
+                            <p:commandButton value="Enregistrer le brouillon" icon="pi pi-save" styleClass="hx-btn-secondary" process="@form" update="@form :globalGrowl" actionListener="#{ficheView.enregistrer}"/>
+                            <p:commandButton value="Transmettre au directeur" icon="pi pi-send" process="@form" update="@form :globalGrowl" actionListener="#{ficheView.evaluer}">
+                                <p:confirm header="Transmettre l'évaluation" message="La note /20 sera calculée et la fiche transmise au N+2 (visa), au directeur (avis) puis à la DCHT (validation). Vous pourrez la rouvrir tant qu'elle n'est pas validée." icon="pi pi-send"/>
+                            </p:commandButton>
+                            <p:commandButton value="Retourner au salarié" icon="pi pi-undo" styleClass="hx-btn-secondary" process="@this" update=":dlgRetour" oncomplete="PF('dlgRetour').show()"/>
+                        </ui:fragment>
+                        <ui:fragment rendered="#{ficheView.revisionDirecteur}">
+                            <p:commandButton value="Enregistrer mes corrections" icon="pi pi-save" styleClass="hx-btn-secondary" process="@form" update="@form :globalGrowl" actionListener="#{ficheView.enregistrerRevision}"/>
+                            <p class="hx-field__help"><i class="pi pi-info-circle"></i> Rendez ensuite votre avis en partie V : la note sera recalculée avec vos corrections.</p>
+                        </ui:fragment>
+                        <ui:fragment rendered="#{ficheView.peutRouvrirN1}">
+                            <p:commandButton value="Rouvrir mon évaluation" icon="pi pi-unlock" styleClass="hx-btn-secondary" process="@this" update="@form :globalGrowl" actionListener="#{ficheView.rouvrirN1}">
+                                <p:confirm header="Rouvrir l'évaluation" message="La fiche revient à l'étape « évaluation N+1 » pour correction, puis devra être retransmise." icon="pi pi-unlock"/>
+                            </p:commandButton>
+                        </ui:fragment>
+                        <ui:fragment rendered="#{ficheView.validationDcht}">
+                            <p:commandButton value="Valider la fiche" icon="pi pi-verified" process="@form" update="@form :globalGrowl" actionListener="#{ficheView.valider}">
+                                <p:confirm header="Valider la fiche" message="La fiche devient définitive et archivée." icon="pi pi-verified"/>
+                            </p:commandButton>
+                            <p:commandButton value="Retourner au N+1" icon="pi pi-undo" styleClass="hx-btn-secondary" process="@this" update=":dlgRetour" oncomplete="PF('dlgRetour').show()"/>
+                        </ui:fragment>
+                        <ui:fragment rendered="#{ficheView.lectureSeule}"><p class="hx-muted"><i class="pi pi-lock"></i> Lecture seule à cette étape.</p></ui:fragment>
+                    </div>
+
+                    <div class="hx-card hx-fiche__block">
+                        <h3 class="hx-fiche__h">Grille de notation</h3>
+                        <table class="hx-grille">
+                            <thead><tr><th>Performance</th><th>Note /20</th><th>Appréciation</th></tr></thead>
+                            <tbody>
+                                <tr><td>100 %</td><td>20</td><td>Excellent</td></tr>
+                                <tr><td>85 à 99 %</td><td>17 à 19</td><td>Bon</td></tr>
+                                <tr><td>70 à 84 %</td><td>15 à 16</td><td>Moyennement bon</td></tr>
+                                <tr><td>51 à 69 %</td><td>10 à 14</td><td>Insuffisant</td></tr>
+                                <tr><td>&lt; 50 %</td><td>&lt; 10</td><td>Mauvais</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </aside>
+            </div>
+
+            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" responsive="true" width="460">
+                <p:commandButton value="Annuler" type="button" styleClass="ui-confirmdialog-no hx-btn-secondary" icon="pi pi-times"/>
+                <p:commandButton value="Confirmer" type="button" styleClass="ui-confirmdialog-yes" icon="pi pi-check"/>
+            </p:confirmDialog>
+        </h:form>
+
+        <!-- Dialogues -->
+        <p:dialog id="dlgTravail" widgetVar="dlgTravail" header="Travail réalisé hors objectifs" modal="true" responsive="true" width="640" fitViewport="true" closeOnEscape="true" showEffect="fade" hideEffect="fade">
+            <h:form id="frmTravail">
+                <p:messages showDetail="true" closable="true"/>
+                <div class="hx-form">
+                    <div class="hx-field"><p:outputLabel for="tAct" value="Type de travaux / activité"/><p:inputText id="tAct" value="#{ficheView.travailEdit.activite}" maxlength="200" placeholder="Missions professionnelles"/></div>
+                    <div class="hx-field"><p:outputLabel for="tLib" value="Travail réalisé"/><p:inputTextarea id="tLib" value="#{ficheView.travailEdit.libelle}" rows="2" autoResize="true" maxlength="600" required="true" requiredMessage="Décrivez le travail"/></div>
+                    <div class="hx-field__grid hx-field__grid--3">
+                        <div class="hx-field"><p:outputLabel for="tInd" value="Indicateur"/><p:inputText id="tInd" value="#{ficheView.travailEdit.indicateur}" maxlength="400"/></div>
+                        <div class="hx-field"><p:outputLabel for="tAtt" value="Attendu (%)"/><p:inputNumber id="tAtt" value="#{ficheView.travailEdit.attendu}" minValue="0" maxValue="100" decimalPlaces="0"/></div>
+                        <div class="hx-field"><p:outputLabel for="tRea" value="Réalisé (%)"/><p:inputNumber id="tRea" value="#{ficheView.travailEdit.realise}" minValue="0" maxValue="100" decimalPlaces="0"/></div>
+                    </div>
+                    <div class="hx-field"><p:outputLabel for="tCom" value="Commentaire"/><p:inputTextarea id="tCom" value="#{ficheView.travailEdit.commentaire}" rows="2" autoResize="true" maxlength="2000"/></div>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgTravail').hide()"/>
+                    <p:commandButton value="Enregistrer" icon="pi pi-check" process="@form" update="@form :secTravaux :globalGrowl" actionListener="#{ficheView.enregistrerTravail}" oncomplete="if (!args.validationFailed) PF('dlgTravail').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog id="dlgFormation" widgetVar="dlgFormation" header="Souhait de formation" modal="true" responsive="true" width="560" closeOnEscape="true" showEffect="fade" hideEffect="fade">
+            <h:form id="frmFormation">
+                <p:messages showDetail="true" closable="true"/>
+                <div class="hx-form">
+                    <div class="hx-field"><p:outputLabel for="fInt" value="Formation demandée"/><p:inputText id="fInt" value="#{ficheView.formationEdit.intitule}" maxlength="200" required="true" requiredMessage="Indiquez la formation"/></div>
+                    <div class="hx-field"><p:outputLabel for="fMot" value="Motivation"/><p:inputTextarea id="fMot" value="#{ficheView.formationEdit.justification}" rows="2" autoResize="true" maxlength="1000"/></div>
+                    <div class="hx-field">
+                        <p:outputLabel for="fPri" value="Priorité"/>
+                        <p:selectOneMenu id="fPri" value="#{ficheView.formationEdit.priorite}" styleClass="hx-select">
+                            <f:selectItem itemLabel="Haute" itemValue="HAUTE"/><f:selectItem itemLabel="Moyenne" itemValue="MOYENNE"/><f:selectItem itemLabel="Basse" itemValue="BASSE"/>
+                        </p:selectOneMenu>
+                    </div>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgFormation').hide()"/>
+                    <p:commandButton value="Enregistrer" icon="pi pi-check" process="@form" update="@form :secFormations :globalGrowl" actionListener="#{ficheView.enregistrerFormation}" oncomplete="if (!args.validationFailed) PF('dlgFormation').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog id="dlgRetour" widgetVar="dlgRetour" header="Retourner la fiche pour correction" modal="true" responsive="true" width="520" closeOnEscape="true" showEffect="fade" hideEffect="fade">
+            <h:form id="frmRetour">
+                <p:messages showDetail="true" closable="true"/>
+                <div class="hx-form">
+                    <div class="hx-field"><p:outputLabel for="rMot" value="Motif du retour"/><p:inputTextarea id="rMot" value="#{ficheView.motif}" rows="3" autoResize="true" maxlength="1000" required="true" requiredMessage="Indiquez le motif"/></div>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgRetour').hide()"/>
+                    <p:commandButton value="Retourner" icon="pi pi-undo" styleClass="hx-btn-danger" process="@form" update="@form :frmEval :globalGrowl"
+                                     actionListener="#{ficheView.retourner}" oncomplete="if (!args.validationFailed) PF('dlgRetour').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>

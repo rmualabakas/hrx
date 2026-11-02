@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Groupes d'utilisateurs"/>
+    <ui:param name="pageSubtitle" value="Groupes de collaborateurs"/>
+    <ui:define name="title">Groupes d'utilisateurs</ui:define>
+
+    <ui:define name="content">
+        <h:form id="frmGrp" prependId="false">
+
+            <div class="hx-page-head">
+                <div>
+                    <h2>Groupes d'utilisateurs</h2>
+                    <p>Un groupe permet d'écrire ou de donner un accès à plusieurs collaborateurs en une fois : comité, managers d'une direction, pilotes de campagne.</p>
+                </div>
+                <div class="hx-page-head__actions">
+                    <p:commandButton value="Nouveau groupe" icon="pi pi-plus" process="@this"
+                                     rendered="#{privilegeBean.hasPrivilege('GRP_EDIT')}"
+                                     actionListener="#{groupeUtilisateurBean.nouveau}" update="dlgGrp" oncomplete="PF('dlgGrp').show()"/>
+                </div>
+            </div>
+
+            <div class="hx-grid hx-grid--kpi hx-kpis-compact">
+                <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-th-large"></i> Groupes actifs</span><span class="hx-kpi__value">#{groupeUtilisateurBean.nbActifs}</span></div>
+                <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-users"></i> Appartenances</span><span class="hx-kpi__value hx-kpi__value--gold">#{groupeUtilisateurBean.nbMembres}</span></div>
+            </div>
+
+            <h:panelGroup id="grille" layout="block">
+                <ui:fragment rendered="#{empty groupeUtilisateurBean.groupes}">
+                    <div class="hx-card"><div class="hx-empty"><i class="pi pi-users"></i><strong>Aucun groupe</strong>Créez un premier groupe, par exemple « Comité de validation » ou « Managers DCHT ».</div></div>
+                </ui:fragment>
+                <div class="hx-grid hx-grid--cards">
+                    <ui:repeat value="#{groupeUtilisateurBean.groupes}" var="g">
+                        <div class="hx-card hx-dir #{g.statut eq 1 ? '' : 'is-off'}">
+                            <div class="hx-dir__head">
+                                <span class="hx-dir__abrege"><i class="pi pi-users"></i> #{groupeUtilisateurBean.membreCount(g)}</span>
+                                <span class="hx-badge #{g.statut eq 1 ? 'hx-badge--done' : 'hx-badge--draft'}">#{g.statut eq 1 ? 'Actif' : 'Inactif'}</span>
+                            </div>
+                            <h3 class="hx-dir__nom">#{g.nom}</h3>
+                            <p class="hx-dir__desc">#{empty g.description ? 'Aucune description.' : g.description}</p>
+                            <div class="hx-members">
+                                <ui:repeat value="#{g.membres.toArray()}" var="m" varStatus="st">
+                                    <ui:fragment rendered="#{st.index lt 6}"><span class="hx-avatar hx-avatar--xs" title="#{m.nomComplet}">#{groupeUtilisateurBean.initiales(m)}</span></ui:fragment>
+                                </ui:repeat>
+                                <ui:fragment rendered="#{groupeUtilisateurBean.membreCount(g) gt 6}"><span class="hx-avatar hx-avatar--xs hx-avatar--more">+#{groupeUtilisateurBean.membreCount(g) - 6}</span></ui:fragment>
+                                <ui:fragment rendered="#{groupeUtilisateurBean.membreCount(g) eq 0}"><span class="hx-muted">Aucun membre</span></ui:fragment>
+                            </div>
+                            <div class="hx-dir__actions">
+                                <ui:fragment rendered="#{privilegeBean.hasPrivilege('GRP_EDIT')}">
+                                    <p:commandLink process="@this" title="Modifier" styleClass="hx-icon-btn"
+                                                   actionListener="#{groupeUtilisateurBean.modifier(g)}" update="dlgGrp" oncomplete="PF('dlgGrp').show()"><i class="pi pi-pencil"></i></p:commandLink>
+                                    <p:commandLink process="@this" title="#{g.statut eq 1 ? 'Désactiver' : 'Activer'}" styleClass="hx-icon-btn"
+                                                   actionListener="#{groupeUtilisateurBean.changeStatus(g.statut eq 1 ? 0 : 1, g)}" update="grille"><i class="pi #{g.statut eq 1 ? 'pi-eye-slash' : 'pi-eye'}"></i></p:commandLink>
+                                    <p:commandLink process="@this" title="Supprimer" styleClass="hx-icon-btn hx-icon-btn--danger"
+                                                   actionListener="#{groupeUtilisateurBean.remove(g)}" update="grille">
+                                        <p:confirm header="Supprimer le groupe" message="Supprimer définitivement le groupe « #{g.nom} » ?" icon="pi pi-exclamation-triangle"/>
+                                        <i class="pi pi-trash"></i></p:commandLink>
+                                </ui:fragment>
+                            </div>
+                        </div>
+                    </ui:repeat>
+                </div>
+            </h:panelGroup>
+
+            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" responsive="true" width="440">
+                <p:commandButton value="Annuler" type="button" styleClass="ui-confirmdialog-no hx-btn-secondary" icon="pi pi-times"/>
+                <p:commandButton value="Supprimer" type="button" styleClass="ui-confirmdialog-yes hx-btn-danger" icon="pi pi-trash"/>
+            </p:confirmDialog>
+        </h:form>
+
+        <p:dialog id="dlgGrp" widgetVar="dlgGrp" header="#{groupeUtilisateurBean.creation ? 'Nouveau groupe' : 'Modifier le groupe'}"
+                  modal="true" responsive="true" width="640" fitViewport="true" closeOnEscape="true" showEffect="fade" hideEffect="fade" styleClass="hx-dialog-lg">
+            <h:form id="frmGrpEdit">
+                <p:messages showDetail="true" closable="true"/>
+                <div class="hx-form">
+                    <div class="hx-field"><p:outputLabel for="gNom" value="Nom du groupe"/><p:inputText id="gNom" value="#{groupeUtilisateurBean.cible.nom}" required="true" requiredMessage="Le nom est obligatoire" maxlength="100" placeholder="Comité de validation"/></div>
+                    <div class="hx-field"><p:outputLabel for="gDesc" value="Description"/><p:inputTextarea id="gDesc" value="#{groupeUtilisateurBean.cible.description}" rows="2" autoResize="false" maxlength="500"/></div>
+                    <h4 class="hx-form__section">Membres</h4>
+                    <div class="hx-field">
+                        <p:pickList id="gMembres" value="#{groupeUtilisateurBean.membresPick}" var="u" itemLabel="#{u.nomComplet}" itemValue="#{u}"
+                                    converter="userConverter" showSourceFilter="true" showTargetFilter="true" filterMatchMode="contains"
+                                    responsive="true" styleClass="hx-picklist" showCheckbox="true">
+                            <f:facet name="sourceCaption">Collaborateurs</f:facet>
+                            <f:facet name="targetCaption">Membres du groupe</f:facet>
+                        </p:pickList>
+                    </div>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgGrp').hide()"/>
+                    <p:commandButton value="Enregistrer" icon="pi pi-check" process="@form" update="@form :grille :globalGrowl"
+                                     actionListener="#{groupeUtilisateurBean.enregistrer}"
+                                     oncomplete="if (!args.validationFailed) PF('dlgGrp').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>

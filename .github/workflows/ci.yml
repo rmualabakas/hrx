@@ -1,0 +1,28 @@
+name: HRX CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - name: Tests et packaging WAR
+        run: ./mvnw --batch-mode --no-transfer-progress verify
+      - name: Publier le WAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: hrx-war
+          path: target/hrx.war
+          if-no-files-found: error

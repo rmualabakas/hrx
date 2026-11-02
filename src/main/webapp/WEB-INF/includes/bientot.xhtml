@@ -1,0 +1,24 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui">
+    <!-- Écran provisoire : titre/description de la page, en attendant son implémentation. -->
+    <div class="hx-page-head">
+        <div>
+            <h2>#{pageTitle}</h2>
+            <p>#{pageSubtitle}</p>
+        </div>
+    </div>
+    <section class="hx-card">
+        <div class="hx-card__body hx-card__body--flush">
+            <div class="hx-empty">
+                <i class="pi pi-wrench"></i>
+                <strong>Écran en cours de réalisation</strong>
+                Cette fonctionnalité fait partie du périmètre HRX et sera livrée dans une prochaine itération.
+                <div style="margin-top: var(--hx-s4);">
+                    <p:button value="Retour au tableau de bord" icon="pi pi-home" outcome="/ui/home" styleClass="hx-btn-secondary"/>
+                </div>
+            </div>
+        </div>
+    </section>
+</ui:composition>

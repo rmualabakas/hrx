@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Modules"/>
+    <ui:param name="pageSubtitle" value="Modules, menus et privilèges"/>
+    <ui:define name="title">Modules</ui:define>
+
+    <ui:define name="head">
+        <h:outputStylesheet library="hrx" name="css/hrx-admin.css"/>
+    </ui:define>
+
+    <ui:define name="scripts">
+        <script>
+            function hrxToggleFold(btn) {
+                var tree = btn.closest('.hx-tree');
+                var open = tree.classList.toggle('is-open');
+                btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            }
+        </script>
+    </ui:define>
+
+    <ui:define name="content">
+        <h:form id="frmModules" prependId="false">
+
+            <div class="hx-page-head">
+                <div>
+                    <h2>Modules</h2>
+                    <p>Un module regroupe des menus, et chaque menu a ses privilèges. On les attribue ensuite aux profils dans « Profils et habilitations ».</p>
+                </div>
+                <div class="hx-page-head__actions">
+                    <p:commandButton value="Nouveau module" icon="pi pi-plus" process="@this"
+                                     actionListener="#{moduleAdminView.newModule}" update="dlgModule"
+                                     oncomplete="PF('dlgModule').show()"/>
+                </div>
+            </div>
+
+            <div class="hx-admin-grid">
+
+                <!-- Volet 1 : modules -->
+                <section class="hx-card hx-pane" aria-label="Modules">
+                    <div class="hx-pane__head">
+                        <h3>Modules <span class="hx-count">#{moduleAdminView.modules.size()}</span></h3>
+                        <div class="hx-pane__search">
+                            <i class="pi pi-search"></i>
+                            <p:inputText id="filtre" value="#{moduleAdminView.filtre}" placeholder="Filtrer">
+                                <p:ajax event="keyup" update="listeModules" delay="250"/>
+                            </p:inputText>
+                        </div>
+                    </div>
+                    <h:panelGroup id="listeModules" layout="block" styleClass="hx-pane__body">
+                        <ui:repeat value="#{moduleAdminView.modulesFiltres}" var="m">
+                            <div class="hx-item #{moduleAdminView.isModuleSelected(m) ? 'is-selected' : ''} #{m.statut eq 1 ? '' : 'is-off'}">
+                                <p:commandLink styleClass="hx-item__main" process="@this"
+                                               actionListener="#{moduleAdminView.selectModule(m)}"
+                                               update="listeModules paneMenus panePrivileges">
+                                    <i class="hx-item__icon #{m.icone}"></i>
+                                    <span class="hx-item__text">
+                                        <strong>#{m.nom}</strong>
+                                        <small>#{m.statut eq 1 ? 'Actif' : 'Inactif'}</small>
+                                    </span>
+                                    <i class="pi pi-angle-right hx-item__chevron"></i>
+                                </p:commandLink>
+                                <div class="hx-item__actions">
+                                    <p:commandLink process="@this" title="Modifier" styleClass="hx-icon-btn"
+                                                   actionListener="#{moduleAdminView.editModule(m)}" update="dlgModule"
+                                                   oncomplete="PF('dlgModule').show()"><i class="pi pi-pencil"></i></p:commandLink>
+                                    <p:commandLink process="@this" title="#{m.statut eq 1 ? 'Désactiver' : 'Activer'}" styleClass="hx-icon-btn"
+                                                   actionListener="#{moduleAdminView.toggleModule(m)}" update="listeModules">
+                                        <i class="pi #{m.statut eq 1 ? 'pi-eye-slash' : 'pi-eye'}"></i></p:commandLink>
+                                    <p:commandLink process="@this" title="Supprimer" styleClass="hx-icon-btn hx-icon-btn--danger"
+                                                   actionListener="#{moduleAdminView.removeModule(m)}" update="listeModules paneMenus panePrivileges">
+                                        <p:confirm header="Supprimer le module" message="Supprimer le module « #{m.nom} » et tous ses menus ?" icon="pi pi-exclamation-triangle"/>
+                                        <i class="pi pi-trash"></i></p:commandLink>
+                                </div>
+                            </div>
+                        </ui:repeat>
+                        <ui:fragment rendered="#{empty moduleAdminView.modulesFiltres}">
+                            <div class="hx-empty hx-empty--sm"><strong>Aucun module</strong>Créez un premier module pour y ranger des menus.</div>
+                        </ui:fragment>
+                    </h:panelGroup>
+                </section>
+
+                <!-- Volet 2 : menus du module -->
+                <h:panelGroup id="paneMenus" layout="block" styleClass="hx-card hx-pane">
+                    <div class="hx-pane__head">
+                        <h3>
+                            Menus
+                            <ui:fragment rendered="#{not empty moduleAdminView.selectedModule}">
+                                <span class="hx-count">#{moduleAdminView.menus.size()}</span>
+                            </ui:fragment>
+                        </h3>
+                        <p:commandButton value="Ajouter" icon="pi pi-plus" styleClass="hx-btn-secondary hx-btn-sm" process="@this"
+                                         rendered="#{not empty moduleAdminView.selectedModule}"
+                                         actionListener="#{moduleAdminView.newMenu}" update="dlgMenu"
+                                         oncomplete="PF('dlgMenu').show()"/>
+                    </div>
+                    <div class="hx-pane__caption" >
+                        <ui:fragment rendered="#{not empty moduleAdminView.selectedModule}">
+                            Module <strong>#{moduleAdminView.selectedModule.nom}</strong>
+                        </ui:fragment>
+                    </div>
+                    <div class="hx-pane__body">
+                        <ui:repeat value="#{moduleAdminView.menusRacine}" var="mn">
+                            <div class="hx-tree #{moduleAdminView.hasEnfants(mn) ? 'has-children' : ''} #{moduleAdminView.isOuvert(mn) ? 'is-open' : ''}">
+                                <div class="hx-item #{moduleAdminView.isMenuSelected(mn) ? 'is-selected' : ''} #{mn.statut eq 1 ? '' : 'is-off'}">
+                                    <p:commandLink styleClass="hx-item__main" process="@this"
+                                                   actionListener="#{moduleAdminView.selectMenu(mn)}"
+                                                   update="paneMenus panePrivileges">
+                                        <i class="hx-item__icon #{mn.icone}"></i>
+                                        <span class="hx-item__text">
+                                            <strong>#{mn.nom}</strong>
+                                            <small><code>#{mn.url eq '#' ? 'dossier' : '/ui/'.concat(mn.url)}</code></small>
+                                        </span>
+                                        <i class="pi pi-angle-right hx-item__chevron"></i>
+                                    </p:commandLink>
+                                    <div class="hx-item__actions">
+                                        <p:commandLink process="@this" title="Modifier" styleClass="hx-icon-btn"
+                                                       actionListener="#{moduleAdminView.editMenu(mn)}" update="dlgMenu"
+                                                       oncomplete="PF('dlgMenu').show()"><i class="pi pi-pencil"></i></p:commandLink>
+                                        <p:commandLink process="@this" title="#{mn.statut eq 1 ? 'Désactiver' : 'Activer'}" styleClass="hx-icon-btn"
+                                                       actionListener="#{moduleAdminView.toggleMenu(mn)}" update="paneMenus">
+                                            <i class="pi #{mn.statut eq 1 ? 'pi-eye-slash' : 'pi-eye'}"></i></p:commandLink>
+                                        <p:commandLink process="@this" title="Supprimer" styleClass="hx-icon-btn hx-icon-btn--danger"
+                                                       actionListener="#{moduleAdminView.removeMenu(mn)}" update="paneMenus panePrivileges">
+                                            <p:confirm header="Supprimer le menu" message="Supprimer le menu « #{mn.nom} » et ses privilèges ?" icon="pi pi-exclamation-triangle"/>
+                                            <i class="pi pi-trash"></i></p:commandLink>
+                                    </div>
+                                    <ui:fragment rendered="#{moduleAdminView.hasEnfants(mn)}">
+                                        <button type="button" class="hx-fold" title="Ouvrir / fermer" aria-expanded="#{moduleAdminView.isOuvert(mn)}"
+                                                onclick="hrxToggleFold(this)"><i class="pi pi-chevron-down"></i></button>
+                                    </ui:fragment>
+                                </div>
+                                <ui:fragment rendered="#{moduleAdminView.hasEnfants(mn)}">
+                                    <div class="hx-tree__children">
+                                        <ui:repeat value="#{moduleAdminView.enfantsDe(mn)}" var="ch">
+                                            <div class="hx-item #{moduleAdminView.isMenuSelected(ch) ? 'is-selected' : ''} #{ch.statut eq 1 ? '' : 'is-off'}">
+                                    <p:commandLink styleClass="hx-item__main" process="@this"
+                                                   actionListener="#{moduleAdminView.selectMenu(ch)}"
+                                                   update="paneMenus panePrivileges">
+                                        <i class="hx-item__icon #{ch.icone}"></i>
+                                        <span class="hx-item__text">
+                                            <strong>#{ch.nom}</strong>
+                                            <small><code>#{ch.url eq '#' ? 'dossier' : '/ui/'.concat(ch.url)}</code></small>
+                                        </span>
+                                        <i class="pi pi-angle-right hx-item__chevron"></i>
+                                    </p:commandLink>
+                                    <div class="hx-item__actions">
+                                        <p:commandLink process="@this" title="Modifier" styleClass="hx-icon-btn"
+                                                       actionListener="#{moduleAdminView.editMenu(ch)}" update="dlgMenu"
+                                                       oncomplete="PF('dlgMenu').show()"><i class="pi pi-pencil"></i></p:commandLink>
+                                        <p:commandLink process="@this" title="#{ch.statut eq 1 ? 'Désactiver' : 'Activer'}" styleClass="hx-icon-btn"
+                                                       actionListener="#{moduleAdminView.toggleMenu(ch)}" update="paneMenus">
+                                            <i class="pi #{ch.statut eq 1 ? 'pi-eye-slash' : 'pi-eye'}"></i></p:commandLink>
+                                        <p:commandLink process="@this" title="Supprimer" styleClass="hx-icon-btn hx-icon-btn--danger"
+                                                       actionListener="#{moduleAdminView.removeMenu(ch)}" update="paneMenus panePrivileges">
+                                            <p:confirm header="Supprimer le menu" message="Supprimer le menu « #{ch.nom} » et ses privilèges ?" icon="pi pi-exclamation-triangle"/>
+                                            <i class="pi pi-trash"></i></p:commandLink>
+                                    </div>
+                                    
+                                </div>
+                                        </ui:repeat>
+                                    </div>
+                                </ui:fragment>
+                            </div>
+                        </ui:repeat>
+                        <ui:fragment rendered="#{empty moduleAdminView.selectedModule}">
+                            <div class="hx-empty hx-empty--sm"><i class="pi pi-arrow-left"></i><strong>Choisissez un module</strong>Ses menus s'afficheront ici.</div>
+                        </ui:fragment>
+                        <ui:fragment rendered="#{not empty moduleAdminView.selectedModule and empty moduleAdminView.menus}">
+                            <div class="hx-empty hx-empty--sm"><strong>Aucun menu</strong>Ajoutez un menu à ce module.</div>
+                        </ui:fragment>
+                    </div>
+                </h:panelGroup>
+
+                <!-- Volet 3 : privilèges du menu -->
+                <h:panelGroup id="panePrivileges" layout="block" styleClass="hx-card hx-pane">
+                    <div class="hx-pane__head">
+                        <h3>
+                            Privilèges
+                            <ui:fragment rendered="#{not empty moduleAdminView.selectedMenu}">
+                                <span class="hx-count">#{moduleAdminView.privileges.size()}</span>
+                            </ui:fragment>
+                        </h3>
+                        <p:commandButton value="Ajouter" icon="pi pi-plus" styleClass="hx-btn-secondary hx-btn-sm" process="@this"
+                                         rendered="#{not empty moduleAdminView.selectedMenu}"
+                                         actionListener="#{moduleAdminView.newPrivilege}" update="dlgPrivilege"
+                                         oncomplete="PF('dlgPrivilege').show()"/>
+                    </div>
+                    <div class="hx-pane__caption">
+                        <ui:fragment rendered="#{not empty moduleAdminView.selectedMenu}">
+                            Menu <strong>#{moduleAdminView.selectedMenu.nom}</strong>
+                        </ui:fragment>
+                    </div>
+                    <div class="hx-pane__body">
+                        <ui:repeat value="#{moduleAdminView.privileges}" var="pr">
+                            <div class="hx-item #{pr.statut eq 1 ? '' : 'is-off'}">
+                                <span class="hx-item__main">
+                                    <span class="hx-item__text">
+                                        <strong>#{pr.nom}</strong>
+                                        <small><code>#{pr.code}</code></small>
+                                    </span>
+                                </span>
+                                <div class="hx-item__actions">
+                                    <p:commandLink process="@this" title="Modifier" styleClass="hx-icon-btn"
+                                                   actionListener="#{moduleAdminView.editPrivilege(pr)}" update="dlgPrivilege"
+                                                   oncomplete="PF('dlgPrivilege').show()"><i class="pi pi-pencil"></i></p:commandLink>
+                                    <p:commandLink process="@this" title="#{pr.statut eq 1 ? 'Désactiver' : 'Activer'}" styleClass="hx-icon-btn"
+                                                   actionListener="#{moduleAdminView.togglePrivilege(pr)}" update="panePrivileges">
+                                        <i class="pi #{pr.statut eq 1 ? 'pi-eye-slash' : 'pi-eye'}"></i></p:commandLink>
+                                    <p:commandLink process="@this" title="Supprimer" styleClass="hx-icon-btn hx-icon-btn--danger"
+                                                   actionListener="#{moduleAdminView.removePrivilege(pr)}" update="panePrivileges">
+                                        <p:confirm header="Supprimer le privilège" message="Supprimer le privilège « #{pr.code} » ?" icon="pi pi-exclamation-triangle"/>
+                                        <i class="pi pi-trash"></i></p:commandLink>
+                                </div>
+                            </div>
+                        </ui:repeat>
+                        <ui:fragment rendered="#{empty moduleAdminView.selectedMenu}">
+                            <div class="hx-empty hx-empty--sm"><i class="pi pi-arrow-left"></i><strong>Choisissez un menu</strong>Ses privilèges s'afficheront ici.</div>
+                        </ui:fragment>
+                        <ui:fragment rendered="#{not empty moduleAdminView.selectedMenu and empty moduleAdminView.privileges}">
+                            <div class="hx-empty hx-empty--sm"><strong>Aucun privilège</strong>Un privilège est un droit fin (ex. <code>CAMP_CREATE</code>) testé dans les écrans.</div>
+                        </ui:fragment>
+                    </div>
+                </h:panelGroup>
+            </div>
+
+            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" responsive="true" width="420">
+                <p:commandButton value="Annuler" type="button" styleClass="ui-confirmdialog-no hx-btn-secondary" icon="pi pi-times"/>
+                <p:commandButton value="Supprimer" type="button" styleClass="ui-confirmdialog-yes hx-btn-danger" icon="pi pi-trash"/>
+            </p:confirmDialog>
+        </h:form>
+
+        <!-- Dialogue module -->
+        <p:dialog id="dlgModule" widgetVar="dlgModule" header="#{moduleAdminView.moduleEdit.id eq 0 ? 'Nouveau module' : 'Modifier le module'}"
+                  modal="true" responsive="true" width="480" closeOnEscape="true" showEffect="fade" hideEffect="fade">
+            <h:form id="frmModule">
+                <p:messages id="msgModule" showDetail="true" closable="true"/>
+                <div class="hx-form">
+                    <div class="hx-field">
+                        <p:outputLabel for="modNom" value="Nom du module"/>
+                        <p:inputText id="modNom" value="#{moduleAdminView.moduleEdit.nom}" required="true" requiredMessage="Le nom est obligatoire" maxlength="80" placeholder="Ex. Évaluations"/>
+                    </div>
+                    <div class="hx-field">
+                        <p:outputLabel for="modIcone" value="Icône"/>
+                        <div class="hx-field__row">
+                            <p:inputText id="modIcone" value="#{moduleAdminView.moduleEdit.icone}" placeholder="pi pi-star">
+                                <p:ajax event="keyup" update="modIconePreview" delay="200"/>
+                            </p:inputText>
+                            <h:panelGroup id="modIconePreview" styleClass="hx-icon-preview"><i class="#{empty moduleAdminView.moduleEdit.icone ? 'pi pi-folder' : moduleAdminView.moduleEdit.icone}"></i></h:panelGroup>
+                        </div>
+                        <small class="hx-field__help">Classe PrimeIcons, ex. <code>pi pi-users</code>, <code>pi pi-calendar</code>, <code>pi pi-chart-bar</code>.</small>
+                    </div>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgModule').hide()"/>
+                    <p:commandButton value="Enregistrer" icon="pi pi-check" process="@form" update="@form :listeModules :paneMenus :panePrivileges"
+                                     actionListener="#{moduleAdminView.saveModule}"
+                                     oncomplete="if (!args.validationFailed) PF('dlgModule').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <!-- Dialogue menu -->
+        <p:dialog id="dlgMenu" widgetVar="dlgMenu" header="#{moduleAdminView.menuEdit.id eq 0 ? 'Nouveau menu' : 'Modifier le menu'}"
+                  modal="true" responsive="true" width="520" closeOnEscape="true" showEffect="fade" hideEffect="fade">
+            <h:form id="frmMenu">
+                <p:messages id="msgMenu" showDetail="true" closable="true"/>
+                <div class="hx-form">
+                    <div class="hx-field">
+                        <p:outputLabel for="menuNom" value="Libellé"/>
+                        <p:inputText id="menuNom" value="#{moduleAdminView.menuEdit.nom}" required="true" requiredMessage="Le libellé est obligatoire" maxlength="80" placeholder="Ex. Campagnes"/>
+                    </div>
+                    <div class="hx-field">
+                        <p:outputLabel for="menuUrl" value="Page"/>
+                        <div class="hx-field__row">
+                            <span class="hx-field__prefix">/ui/</span>
+                            <p:inputText id="menuUrl" value="#{moduleAdminView.menuEdit.url}" required="true" requiredMessage="La page est obligatoire" maxlength="120" placeholder="campagnes"/>
+                        </div>
+                        <small class="hx-field__help">Nom de la page JSF sans extension, déclarée dans <code>pretty-config.xml</code>. Mettre <code>#</code> pour un simple dossier.</small>
+                    </div>
+                    <div class="hx-field__grid">
+                        <div class="hx-field">
+                            <p:outputLabel for="menuIcone" value="Icône"/>
+                            <div class="hx-field__row">
+                                <p:inputText id="menuIcone" value="#{moduleAdminView.menuEdit.icone}" placeholder="pi pi-calendar">
+                                    <p:ajax event="keyup" update="menuIconePreview" delay="200"/>
+                                </p:inputText>
+                                <h:panelGroup id="menuIconePreview" styleClass="hx-icon-preview"><i class="#{empty moduleAdminView.menuEdit.icone ? 'pi pi-circle' : moduleAdminView.menuEdit.icone}"></i></h:panelGroup>
+                            </div>
+                        </div>
+                        <div class="hx-field">
+                            <p:outputLabel for="menuParent" value="Menu parent"/>
+                            <p:selectOneMenu id="menuParent" value="#{moduleAdminView.menuEdit.parentId}" styleClass="hx-select">
+                                <f:selectItem itemLabel="Aucun (racine du module)" itemValue="0"/>
+                                <f:selectItems value="#{moduleAdminView.parentsPossibles}" var="pm" itemLabel="#{pm.nom}" itemValue="#{pm.id}"/>
+                            </p:selectOneMenu>
+                        </div>
+                    </div>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgMenu').hide()"/>
+                    <p:commandButton value="Enregistrer" icon="pi pi-check" process="@form" update="@form :paneMenus"
+                                     actionListener="#{moduleAdminView.saveMenu}"
+                                     oncomplete="if (!args.validationFailed) PF('dlgMenu').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <!-- Dialogue privilège -->
+        <p:dialog id="dlgPrivilege" widgetVar="dlgPrivilege" header="#{moduleAdminView.privilegeEdit.id eq 0 ? 'Nouveau privilège' : 'Modifier le privilège'}"
+                  modal="true" responsive="true" width="480" closeOnEscape="true" showEffect="fade" hideEffect="fade">
+            <h:form id="frmPrivilege">
+                <p:messages id="msgPrivilege" showDetail="true" closable="true"/>
+                <div class="hx-form">
+                    <div class="hx-field">
+                        <p:outputLabel for="privNom" value="Libellé"/>
+                        <p:inputText id="privNom" value="#{moduleAdminView.privilegeEdit.nom}" required="true" requiredMessage="Le libellé est obligatoire" maxlength="50" placeholder="Ex. Lancer une campagne"/>
+                    </div>
+                    <div class="hx-field">
+                        <p:outputLabel for="privCode" value="Code"/>
+                        <p:inputText id="privCode" value="#{moduleAdminView.privilegeEdit.code}" required="true" requiredMessage="Le code est obligatoire" maxlength="30" placeholder="CAMP_LAUNCH" styleClass="hx-mono"/>
+                        <small class="hx-field__help">Identifiant unique, en majuscules, utilisé dans les écrans : <code>privilegeBean.hasPrivilege('CAMP_LAUNCH')</code>.</small>
+                    </div>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgPrivilege').hide()"/>
+                    <p:commandButton value="Enregistrer" icon="pi pi-check" process="@form" update="@form :panePrivileges"
+                                     actionListener="#{moduleAdminView.savePrivilege}"
+                                     oncomplete="if (!args.validationFailed) PF('dlgPrivilege').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>

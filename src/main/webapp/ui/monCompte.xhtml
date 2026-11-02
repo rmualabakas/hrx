@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Mon compte"/>
+    <ui:param name="pageSubtitle" value="Vos informations et préférences"/>
+    <ui:define name="title">Mon compte</ui:define>
+
+    <ui:define name="content">
+        <div class="hx-account">
+
+            <!-- Carte identité -->
+            <aside class="hx-card hx-account__id">
+                <span class="hx-avatar hx-avatar--xl">#{accountBean.initiales}</span>
+                <h3>#{accountBean.profile.nomComplet}</h3>
+                <p class="hx-muted">#{empty accountBean.profile.fonction ? 'Fonction non renseignée' : accountBean.profile.fonction}</p>
+                <dl class="hx-account__facts">
+                    <dt>Identifiant</dt><dd class="hx-mono">#{accountBean.profile.login}</dd>
+                    <dt>Matricule</dt><dd>#{empty accountBean.profile.matricule ? '—' : accountBean.profile.matricule}</dd>
+                    <dt>Direction</dt><dd>#{empty accountBean.profile.direction ? '—' : accountBean.profile.direction.nom}</dd>
+                    <dt>N+1</dt><dd><ui:fragment rendered="#{not empty accountBean.profile.superieurHierarchique}">#{accountBean.profile.superieurHierarchique.nomComplet}</ui:fragment><ui:fragment rendered="#{empty accountBean.profile.superieurHierarchique}">—</ui:fragment></dd>
+                    <dt>Profil</dt><dd><span class="hx-badge hx-badge--info">#{accountBean.profile.profil.nom}</span></dd>
+                    <dt>Type de compte</dt><dd>#{accountBean.nativeAccount ? 'Compte local' : 'Compte réseau (annuaire)'}</dd>
+                </dl>
+                <h:form id="frmLdap" rendered="#{not accountBean.nativeAccount}">
+                    <div class="hx-account__ldap #{accountBean.ldapStatusClass}">
+                        <i class="pi #{accountBean.ldapStatusClass eq 'ldap-ok' ? 'pi-shield' : 'pi-exclamation-triangle'}"></i>
+                        <span><strong>#{accountBean.ldapStatusLabel}</strong><small>#{accountBean.ldapStatusDetail}</small></span>
+                        <p:commandLink process="@this" update="@form" actionListener="#{accountBean.refreshLdapStatus}" styleClass="hx-icon-btn" title="Vérifier à nouveau"><i class="pi pi-refresh"></i></p:commandLink>
+                    </div>
+                </h:form>
+            </aside>
+
+            <!-- Onglets -->
+            <div class="hx-account__main">
+                <p:tabView id="tabs" styleClass="hx-tabs hx-card" activeIndex="#{accountBean.activeTab}" dynamic="false">
+
+                    <p:tab title="Mes informations">
+                        <h:form id="frmProfil">
+                            <p:messages showDetail="true" closable="true"/>
+                            <div class="hx-form">
+                                <div class="hx-field__grid hx-field__grid--3">
+                                    <div class="hx-field"><span class="hx-field__lbl">Prénom</span><span class="hx-readonly">#{empty accountBean.profile.prenom ? '—' : accountBean.profile.prenom}</span></div>
+                                    <div class="hx-field"><span class="hx-field__lbl">Nom</span><span class="hx-readonly">#{empty accountBean.profile.nom ? '—' : accountBean.profile.nom}</span></div>
+                                    <div class="hx-field"><span class="hx-field__lbl">Post-nom</span><span class="hx-readonly">#{empty accountBean.profile.postnom ? '—' : accountBean.profile.postnom}</span></div>
+                                </div>
+                                <div class="hx-field__grid">
+                                    <div class="hx-field"><span class="hx-field__lbl">E-mail</span><span class="hx-readonly">#{empty accountBean.profile.email ? '—' : accountBean.profile.email}</span></div>
+                                    <div class="hx-field"><p:outputLabel for="aPhone" value="Téléphone"/><p:inputText id="aPhone" value="#{accountBean.profile.phone}" maxlength="30"/></div>
+                                </div>
+                                <p class="hx-field__help"><i class="pi pi-info-circle"></i> Votre nom, votre e-mail, votre direction, votre N+1, votre fonction et votre matricule sont tenus par la DCHT. Adressez-vous à elle pour toute correction. Seul le téléphone se modifie ici.</p>
+                            </div>
+                            <div class="hx-form__actions">
+                                <p:commandButton value="Enregistrer le téléphone" icon="pi pi-check" process="@form" update="@form :globalGrowl" actionListener="#{accountBean.saveProfile}"/>
+                            </div>
+                        </h:form>
+                    </p:tab>
+
+                    <p:tab title="Préférences">
+                        <h:form id="frmPrefs">
+                            <div class="hx-form">
+                                <h4 class="hx-form__section">Apparence</h4>
+                                <div class="hx-field">
+                                    <p:outputLabel value="Thème"/>
+                                    <p:selectOneRadio id="aTheme" value="#{accountBean.preferences.themeCode}" layout="responsive" columns="3" styleClass="hx-theme-radio" unselectable="false">
+                                        <f:selectItems value="#{accountBean.themes}" var="t" itemLabel="#{t.label}" itemValue="#{t.name()}"/>
+                                    </p:selectOneRadio>
+                                    <div class="hx-themes">
+                                        <ui:repeat value="#{accountBean.themes}" var="t">
+                                            <span class="hx-theme-card #{t.bodyClass} #{t.name() eq accountBean.preferences.themeCode ? 'is-on' : ''}" title="#{t.label}">
+                                                <span class="hx-theme-card__swatch"><i></i><i></i><i></i></span>
+                                                <span class="hx-theme-card__name">#{t.label}</span>
+                                            </span>
+                                        </ui:repeat>
+                                    </div>
+                                </div>
+                                <div class="hx-field__grid">
+                                    <div class="hx-field hx-field--inline">
+                                        <p:selectBooleanCheckbox id="aCompact" value="#{accountBean.preferences.compactMode}"/>
+                                        <p:outputLabel for="aCompact" value="Affichage compact (tableaux et listes plus denses)"/>
+                                    </div>
+                                    <div class="hx-field hx-field--inline">
+                                        <p:selectBooleanCheckbox id="aNotif" value="#{accountBean.preferences.sessionNotifications}"/>
+                                        <p:outputLabel for="aNotif" value="Notifications dans la session (rappels d'échéances)"/>
+                                    </div>
+                                </div>
+                                <h4 class="hx-form__section">Navigation</h4>
+                                <div class="hx-field__grid">
+                                    <div class="hx-field">
+                                        <p:outputLabel for="aStart" value="Page d'accueil après connexion"/>
+                                        <p:selectOneMenu id="aStart" value="#{accountBean.preferences.defaultPage}" styleClass="hx-select">
+                                            <f:selectItem itemLabel="Tableau de bord" itemValue="/ui/home"/>
+                                            <f:selectItem itemLabel="Mon compte" itemValue="/ui/monCompte"/>
+                                        </p:selectOneMenu>
+                                    </div>
+                                    <div class="hx-field">
+                                        <p:outputLabel for="aMenu" value="Position du menu"/>
+                                        <p:selectOneMenu id="aMenu" value="#{accountBean.preferences.menuOrientation}" styleClass="hx-select">
+                                            <f:selectItem itemLabel="Latéral gauche" itemValue="SIDEBAR_LEFT"/>
+                                            <f:selectItem itemLabel="Latéral droit" itemValue="SIDEBAR_RIGHT"/>
+                                        </p:selectOneMenu>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="hx-form__actions">
+                                <p:commandButton value="Appliquer" icon="pi pi-check" process="@form" update="@form :globalGrowl" actionListener="#{accountBean.savePreferences}"
+                                                 oncomplete="window.location.reload()"/>
+                            </div>
+                        </h:form>
+                    </p:tab>
+
+                    <p:tab title="Mot de passe">
+                        <h:form id="frmPwd">
+                            <p:messages showDetail="true" closable="true"/>
+                            <ui:fragment rendered="#{not accountBean.nativeAccount}">
+                                <div class="hx-empty hx-empty--sm"><i class="pi pi-shield"></i><strong>Compte réseau</strong>Votre mot de passe est celui de votre session Windows : il se modifie dans l'annuaire de la banque, pas dans HRX.</div>
+                            </ui:fragment>
+                            <ui:fragment rendered="#{accountBean.nativeAccount}">
+                                <div class="hx-form hx-form--narrow">
+                                    <div class="hx-field"><p:outputLabel for="pCur" value="Mot de passe actuel"/><p:password id="pCur" value="#{accountBean.currentPassword}" required="true" requiredMessage="Le mot de passe actuel est obligatoire" feedback="false" toggleMask="true" redisplay="false"/></div>
+                                    <div class="hx-field"><p:outputLabel for="pNew" value="Nouveau mot de passe"/><p:password id="pNew" value="#{accountBean.newPassword}" required="true" requiredMessage="Le nouveau mot de passe est obligatoire" feedback="true" toggleMask="true" promptLabel="Saisissez un mot de passe" weakLabel="Faible" goodLabel="Moyen" strongLabel="Fort" redisplay="false"/></div>
+                                    <div class="hx-field"><p:outputLabel for="pConf" value="Confirmation"/><p:password id="pConf" value="#{accountBean.confirmPassword}" required="true" requiredMessage="La confirmation est obligatoire" feedback="false" toggleMask="true" redisplay="false"/></div>
+                                    <p class="hx-field__help"><i class="pi pi-info-circle"></i> 8 caractères minimum, avec majuscule, minuscule et chiffre.</p>
+                                </div>
+                                <div class="hx-form__actions">
+                                    <p:commandButton value="Changer le mot de passe" icon="pi pi-key" process="@form" update="@form :globalGrowl" actionListener="#{accountBean.changePassword}"/>
+                                </div>
+                            </ui:fragment>
+                        </h:form>
+                    </p:tab>
+                </p:tabView>
+            </div>
+        </div>
+    </ui:define>
+</ui:composition>

@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Profils et habilitations"/>
+    <ui:param name="pageSubtitle" value="Ce que chaque profil peut voir et faire"/>
+    <ui:define name="title">Profils et habilitations</ui:define>
+
+    <ui:define name="head">
+        <h:outputStylesheet library="hrx" name="css/hrx-admin.css"/>
+    </ui:define>
+
+    <ui:define name="scripts">
+        <script>
+            (function () {
+                var KEY = 'hrx.profils.folds';
+                function read() { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { return {}; } }
+                function write(o) { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) {} }
+
+                function hideDescendants(parentId, hidden) {
+                    document.querySelectorAll('.hx-menu-row[data-parent="' + parentId + '"]').forEach(function (row) {
+                        row.classList.toggle('is-hidden', hidden);
+                        var folded = row.classList.contains('is-collapsed');
+                        hideDescendants(row.getAttribute('data-id'), hidden || folded);
+                    });
+                }
+
+                window.hrxApplyFolds = function () {
+                    var state = read();
+                    document.querySelectorAll('.hx-module[data-fold]').forEach(function (mod) {
+                        var c = state[mod.getAttribute('data-fold')] === true;
+                        mod.classList.toggle('is-collapsed', c);
+                        var b = mod.querySelector('.hx-fold--module'); if (b) b.setAttribute('aria-expanded', c ? 'false' : 'true');
+                    });
+                    document.querySelectorAll('.hx-menu-row.has-children').forEach(function (row) {
+                        var c = state[row.getAttribute('data-fold')] === true;
+                        row.classList.toggle('is-collapsed', c);
+                        var b = row.querySelector('.hx-fold--row'); if (b) b.setAttribute('aria-expanded', c ? 'false' : 'true');
+                    });
+                    document.querySelectorAll('.hx-menu-row[data-parent="0"]').forEach(function (root) {
+                        root.classList.remove('is-hidden');
+                        hideDescendants(root.getAttribute('data-id'), root.classList.contains('is-collapsed'));
+                    });
+                };
+
+                window.hrxToggleFold = function (btn) {
+                    var el = btn.closest('[data-fold]');
+                    var state = read();
+                    var key = el.getAttribute('data-fold');
+                    state[key] = !el.classList.contains('is-collapsed');
+                    write(state);
+                    hrxApplyFolds();
+                };
+
+                window.hrxFoldAll = function (collapse) {
+                    var state = read();
+                    document.querySelectorAll('[data-fold]').forEach(function (el) { state[el.getAttribute('data-fold')] = collapse; });
+                    write(state);
+                    hrxApplyFolds();
+                };
+
+                document.addEventListener('DOMContentLoaded', hrxApplyFolds);
+            })();
+        </script>
+    </ui:define>
+
+    <ui:define name="content">
+        <h:form id="frmProfils" prependId="false">
+
+            <div class="hx-page-head">
+                <div>
+                    <h2>Profils et habilitations</h2>
+                    <p>Les menus définissent ce qu'un profil voit, les privilèges ce qu'il peut faire. Chaque utilisateur a un seul profil.</p>
+                </div>
+                <div class="hx-page-head__actions">
+                    <p:commandButton value="Nouveau profil" icon="pi pi-plus" process="@this"
+                                     actionListener="#{profilAdminView.newProfil}" update="dlgProfil"
+                                     oncomplete="PF('dlgProfil').show()"/>
+                </div>
+            </div>
+
+            <div class="hx-admin-grid hx-admin-grid--2">
+
+                <!-- Profils -->
+                <section class="hx-card hx-pane" aria-label="Profils">
+                    <div class="hx-pane__head">
+                        <h3>Profils <span class="hx-count">#{profilAdminView.profils.size()}</span></h3>
+                        <div class="hx-pane__search">
+                            <i class="pi pi-search"></i>
+                            <p:inputText value="#{profilAdminView.filtre}" placeholder="Filtrer">
+                                <p:ajax event="keyup" update="listeProfils" delay="250"/>
+                            </p:inputText>
+                        </div>
+                    </div>
+                    <h:panelGroup id="listeProfils" layout="block" styleClass="hx-pane__body">
+                        <ui:repeat value="#{profilAdminView.profilsFiltres}" var="pf">
+                            <div class="hx-item #{profilAdminView.isSelected(pf) ? 'is-selected' : ''} #{pf.statut eq 1 ? '' : 'is-off'}">
+                                <p:commandLink styleClass="hx-item__main" process="@this"
+                                               actionListener="#{profilAdminView.select(pf)}" update="listeProfils matrice" oncomplete="hrxApplyFolds()">
+                                    <span class="hx-item__icon hx-item__icon--letter">#{pf.nom.substring(0,1)}</span>
+                                    <span class="hx-item__text">
+                                        <strong>#{pf.nom}
+                                            <ui:fragment rendered="#{pf.profilParDefaut}"><span class="hx-tag hx-tag--gold">par défaut</span></ui:fragment>
+                                            <ui:fragment rendered="#{pf.id eq 1}"><span class="hx-tag">root</span></ui:fragment>
+                                        </strong>
+                                        <small>#{profilAdminView.usersOf(pf)} utilisateur#{profilAdminView.usersOf(pf) gt 1 ? 's' : ''}<ui:fragment rendered="#{not empty pf.description}"> - #{pf.description}</ui:fragment></small>
+                                    </span>
+                                    <i class="pi pi-angle-right hx-item__chevron"></i>
+                                </p:commandLink>
+                                <div class="hx-item__actions">
+                                    <p:commandLink process="@this" title="Modifier" styleClass="hx-icon-btn"
+                                                   actionListener="#{profilAdminView.editProfil(pf)}" update="dlgProfil"
+                                                   oncomplete="PF('dlgProfil').show()"><i class="pi pi-pencil"></i></p:commandLink>
+                                    <p:commandLink process="@this" title="Définir comme profil par défaut" styleClass="hx-icon-btn"
+                                                   rendered="#{not pf.profilParDefaut}"
+                                                   actionListener="#{profilAdminView.setDefault(pf)}" update="listeProfils"><i class="pi pi-star"></i></p:commandLink>
+                                    <p:commandLink process="@this" title="#{pf.statut eq 1 ? 'Désactiver' : 'Activer'}" styleClass="hx-icon-btn"
+                                                   rendered="#{pf.id ne 1}"
+                                                   actionListener="#{profilAdminView.toggleStatut(pf)}" update="listeProfils">
+                                        <i class="pi #{pf.statut eq 1 ? 'pi-eye-slash' : 'pi-eye'}"></i></p:commandLink>
+                                    <p:commandLink process="@this" title="Supprimer" styleClass="hx-icon-btn hx-icon-btn--danger"
+                                                   rendered="#{pf.id ne 1}"
+                                                   actionListener="#{profilAdminView.removeProfil(pf)}" update="listeProfils matrice">
+                                        <p:confirm header="Supprimer le profil" message="Supprimer le profil « #{pf.nom} » ? Impossible s'il a encore des utilisateurs." icon="pi pi-exclamation-triangle"/>
+                                        <i class="pi pi-trash"></i></p:commandLink>
+                                </div>
+                            </div>
+                        </ui:repeat>
+                    </h:panelGroup>
+                </section>
+
+                <!-- Matrice d'habilitations -->
+                <h:panelGroup id="matrice" layout="block" styleClass="hx-card hx-pane hx-matrix">
+                    <ui:fragment rendered="#{empty profilAdminView.selected}">
+                        <div class="hx-empty"><i class="pi pi-arrow-left"></i><strong>Choisissez un profil</strong>Ses habilitations s'afficheront ici.</div>
+                    </ui:fragment>
+
+                    <ui:fragment rendered="#{not empty profilAdminView.selected}">
+                        <div class="hx-pane__head hx-matrix__head">
+                            <div>
+                                <h3>#{profilAdminView.selected.nom}</h3>
+                                <small>#{profilAdminView.totalMenus} menu#{profilAdminView.totalMenus gt 1 ? 's' : ''} et #{profilAdminView.totalPrivileges} privilège#{profilAdminView.totalPrivileges gt 1 ? 's' : ''} accordés</small>
+                            </div>
+                            <div class="hx-matrix__tools">
+                                <button type="button" class="hx-tool" onclick="hrxFoldAll(true)" title="Tout replier"><i class="pi pi-minus-circle"></i> Replier</button>
+                                <button type="button" class="hx-tool" onclick="hrxFoldAll(false)" title="Tout déplier"><i class="pi pi-plus-circle"></i> Déplier</button>
+                                <p:commandButton value="Copier depuis…" icon="pi pi-copy" styleClass="hx-btn-secondary hx-btn-sm" process="@this"
+                                                 update="dlgCopie" oncomplete="PF('dlgCopie').show()"/>
+                            </div>
+                        </div>
+
+                        <div class="hx-matrix__body">
+                            <ui:repeat value="#{profilAdminView.modules}" var="md">
+                                <section class="hx-module #{profilAdminView.isModuleComplete(md) ? 'is-complete' : ''} #{profilAdminView.grantedMenusOf(md) eq 0 ? 'is-none' : ''}" data-fold="mod-#{md.id}">
+                                    <header class="hx-module__head">
+                                        <button type="button" class="hx-fold hx-fold--module" onclick="hrxToggleFold(this)" title="Replier / déplier le module" aria-expanded="true"><i class="pi pi-chevron-down"></i></button>
+                                        <i class="hx-module__icon #{md.icone}"></i>
+                                        <div class="hx-module__title">
+                                            <strong>#{md.nom}</strong>
+                                            <small>#{profilAdminView.grantedMenusOf(md)} / #{profilAdminView.menusOf(md).size()} menus</small>
+                                        </div>
+                                        <p:commandLink styleClass="hx-switch #{profilAdminView.isModuleComplete(md) ? 'is-on' : ''}" process="@this"
+                                                       title="#{profilAdminView.isModuleComplete(md) ? 'Retirer tout le module' : 'Accorder tout le module'}"
+                                                       actionListener="#{profilAdminView.toggleModule(md)}" update="matrice listeProfils" oncomplete="hrxApplyFolds()">
+                                            <span class="hx-switch__knob"></span>
+                                        </p:commandLink>
+                                    </header>
+
+                                    <ui:repeat value="#{profilAdminView.menusOf(md)}" var="mn">
+                                        <div class="hx-menu-row #{profilAdminView.hasMenu(mn) ? 'is-on' : ''} #{mn.parentId gt 0 ? 'is-child' : ''} #{profilAdminView.hasEnfants(mn) ? 'has-children' : ''}"
+                                             style="--hx-level: #{profilAdminView.niveau(mn)};" data-id="#{mn.id}" data-parent="#{mn.parentId}" data-fold="menu-#{mn.id}">
+                                            <div class="hx-menu-row__main">
+                                                <ui:fragment rendered="#{profilAdminView.hasEnfants(mn)}">
+                                                    <button type="button" class="hx-fold hx-fold--row" onclick="hrxToggleFold(this)" title="Replier / déplier les sous-menus" aria-expanded="true"><i class="pi pi-chevron-down"></i></button>
+                                                </ui:fragment>
+                                                <p:commandLink styleClass="hx-switch hx-switch--sm #{profilAdminView.hasMenu(mn) ? 'is-on' : ''}" process="@this"
+                                                               title="#{profilAdminView.hasMenu(mn) ? 'Retirer ce menu' : 'Accorder ce menu'}"
+                                                               actionListener="#{profilAdminView.toggleMenu(mn)}" update="matrice" oncomplete="hrxApplyFolds()">
+                                                    <span class="hx-switch__knob"></span>
+                                                </p:commandLink>
+                                                <i class="hx-menu-row__icon #{mn.icone}"></i>
+                                                <span class="hx-menu-row__text">
+                                                    <strong>#{mn.nom}</strong>
+                                                    <small><code>/ui/#{mn.url}</code></small>
+                                                </span>
+                                                <ui:fragment rendered="#{not empty profilAdminView.privilegesOf(mn)}">
+                                                    <span class="hx-menu-row__count">#{profilAdminView.grantedPrivilegesOf(mn)}/#{profilAdminView.privilegesOf(mn).size()}</span>
+                                                    <p:commandLink styleClass="hx-link-sm" process="@this" title="Accorder tous les privilèges de ce menu"
+                                                                   rendered="#{profilAdminView.grantedPrivilegesOf(mn) lt profilAdminView.privilegesOf(mn).size()}"
+                                                                   actionListener="#{profilAdminView.grantAllPrivileges(mn)}" update="matrice" oncomplete="hrxApplyFolds()">tout</p:commandLink>
+                                                </ui:fragment>
+                                            </div>
+                                            <ui:fragment rendered="#{not empty profilAdminView.privilegesOf(mn)}">
+                                                <div class="hx-chips">
+                                                    <ui:repeat value="#{profilAdminView.privilegesOf(mn)}" var="pv">
+                                                        <p:commandLink styleClass="hx-chip #{profilAdminView.hasPrivilege(pv) ? 'is-on' : ''} #{pv.statut eq 1 ? '' : 'is-off'}"
+                                                                       process="@this" title="#{pv.code}"
+                                                                       actionListener="#{profilAdminView.togglePrivilege(pv)}" update="matrice" oncomplete="hrxApplyFolds()">
+                                                            <i class="pi #{profilAdminView.hasPrivilege(pv) ? 'pi-check' : 'pi-plus'}"></i> #{pv.nom}
+                                                        </p:commandLink>
+                                                    </ui:repeat>
+                                                </div>
+                                            </ui:fragment>
+                                        </div>
+                                    </ui:repeat>
+                                </section>
+                            </ui:repeat>
+                        </div>
+                    </ui:fragment>
+                </h:panelGroup>
+            </div>
+
+            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" responsive="true" width="420">
+                <p:commandButton value="Annuler" type="button" styleClass="ui-confirmdialog-no hx-btn-secondary" icon="pi pi-times"/>
+                <p:commandButton value="Supprimer" type="button" styleClass="ui-confirmdialog-yes hx-btn-danger" icon="pi pi-trash"/>
+            </p:confirmDialog>
+        </h:form>
+
+        <!-- Dialogue profil -->
+        <p:dialog id="dlgProfil" widgetVar="dlgProfil" header="#{profilAdminView.profilEdit.id eq 0 ? 'Nouveau profil' : 'Modifier le profil'}"
+                  modal="true" responsive="true" width="480" closeOnEscape="true" showEffect="fade" hideEffect="fade">
+            <h:form id="frmProfil">
+                <p:messages showDetail="true" closable="true"/>
+                <div class="hx-form">
+                    <div class="hx-field">
+                        <p:outputLabel for="pfNom" value="Nom du profil"/>
+                        <p:inputText id="pfNom" value="#{profilAdminView.profilEdit.nom}" required="true" requiredMessage="Le nom est obligatoire" maxlength="50" placeholder="Ex. Responsable hiérarchique"/>
+                    </div>
+                    <div class="hx-field">
+                        <p:outputLabel for="pfDesc" value="Description"/>
+                        <p:inputTextarea id="pfDesc" value="#{profilAdminView.profilEdit.description}" rows="3" autoResize="false" placeholder="À qui ce profil est destiné et ce qu'il permet"/>
+                    </div>
+                    <div class="hx-field hx-field--inline">
+                        <p:selectBooleanCheckbox id="pfDefaut" value="#{profilAdminView.profilEdit.profilParDefaut}"/>
+                        <p:outputLabel for="pfDefaut" value="Profil par défaut des nouveaux comptes (import annuaire)"/>
+                    </div>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgProfil').hide()"/>
+                    <p:commandButton value="Enregistrer" icon="pi pi-check" process="@form" update="@form :listeProfils :matrice"
+                                     actionListener="#{profilAdminView.saveProfil}"
+                                     oncomplete="if (!args.validationFailed) PF('dlgProfil').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <!-- Dialogue copie -->
+        <p:dialog id="dlgCopie" widgetVar="dlgCopie" header="Copier des habilitations" modal="true" responsive="true" width="440" closeOnEscape="true" showEffect="fade" hideEffect="fade">
+            <h:form id="frmCopie">
+                <div class="hx-form">
+                    <p class="hx-field__help" style="margin:0">Les menus et privilèges du profil source seront <strong>ajoutés</strong> à « #{profilAdminView.selected.nom} ». Rien n'est retiré.</p>
+                    <div class="hx-field">
+                        <p:outputLabel for="cpSource" value="Profil source"/>
+                        <p:selectOneMenu id="cpSource" value="#{profilAdminView.copieSourceId}" styleClass="hx-select">
+                            <f:selectItem itemLabel="Choisir un profil" itemValue="#{null}" noSelectionOption="true"/>
+                            <f:selectItems value="#{profilAdminView.autresProfils}" var="ap" itemLabel="#{ap.nom}" itemValue="#{ap.id}"/>
+                        </p:selectOneMenu>
+                    </div>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgCopie').hide()"/>
+                    <p:commandButton value="Copier" icon="pi pi-copy" process="@form" update="@form :matrice"
+                                     actionListener="#{profilAdminView.copierDepuis}" oncomplete="PF('dlgCopie').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>

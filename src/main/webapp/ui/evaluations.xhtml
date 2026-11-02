@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Suivi des évaluations"/>
+    <ui:param name="pageSubtitle" value="Avancement, anomalies et relances"/>
+    <ui:define name="title">Suivi des évaluations</ui:define>
+
+    <ui:define name="content">
+        <h:form id="frmSuivi" prependId="false">
+            <div class="hx-page-head">
+                <div>
+                    <h2>Suivi des évaluations</h2>
+                    <p>Où en est chaque fiche, qui doit agir et ce qui bloque. Les lignes en anomalie sont signalées (pas de N+1, pas d'objectifs, retard, fiche incomplète).</p>
+                </div>
+                <div class="hx-page-head__actions">
+                    <p:selectOneMenu id="selCamp" value="#{suiviEvaluationsView.campagneId}" styleClass="hx-select-inline" converter="jakarta.faces.Integer">
+                        <f:selectItems value="#{suiviEvaluationsView.campagnes}" var="c" itemValue="#{c.id}" itemLabel="#{c.libelle} - #{c.typeLabel} #{c.exercice}#{c.ouverte ? ' (ouverte)' : ''}"/>
+                        <p:ajax listener="#{suiviEvaluationsView.changerCampagne}" update="zone"/>
+                    </p:selectOneMenu>
+                </div>
+            </div>
+
+            <h:panelGroup id="zone" layout="block">
+                <ui:fragment rendered="#{empty suiviEvaluationsView.campagne}">
+                    <div class="hx-card"><div class="hx-empty"><i class="pi pi-calendar"></i><strong>Aucune campagne</strong>Créez puis lancez une campagne depuis le menu Campagnes pour suivre les évaluations.</div></div>
+                </ui:fragment>
+
+                <ui:fragment rendered="#{not empty suiviEvaluationsView.campagne}">
+                    <!-- Indicateurs -->
+                    <section class="hx-grid hx-grid--kpi hx-kpis-compact hx-suivi__kpis" aria-label="Indicateurs de la campagne">
+                        <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-users"></i> Population</span><span class="hx-kpi__value">#{suiviEvaluationsView.nbTotal}</span><span class="hx-kpi__delta">#{suiviEvaluationsView.campagne.effectifAttendu} attendues · #{suiviEvaluationsView.nbIntegrees} intégrées</span></div>
+                        <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-user-plus"></i> Non intégrées</span><span class="hx-kpi__value #{suiviEvaluationsView.nbNonIntegrees gt 0 ? 'hx-kpi__value--gold' : ''}">#{suiviEvaluationsView.nbNonIntegrees}</span><span class="hx-kpi__delta">évaluables sans fiche</span></div>
+                        <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-user-edit"></i> En auto-évaluation</span><span class="hx-kpi__value">#{suiviEvaluationsView.nbAutoEval}</span><span class="hx-kpi__delta">chez le collaborateur</span></div>
+                        <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-inbox"></i> Chez le N+1</span><span class="hx-kpi__value">#{suiviEvaluationsView.nbChezN1}</span><span class="hx-kpi__delta">à évaluer</span></div>
+                        <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-verified"></i> À valider</span><span class="hx-kpi__value #{suiviEvaluationsView.nbAValider gt 0 ? 'hx-kpi__value--primary' : ''}">#{suiviEvaluationsView.nbAValider}</span><span class="hx-kpi__delta">évaluées par le N+1</span></div>
+                        <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-check-circle"></i> Validées</span><span class="hx-kpi__value">#{suiviEvaluationsView.nbValidees}</span><div class="hx-kpi__bar hx-kpi__bar--gold"><span style="width:#{suiviEvaluationsView.taux}%"></span></div><span class="hx-kpi__delta">#{suiviEvaluationsView.taux} % de réalisation</span></div>
+                        <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-exclamation-triangle"></i> Anomalies</span><span class="hx-kpi__value #{suiviEvaluationsView.nbAnomalies gt 0 ? 'hx-kpi__value--danger' : ''}">#{suiviEvaluationsView.nbAnomalies}</span><span class="hx-kpi__delta">#{suiviEvaluationsView.nbRetard} en retard · #{suiviEvaluationsView.nbHorsDelai} hors délai</span></div>
+                    </section>
+
+                    <div class="hx-card hx-suivi__bar">
+                        <div class="hx-campaign__progress">
+                            <div class="hx-campaign__bar">
+                                <span class="seg seg--done" style="width:#{suiviEvaluationsView.pct(suiviEvaluationsView.nbValidees)}%"></span>
+                                <span class="seg seg--eval" style="width:#{suiviEvaluationsView.pct(suiviEvaluationsView.nbAValider)}%"></span>
+                                <span class="seg seg--sub" style="width:#{suiviEvaluationsView.pct(suiviEvaluationsView.nbChezN1)}%"></span>
+                                <span class="seg seg--init" style="width:#{suiviEvaluationsView.pct(suiviEvaluationsView.nbAutoEval)}%"></span>
+                            </div>
+                            <div class="hx-campaign__legend">
+                                <span><i class="seg--done"></i>#{suiviEvaluationsView.nbValidees} validées</span>
+                                <span><i class="seg--eval"></i>#{suiviEvaluationsView.nbAValider} à valider</span>
+                                <span><i class="seg--sub"></i>#{suiviEvaluationsView.nbChezN1} à évaluer</span>
+                                <span><i class="seg--init"></i>#{suiviEvaluationsView.nbAutoEval} en auto-évaluation</span>
+                                <span class="hx-campaign__rest"><i class="seg--rest"></i>#{suiviEvaluationsView.restantes} non initiées sur #{suiviEvaluationsView.campagne.effectifAttendu} attendues</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filtres -->
+                    <div class="hx-toolbar hx-suivi__toolbar">
+                        <p:selectOneButton value="#{suiviEvaluationsView.onglet}" styleClass="hx-segment" unselectable="false">
+                            <f:selectItem itemValue="tous" itemLabel="Toutes (#{suiviEvaluationsView.nbTotal})"/>
+                            <f:selectItem itemValue="anomalies" itemLabel="Anomalies (#{suiviEvaluationsView.nbAnomalies})"/>
+                            <f:selectItem itemValue="retard" itemLabel="En retard (#{suiviEvaluationsView.nbRetard})"/>
+                            <f:selectItem itemValue="aValider" itemLabel="À valider (#{suiviEvaluationsView.nbAValider})"/>
+                            <f:selectItem itemValue="nonInitiees" itemLabel="Non intégrées (#{suiviEvaluationsView.nbNonIntegrees})"/>
+                            <p:ajax update="tbl btnBulk"/>
+                        </p:selectOneButton>
+                        <p:selectOneMenu value="#{suiviEvaluationsView.filtreStatut}" styleClass="hx-select-inline">
+                            <f:selectItem itemValue="" itemLabel="Tous les statuts"/>
+                            <f:selectItem itemValue="NON_INITIEE" itemLabel="Non intégrée"/>
+                            <f:selectItem itemValue="INITIEE" itemLabel="Auto-évaluation à renseigner"/>
+                            <f:selectItem itemValue="RETOURNEE" itemLabel="Retournée pour correction"/>
+                            <f:selectItem itemValue="SOUMISE" itemLabel="Auto-évaluation soumise"/>
+                            <f:selectItem itemValue="EVALUEE" itemLabel="Évaluée par le N+1"/>
+                            <f:selectItem itemValue="VALIDEE" itemLabel="Validée"/>
+                            <p:ajax update="tbl btnBulk"/>
+                        </p:selectOneMenu>
+                        <p:selectOneMenu value="#{suiviEvaluationsView.filtreDirection}" styleClass="hx-select-inline">
+                            <f:selectItem itemValue="" itemLabel="Toutes les directions"/>
+                            <f:selectItems value="#{suiviEvaluationsView.directions}"/>
+                            <p:ajax update="tbl btnBulk"/>
+                        </p:selectOneMenu>
+                        <span class="hx-search"><i class="pi pi-search"></i>
+                            <p:inputText value="#{suiviEvaluationsView.recherche}" placeholder="Nom, matricule, fonction, N+1…"><p:ajax event="keyup" delay="300" update="tbl btnBulk"/></p:inputText>
+                        </span>
+                        <span class="hx-toolbar__spacer"></span>
+                        <h:panelGroup id="btnBulk">
+                            <p:commandButton value="Relancer les retardataires" icon="pi pi-megaphone" styleClass="hx-btn-secondary" process="@this" update="tbl :globalGrowl"
+                                             rendered="#{suiviEvaluationsView.peutRelancer}" actionListener="#{suiviEvaluationsView.relancerRetardataires}">
+                                <p:confirm header="Relance groupée" message="Envoyer une relance e-mail à chaque responsable des lignes affichées en retard, non intégrées ou en anomalie ?" icon="pi pi-megaphone"/>
+                            </p:commandButton>
+                        </h:panelGroup>
+                        <p:commandButton value="Excel" icon="pi pi-file-excel" styleClass="hx-btn-secondary" ajax="false">
+                            <p:dataExporter type="xlsx" target="tbl" fileName="#{suiviEvaluationsView.nomFichierExport}"/>
+                        </p:commandButton>
+                    </div>
+
+                    <!-- Liste -->
+                    <div class="hx-card hx-card--table">
+                        <p:dataTable id="tbl" value="#{suiviEvaluationsView.lignesFiltrees}" var="l" rowKey="#{l.id}" styleClass="hx-table hx-suivi__table"
+                                     paginator="true" rows="25" paginatorPosition="bottom" paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     rowsPerPageTemplate="25,50,100" currentPageReportTemplate="{startRecord}–{endRecord} sur {totalRecords}"
+                                     emptyMessage="Aucune ligne ne correspond aux filtres." rowStyleClass="#{l.anomalie ? 'hx-row--anomalie' : ''}">
+                            <p:column headerText="Collaborateur" sortBy="#{l.salarie.nom}" exportValue="#{l.salarie.nomComplet} (#{l.salarie.matricule})">
+                                <div class="hx-suivi__who">
+                                    <span class="hx-avatar hx-avatar--sm">#{suiviEvaluationsView.initiales(l.salarie)}</span>
+                                    <div><strong>#{l.salarie.nomComplet}</strong><small>#{l.salarie.matricule}<ui:fragment rendered="#{not empty l.salarie.fonction}"> · #{l.salarie.fonction}</ui:fragment></small></div>
+                                </div>
+                            </p:column>
+                            <p:column headerText="Direction" sortBy="#{l.directionComplete}" exportValue="#{l.directionComplete}"><span title="#{l.directionComplete}">#{l.directionNom}</span></p:column>
+                            <p:column headerText="N+1" sortBy="#{l.n1Nom}" exportValue="#{l.n1Nom}">#{l.n1Nom}</p:column>
+                            <p:column headerText="Objectifs" styleClass="num" exportValue="#{l.nbObjectifs}"><span class="#{l.nbObjectifs eq 0 ? 'hx-ko' : ''}">#{l.nbObjectifs}</span></p:column>
+                            <p:column headerText="Statut" sortBy="#{l.statut}" exportValue="#{l.statutLabel}">
+                                <span class="hx-badge #{l.statutClasse}">#{l.statutLabel}</span>
+                                <small class="hx-suivi__etape">#{l.etape}</small>
+                            </p:column>
+                            <p:column headerText="Auto-évaluation" exportValue="#{empty l.fiche.dateSoumission ? '' : l.fiche.dateSoumission}">
+                                <ui:fragment rendered="#{not empty l.fiche and not empty l.fiche.dateSoumission}">
+                                    <h:outputText value="#{l.fiche.dateSoumission}"><f:convertDateTime pattern="dd/MM/yyyy"/></h:outputText>
+                                    <small class="#{l.fiche.soumiseATemps ? 'hx-ok' : 'hx-ko'} hx-suivi__delai">#{l.fiche.soumiseATemps ? 'à temps' : 'hors délai'}</small>
+                                </ui:fragment>
+                                <ui:fragment rendered="#{not empty l.fiche and empty l.fiche.dateSoumission}"><span class="hx-muted">—</span>
+                                    <ui:fragment rendered="#{l.completudeSalarie ge 0}"><small class="hx-suivi__delai hx-muted">#{l.completudeSalarie} % saisi</small></ui:fragment></ui:fragment>
+                            </p:column>
+                            <p:column headerText="Évaluation N+1" exportValue="#{empty l.fiche.dateEvaluation ? '' : l.fiche.dateEvaluation}">
+                                <ui:fragment rendered="#{not empty l.fiche and not empty l.fiche.dateEvaluation}">
+                                    <h:outputText value="#{l.fiche.dateEvaluation}"><f:convertDateTime pattern="dd/MM/yyyy"/></h:outputText>
+                                    <small class="#{l.fiche.evalueeATemps ? 'hx-ok' : 'hx-ko'} hx-suivi__delai">#{l.fiche.evalueeATemps ? 'à temps' : 'hors délai'}</small>
+                                </ui:fragment>
+                                <ui:fragment rendered="#{empty l.fiche or empty l.fiche.dateEvaluation}"><span class="hx-muted">—</span></ui:fragment>
+                            </p:column>
+                            <p:column headerText="Note" styleClass="num" exportValue="#{empty l.note ? '' : l.note}">
+                                <ui:fragment rendered="#{not empty l.note and (l.statut eq 'EVALUEE' or l.statut eq 'VALIDEE')}"><b><h:outputText value="#{l.note}"><f:convertNumber maxFractionDigits="1"/></h:outputText></b><small class="hx-muted">/20</small></ui:fragment>
+                                <ui:fragment rendered="#{empty l.note or not (l.statut eq 'EVALUEE' or l.statut eq 'VALIDEE')}"><span class="hx-muted">—</span></ui:fragment>
+                            </p:column>
+                            <p:column headerText="Anomalies" exportValue="#{l.anomaliesTexte}">
+                                <ui:fragment rendered="#{not l.anomalie}"><span class="hx-suivi__ok"><i class="pi pi-check"></i> Conforme</span></ui:fragment>
+                                <ui:repeat value="#{l.anomalies}" var="a"><span class="hx-anom">#{a}</span></ui:repeat>
+                            </p:column>
+                            <p:column headerText="Actions" styleClass="hx-col-actions" exportable="false">
+                                <div class="hx-row-actions">
+                                    <p:button icon="pi pi-eye" title="Ouvrir la fiche" styleClass="hx-icon-btn" outcome="/ui/fiche" rendered="#{not empty l.fiche}"><f:param name="id" value="#{l.fiche.id}"/></p:button>
+                                    <p:button icon="pi pi-flag" title="Objectifs du collaborateur" styleClass="hx-icon-btn" outcome="/ui/objectifs"><f:param name="salarie" value="#{l.salarie.id}"/><f:param name="exercice" value="#{suiviEvaluationsView.campagne.exercice}"/></p:button>
+                                    <p:commandButton icon="pi pi-send" title="Relancer (#{l.cibleRelanceRole})" styleClass="hx-icon-btn hx-icon-btn--send" process="@this" rendered="#{suiviEvaluationsView.peutRelancer and l.relancable}"
+                                                     actionListener="#{suiviEvaluationsView.preparerRelance(l)}" update=":dlgRelance" oncomplete="PF('dlgRelance').show()"/>
+                                    <p:commandButton icon="pi pi-verified" title="Valider la fiche (DCHT)" styleClass="hx-icon-btn hx-icon-btn--primary" process="@this" update="tbl zone :globalGrowl"
+                                                     rendered="#{suiviEvaluationsView.peutValider and l.statut eq 'EVALUEE'}" actionListener="#{suiviEvaluationsView.valider(l)}">
+                                        <p:confirm header="Valider l'évaluation" message="Valider définitivement la fiche de #{l.salarie.nomComplet} ?#{l.anomalie ? ' Attention : des anomalies sont signalées sur cette ligne.' : ''}" icon="pi pi-verified"/>
+                                    </p:commandButton>
+                                </div>
+                            </p:column>
+                        </p:dataTable>
+                    </div>
+                </ui:fragment>
+            </h:panelGroup>
+
+            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" responsive="true" width="460">
+                <p:commandButton value="Annuler" type="button" styleClass="ui-confirmdialog-no hx-btn-secondary" icon="pi pi-times"/>
+                <p:commandButton value="Confirmer" type="button" styleClass="ui-confirmdialog-yes" icon="pi pi-check"/>
+            </p:confirmDialog>
+        </h:form>
+
+        <p:dialog id="dlgRelance" widgetVar="dlgRelance" header="Relance par e-mail" modal="true" responsive="true" width="620" fitViewport="true" closeOnEscape="true" showEffect="fade" hideEffect="fade">
+            <h:form id="frmRelance">
+                <p:messages showDetail="true" closable="true"/>
+                <ui:fragment rendered="#{not empty suiviEvaluationsView.cible}">
+                    <div class="hx-form">
+                        <div class="hx-relance__to">
+                            <span class="hx-avatar hx-avatar--sm">#{suiviEvaluationsView.initiales(suiviEvaluationsView.cible.cibleRelance)}</span>
+                            <div><strong>#{suiviEvaluationsView.cible.cibleRelance.nomComplet}</strong><small>#{suiviEvaluationsView.cible.cibleRelanceRole} · #{empty suiviEvaluationsView.cible.cibleRelance.email ? 'aucune adresse e-mail' : suiviEvaluationsView.cible.cibleRelance.email}</small></div>
+                            <span class="hx-badge #{suiviEvaluationsView.cible.statutClasse}">#{suiviEvaluationsView.cible.statutLabel}</span>
+                        </div>
+                        <div class="hx-field"><p:outputLabel for="rObj" value="Objet"/><p:inputText id="rObj" value="#{suiviEvaluationsView.relanceObjet}" maxlength="180"/></div>
+                        <div class="hx-field"><p:outputLabel for="rMsg" value="Message"/><p:inputTextarea id="rMsg" value="#{suiviEvaluationsView.relanceMessage}" rows="7" autoResize="true" maxlength="3000"/><p class="hx-field__help">Le message est inséré dans le gabarit HRX avec le rappel de la fiche, l'échéance et un bouton d'accès direct.</p></div>
+                    </div>
+                    <div class="hx-form__actions">
+                        <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgRelance').hide()"/>
+                        <p:commandButton value="Envoyer la relance" icon="pi pi-send" process="@form" update="@form :globalGrowl" actionListener="#{suiviEvaluationsView.envoyerRelance}"
+                                         disabled="#{empty suiviEvaluationsView.cible.cibleRelance.email}" oncomplete="if (args &amp;&amp; args.ok) PF('dlgRelance').hide()"/>
+                    </div>
+                </ui:fragment>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>

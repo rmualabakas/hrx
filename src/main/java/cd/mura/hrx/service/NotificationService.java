@@ -1,0 +1,225 @@
+package cd.mura.hrx.service;
+
+import cd.mura.hrx.dao.config.AppDAO;
+import cd.mura.hrx.dao.config.UserDAO;
+import cd.mura.hrx.entity.config.App;
+import cd.mura.hrx.entity.config.Users;
+import cd.mura.hrx.entity.eval.Campagne;
+import cd.mura.hrx.entity.eval.Evaluation;
+import cd.mura.hrx.entity.eval.FicheObjectifs;
+import cd.mura.hrx.entity.eval.Objectif;
+import jakarta.ejb.EJB;
+import jakarta.ejb.Stateless;
+
+import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+
+/**
+ * Notifications métier HRX (e-mails HTML à la charte BGFI) : accusés d'envoi au collaborateur,
+ * alertes « à traiter » au N+1, au directeur, à la DCHT, retours et validations.
+ */
+@Stateless
+public class NotificationService {
+
+    private static final DateTimeFormatter D = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final SimpleDateFormat DT = new SimpleDateFormat("dd/MM/yyyy 'à' HH:mm");
+
+    @EJB private MailService mail;
+    @EJB private AppDAO appDAO;
+    @EJB private UserDAO userDAO;
+
+    // gabarit
+    private String base() {
+        App a = appDAO.findFirst();
+        String u = a == null || a.getUrl() == null ? "" : a.getUrl().trim();
+        return u.endsWith("/") ? u.substring(0, u.length() - 1) : u;
+    }
+    private static String esc(String s) { return s == null ? "" : s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"); }
+    private static String nom(Users u) { return u == null ? "—" : esc(u.getNomComplet()); }
+    private static String prenom(Users u) { return u == null ? "" : esc(u.getPrenom()); }
+
+    /** Page HTML : bandeau marine, filet or, carte blanche, bouton d'action, pied discret. */
+    private String gabarit(String titre, String accroche, String corps, String ctaLibelle, String ctaUrl, String badge) {
+        String bouton = ctaUrl == null ? "" : "<table role='presentation' cellspacing='0' cellpadding='0' style='margin:22px 0 6px'><tr><td style='background:#0a5c8f;border-radius:8px'>"
+                + "<a href='" + ctaUrl + "' style='display:inline-block;padding:12px 22px;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;font-family:Arial,Helvetica,sans-serif'>" + esc(ctaLibelle) + " &rarr;</a></td></tr></table>";
+        String pastille = badge == null ? "" : "<span style='display:inline-block;padding:4px 10px;border-radius:999px;background:#fdf3e1;color:#b8872b;font-size:12px;font-weight:600;letter-spacing:.02em'>" + esc(badge) + "</span>";
+        return "<!doctype html><html lang='fr'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'></head>"
+                + "<body style='margin:0;background:#eef3f6;font-family:Arial,Helvetica,sans-serif;color:#1f2937'>"
+                + "<table role='presentation' width='100%' cellspacing='0' cellpadding='0' style='background:#eef3f6;padding:28px 12px'><tr><td align='center'>"
+                + "<table role='presentation' width='600' cellspacing='0' cellpadding='0' style='max-width:600px;width:100%'>"
+                + "<tr><td style='background:#07294a;border-radius:12px 12px 0 0;padding:20px 28px'>"
+                + "<table role='presentation' width='100%' cellspacing='0' cellpadding='0'><tr><td style='color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-.01em'>HRX</td>"
+                + "<td align='right' style='color:#b9c7d6;font-size:12px'>Plateforme collaborative RH &middot; BGFIBank RDC</td></tr></table></td></tr>"
+                + "<tr><td style='height:3px;background:#b8872b'></td></tr>"
+                + "<tr><td style='background:#ffffff;padding:28px 28px 22px'>"
+                + pastille
+                + "<h1 style='margin:12px 0 6px;font-size:21px;line-height:1.3;color:#07294a'>" + esc(titre) + "</h1>"
+                + "<p style='margin:0 0 18px;font-size:15px;line-height:1.55;color:#374151'>" + accroche + "</p>"
+                + corps
+                + bouton
+                + "</td></tr>"
+                + "<tr><td style='background:#ffffff;border-radius:0 0 12px 12px;border-top:1px solid #e5e9ee;padding:14px 28px;font-size:11.5px;line-height:1.5;color:#6b7280'>"
+                + "Message envoy&eacute; automatiquement par HRX, Direction du Capital Humain et de la Transformation. Ce message est confidentiel, merci de ne pas le transf&eacute;rer.</td></tr>"
+                + "</table></td></tr></table></body></html>";
+    }
+
+    /** Petit tableau clé / valeur. */
+    private static String fiche(String... kv) {
+        StringBuilder b = new StringBuilder("<table role='presentation' cellspacing='0' cellpadding='0' style='width:100%;border:1px solid #e5e9ee;border-radius:8px;border-collapse:separate;overflow:hidden'>");
+        for (int i = 0; i + 1 < kv.length; i += 2)
+            b.append("<tr><td style='padding:9px 12px;background:#f6f8fa;color:#6b7280;font-size:12px;width:38%;border-bottom:1px solid #eef1f4'>").append(esc(kv[i])).append("</td>")
+             .append("<td style='padding:9px 12px;font-size:13.5px;color:#111827;font-weight:600;border-bottom:1px solid #eef1f4'>").append(kv[i + 1]).append("</td></tr>");
+        return b.append("</table>").toString();
+    }
+
+    private String lienFiche(Evaluation e) { return base() + "/ui/fiche?id=" + e.getId(); }
+    private String lienObjectifs(FicheObjectifs f) { return base() + "/ui/objectifs?salarie=" + f.getSalarie().getId() + "&exercice=" + f.getExercice(); }
+    private String contexte(Evaluation e) {
+        return fiche("Collaborateur", nom(e.getSalarie()), "Campagne", esc(e.getCampagne().getLibelle()), "Évaluateur (N+1)", nom(e.getEvaluateur()),
+                "Échéance", e.getCampagne().getDateFin() == null ? "—" : e.getCampagne().getDateFin().format(D));
+    }
+    private void envoyer(Users dest, String sujet, String html) { if (dest != null && dest.getEmail() != null && !dest.getEmail().isBlank()) mail.envoyerHtml(dest.getEmail(), sujet, html); }
+
+    // évaluations
+    /** Intégration à la campagne : le collaborateur peut renseigner son auto-évaluation. */
+    public void ficheInitiee(Evaluation e) {
+        envoyer(e.getSalarie(), "Votre fiche d'évaluation est ouverte : " + e.getCampagne().getLibelle(),
+                gabarit("Votre auto-évaluation est à renseigner", "Bonjour " + prenom(e.getSalarie()) + ", votre supérieur hiérarchique vous a intégré(e) à la campagne <b>" + esc(e.getCampagne().getLibelle()) + "</b>. Vous pouvez dès maintenant remplir votre auto-évaluation.",
+                        contexte(e), "Renseigner mon auto-évaluation", lienFiche(e), "Auto-évaluation"));
+    }
+
+    /** Le collaborateur a soumis : accusé d'envoi au collaborateur, alerte au N+1. */
+    public void autoEvaluationSoumise(Evaluation e) {
+        String quand = e.getDateSoumission() == null ? "" : DT.format(e.getDateSoumission());
+        envoyer(e.getSalarie(), "Accusé de réception - auto-évaluation transmise à votre N+1",
+                gabarit("Votre auto-évaluation a bien été transmise", "Bonjour " + prenom(e.getSalarie()) + ", nous accusons réception de votre auto-évaluation, transmise le <b>" + quand + "</b> à <b>" + nom(e.getEvaluateur()) + "</b>" + (e.isSoumiseATemps() ? " - dans les délais de la campagne." : " - <span style='color:#b45309'>après l'échéance de la campagne</span>.") + " Vous serez informé(e) dès que votre évaluation sera réalisée.",
+                        contexte(e), "Suivre ma fiche", lienFiche(e), "Accusé d'envoi"));
+        envoyer(e.getEvaluateur(), "Évaluation à réaliser : " + e.getSalarie().getNomComplet(),
+                gabarit("Une auto-évaluation attend votre revue", "Bonjour " + prenom(e.getEvaluateur()) + ", <b>" + nom(e.getSalarie()) + "</b> a soumis son auto-évaluation le <b>" + quand + "</b>. Merci de la relire, de compléter votre évaluation et de la transmettre.",
+                        contexte(e), "Évaluer maintenant", lienFiche(e), "À traiter"));
+    }
+
+    /** Le N+1 a transmis : information du collaborateur, alertes N+2 / directeur / DCHT. */
+    public void evaluationTransmise(Evaluation e, Users n2, Users directeur) {
+        String note = e.getNoteGlobale() == null ? "—" : e.getNoteGlobale() + " / 20 : " + esc(e.getAppreciation());
+        envoyer(e.getSalarie(), "Votre évaluation a été réalisée : " + e.getCampagne().getLibelle(),
+                gabarit("Votre évaluation a été réalisée par votre N+1", "Bonjour " + prenom(e.getSalarie()) + ", <b>" + nom(e.getEvaluateur()) + "</b> a terminé votre évaluation. Elle part maintenant chez le directeur puis à la DCHT. Vous pouvez la consulter et y ajouter vos commentaires.",
+                        contexte(e) + "<p style='margin:14px 0 0;font-size:14px'>Note provisoire : <b>" + note + "</b></p>", "Consulter et commenter", lienFiche(e), "Évaluation réalisée"));
+        String corpsResp = contexte(e) + "<p style='margin:14px 0 0;font-size:14px'>Note : <b>" + note + "</b></p>";
+        if (n2 != null) envoyer(n2, "Visa à apposer - évaluation de " + e.getSalarie().getNomComplet(),
+                gabarit("Une évaluation attend votre visa (N+2)", "Bonjour " + prenom(n2) + ", l'évaluation de <b>" + nom(e.getSalarie()) + "</b> réalisée par <b>" + nom(e.getEvaluateur()) + "</b> vous est transmise pour visa.", corpsResp, "Apposer mon visa", lienFiche(e), "À viser"));
+        if (directeur != null) envoyer(directeur, "Avis du directeur à donner : " + e.getSalarie().getNomComplet(),
+                gabarit("Une évaluation attend votre avis", "Bonjour " + prenom(directeur) + ", l'évaluation de <b>" + nom(e.getSalarie()) + "</b> attend votre avis.", corpsResp, "Donner mon avis", lienFiche(e), "Avis du directeur"));
+        for (Users rh : dcht()) envoyer(rh, "Évaluation à valider : " + e.getSalarie().getNomComplet(),
+                gabarit("Une évaluation est prête pour validation", "Bonjour " + prenom(rh) + ", l'évaluation de <b>" + nom(e.getSalarie()) + "</b> (" + esc(e.getCampagne().getLibelle()) + ") a été réalisée par le N+1 et attend le contrôle de conformité et la validation de la DCHT.", corpsResp, "Contrôler et valider", lienFiche(e), "À valider"));
+    }
+
+    public void ficheRetournee(Evaluation e, boolean versSalarie, String motif) {
+        if (versSalarie) envoyer(e.getSalarie(), "Votre auto-évaluation vous est retournée pour correction",
+                gabarit("Correction demandée sur votre auto-évaluation", "Bonjour " + prenom(e.getSalarie()) + ", <b>" + nom(e.getEvaluateur()) + "</b> vous retourne votre fiche pour correction :",
+                        "<blockquote style='margin:0 0 14px;padding:12px 16px;border-left:4px solid #b8872b;background:#fdf8ee;font-size:14px'>" + esc(motif) + "</blockquote>" + contexte(e), "Corriger ma fiche", lienFiche(e), "À corriger"));
+        else envoyer(e.getEvaluateur(), "Évaluation retournée par la DCHT : " + e.getSalarie().getNomComplet(),
+                gabarit("La DCHT vous retourne une évaluation", "Bonjour " + prenom(e.getEvaluateur()) + ", l'évaluation de <b>" + nom(e.getSalarie()) + "</b> vous est retournée pour correction :",
+                        "<blockquote style='margin:0 0 14px;padding:12px 16px;border-left:4px solid #b8872b;background:#fdf8ee;font-size:14px'>" + esc(motif) + "</blockquote>" + contexte(e), "Corriger l'évaluation", lienFiche(e), "À corriger"));
+    }
+
+    public void ficheValidee(Evaluation e) {
+        String note = e.getNoteGlobale() == null ? "—" : e.getNoteGlobale() + " / 20 : " + esc(e.getAppreciation());
+        String corps = contexte(e) + "<p style='margin:14px 0 0;font-size:14px'>Note définitive : <b>" + note + "</b></p>";
+        envoyer(e.getSalarie(), "Votre évaluation est validée : " + e.getCampagne().getLibelle(),
+                gabarit("Votre évaluation est validée", "Bonjour " + prenom(e.getSalarie()) + ", la DCHT a validé votre fiche d'évaluation. Elle est maintenant définitive ; vous pouvez la consulter ou la télécharger quand vous voulez.", corps, "Consulter ma fiche", lienFiche(e), "Validée"));
+        envoyer(e.getEvaluateur(), "Évaluation validée : " + e.getSalarie().getNomComplet(),
+                gabarit("Évaluation validée par la DCHT", "Bonjour " + prenom(e.getEvaluateur()) + ", l'évaluation de <b>" + nom(e.getSalarie()) + "</b> a été validée.", corps, "Consulter la fiche", lienFiche(e), "Validée"));
+    }
+
+    /** Relance DCHT : message libre adressé au collaborateur, au N+1 ou au directeur selon l'étape de la fiche. */
+    public void relance(Evaluation e, Users dest, String objet, String message, Users auteur) {
+        String corps = "<blockquote style='margin:0 0 14px;padding:12px 16px;border-left:4px solid #b8872b;background:#fdf8ee;font-size:14px;white-space:pre-line'>" + esc(message) + "</blockquote>" + contexte(e)
+                + "<p style='margin:14px 0 0;font-size:12.5px;color:#6b7280'>Relance émise par " + nom(auteur) + " (DCHT) le " + DT.format(new java.util.Date()) + ".</p>";
+        envoyer(dest, "Relance : " + objet, gabarit(objet, "Bonjour " + prenom(dest) + ", la Direction du Capital Humain vous adresse une relance concernant la fiche d'évaluation de <b>" + nom(e.getSalarie()) + "</b> :", corps, "Ouvrir la fiche", lienFiche(e), "Relance DCHT"));
+    }
+
+    /** Relance d'un N+1 qui n'a pas encore intégré un collaborateur évaluable à la campagne. */
+    public void relanceIntegration(Users n1, Users salarie, Campagne c, String message, Users auteur) {
+        String corps = "<blockquote style='margin:0 0 14px;padding:12px 16px;border-left:4px solid #b8872b;background:#fdf8ee;font-size:14px;white-space:pre-line'>" + esc(message) + "</blockquote>"
+                + fiche("Collaborateur", nom(salarie), "Campagne", esc(c.getLibelle()), "Échéance", c.getDateFin() == null ? "—" : c.getDateFin().format(D))
+                + "<p style='margin:14px 0 0;font-size:12.5px;color:#6b7280'>Relance émise par " + nom(auteur) + " (DCHT) le " + DT.format(new java.util.Date()) + ".</p>";
+        envoyer(n1, "Relance - collaborateur à intégrer à la campagne " + c.getLibelle(),
+                gabarit("Un collaborateur attend son intégration à la campagne", "Bonjour " + prenom(n1) + ", <b>" + nom(salarie) + "</b> n'a pas encore de fiche d'évaluation pour la campagne <b>" + esc(c.getLibelle()) + "</b>.", corps, "Ouvrir mon équipe", base() + "/ui/equipe", "Relance DCHT"));
+    }
+
+    // objectifs
+    public void objectifPropose(FicheObjectifs f, Objectif o, Users auteur) {
+        Users n1 = f.getSalarie().getSuperieurHierarchique();
+        envoyer(n1, "Objectif proposé à valider : " + f.getSalarie().getNomComplet(),
+                gabarit("Un collaborateur propose un objectif", "Bonjour " + prenom(n1) + ", <b>" + nom(f.getSalarie()) + "</b> propose un objectif pour l'exercice " + f.getExercice() + ". Validez-le, modifiez-le ou refusez-le avec un motif.",
+                        fiche("Rubrique", esc(o.getNature() == null ? "" : o.getNature().getLibelle()), "Objectif", esc(o.getLibelle()), "Indicateur", esc(o.getIndicateur()), "Périodicité", esc(o.getPeriodiciteEnum().getLibelle())),
+                        "Examiner la proposition", lienObjectifs(f), "À valider"));
+        envoyer(f.getSalarie(), "Accusé de réception - objectif proposé",
+                gabarit("Votre proposition d'objectif est transmise", "Bonjour " + prenom(f.getSalarie()) + ", votre proposition a été transmise à <b>" + nom(n1) + "</b> pour validation.",
+                        fiche("Objectif", esc(o.getLibelle())), "Voir mes objectifs", lienObjectifs(f), "Accusé d'envoi"));
+    }
+
+    public void objectifTraite(FicheObjectifs f, Objectif o, boolean valide) {
+        envoyer(f.getSalarie(), valide ? "Objectif validé par votre N+1" : "Objectif refusé par votre N+1",
+                gabarit(valide ? "Votre objectif a été validé" : "Votre proposition d'objectif a été refusée", "Bonjour " + prenom(f.getSalarie()) + ", votre supérieur hiérarchique a " + (valide ? "validé" : "refusé") + " l'objectif suivant" + (valide ? "." : " :"),
+                        (valide ? "" : "<blockquote style='margin:0 0 14px;padding:12px 16px;border-left:4px solid #b8872b;background:#fdf8ee;font-size:14px'>" + esc(o.getMotifRefus()) + "</blockquote>") + fiche("Objectif", esc(o.getLibelle())),
+                        "Voir mes objectifs", lienObjectifs(f), valide ? "Validé" : "Refusé"));
+    }
+
+    public void ficheObjectifsSignee(FicheObjectifs f) {
+        String corps = fiche("Collaborateur", nom(f.getSalarie()), "Exercice", String.valueOf(f.getExercice()), "Objectifs validés", String.valueOf(f.getNbValides()));
+        envoyer(f.getSalarie(), "Votre fiche d'objectifs " + f.getExercice() + " est signée",
+                gabarit("Fiche d'objectifs signée par les deux parties", "Bonjour " + prenom(f.getSalarie()) + ", votre fiche d'objectifs est signée. Elle servira de référence pour vos évaluations de l'année.", corps, "Consulter ma fiche", lienObjectifs(f), "Signée"));
+        envoyer(f.getN1(), "Fiche d'objectifs signée : " + f.getSalarie().getNomComplet(),
+                gabarit("Fiche d'objectifs signée", "Bonjour " + prenom(f.getN1()) + ", la fiche d'objectifs de <b>" + nom(f.getSalarie()) + "</b> est signée par les deux parties.", corps, "Consulter la fiche", lienObjectifs(f), "Signée"));
+    }
+
+    public List<Users> destinatairesDcht() {
+        try { return userDAO.findActiveByPrivilegeCodes(List.of("EVAL_DCHT", "CAMP_CREATE")); } catch (Exception e) { return List.of(); }
+    }
+
+    // Rappels de fixation des objectifs
+    private static final String TH = "<th style='text-align:left;padding:8px 10px;background:#f6f8fa;color:#6b7280;font-size:11.5px;font-weight:600;border-bottom:1px solid #e5e9ee'>";
+    private static final String TD = "<td style='padding:8px 10px;font-size:13px;color:#111827;border-bottom:1px solid #eef1f4'>";
+    private static final String TDN = "<td style='padding:8px 10px;font-size:13px;color:#111827;border-bottom:1px solid #eef1f4;text-align:right'>";
+
+    /** Rappel au N+1 : ses collaborateurs directs dont la fiche d'objectifs n'est pas signée. */
+    public void rappelObjectifsManager(Users n1, List<SuiviObjectifsService.Ligne> lignes, int exercice) {
+        long retard = lignes.stream().filter(SuiviObjectifsService.Ligne::enRetard).count();
+        StringBuilder t = new StringBuilder("<table role='presentation' cellspacing='0' cellpadding='0' style='width:100%;border:1px solid #e5e9ee;border-radius:8px;border-collapse:separate;overflow:hidden'>")
+                .append("<tr>").append(TH).append("Collaborateur</th>").append(TH).append("Situation</th>").append(TH).append("Objectifs</th></tr>");
+        for (SuiviObjectifsService.Ligne l : lignes)
+            t.append("<tr>").append(TD).append("<b>").append(nom(l.salarie())).append("</b>").append(l.enRetard() ? " <span style='color:#b91c1c;font-size:11.5px'>en retard</span>" : "").append("</td>")
+             .append(TD).append(esc(l.statutLabel())).append("</td>")
+             .append(TD).append(l.valides()).append(" validé(s)").append(l.proposes() > 0 ? ", " + l.proposes() + " proposé(s)" : "").append("</td></tr>");
+        t.append("</table>");
+        String accroche = "Bonjour " + prenom(n1) + ", " + lignes.size() + (lignes.size() > 1 ? " de vos collaborateurs n'ont" : " de vos collaborateurs n'a")
+                + " pas encore de fiche d'objectifs " + exercice + " signée" + (retard > 0 ? ", dont <b>" + retard + " en retard</b>" : "") + ". Sans objectifs validés, ils ne pourront pas être évalués.";
+        envoyer(n1, "Rappel : objectifs " + exercice + " à fixer pour votre équipe",
+                gabarit("Objectifs " + exercice + " à finaliser", accroche, t.toString(), "Ouvrir mon équipe", base() + "/ui/equipe", "Rappel"));
+    }
+
+    /** Synthèse DCHT : avancement de la fixation des objectifs par direction. */
+    public void rappelObjectifsDcht(Users rh, List<SuiviObjectifsService.Agregat> dirs, SuiviObjectifsService.Agregat total, int exercice) {
+        StringBuilder t = new StringBuilder("<table role='presentation' cellspacing='0' cellpadding='0' style='width:100%;border:1px solid #e5e9ee;border-radius:8px;border-collapse:separate;overflow:hidden'>")
+                .append("<tr>").append(TH).append("Direction</th>").append(TH.replace("text-align:left", "text-align:right")).append("Évaluables</th>")
+                .append(TH.replace("text-align:left", "text-align:right")).append("Signées</th>").append(TH.replace("text-align:left", "text-align:right")).append("Restantes</th>")
+                .append(TH.replace("text-align:left", "text-align:right")).append("En retard</th>").append(TH.replace("text-align:left", "text-align:right")).append("Taux</th></tr>");
+        for (SuiviObjectifsService.Agregat a : dirs)
+            t.append("<tr>").append(TD).append(esc(a.getNom())).append("</td>").append(TDN).append(a.getEffectif()).append("</td>").append(TDN).append(a.getSignees()).append("</td>")
+             .append(TDN).append(a.getRestants()).append("</td>").append(TDN).append(a.getRetard() > 0 ? "<span style='color:#b91c1c'>" + a.getRetard() + "</span>" : "0").append("</td>")
+             .append(TDN).append("<b>").append(a.getTaux()).append(" %</b></td></tr>");
+        t.append("<tr>").append(TD).append("<b>Total</b></td>").append(TDN).append("<b>").append(total.getEffectif()).append("</b></td>").append(TDN).append("<b>").append(total.getSignees()).append("</b></td>")
+         .append(TDN).append("<b>").append(total.getRestants()).append("</b></td>").append(TDN).append("<b>").append(total.getRetard()).append("</b></td>").append(TDN).append("<b>").append(total.getTaux()).append(" %</b></td></tr></table>");
+        String accroche = "Bonjour " + prenom(rh) + ", voici où en est la fixation des objectifs " + exercice + " : <b>" + total.getSignees() + " fiche(s) signée(s) sur " + total.getEffectif()
+                + "</b>" + (total.getRetard() > 0 ? ", " + total.getRetard() + " en retard" : "") + ". Les N+1 concernés reçoivent leur propre rappel.";
+        envoyer(rh, "Fixation des objectifs " + exercice + " : point par direction",
+                gabarit("Fixation des objectifs " + exercice, accroche, t.toString(), "Voir le suivi", base() + "/ui/suiviObjectifs", "Synthèse"));
+    }
+
+    private List<Users> dcht() {
+        try { return userDAO.findActiveByPrivilegeCodes(List.of("EVAL_DCHT")); } catch (Exception e) { return List.of(); }
+    }
+}

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="http://xmlns.jcp.org/xml/ns/persistence" version="2.2">
+    <persistence-unit name="PU" transaction-type="JTA">
+        <jta-data-source>java:/hrx</jta-data-source>
+        <exclude-unlisted-classes>false</exclude-unlisted-classes>
+        <properties>
+            <!-- Configuration Hibernate -->
+            <property name="hibernate.hbm2ddl.auto" value="update" />
+
+            <!-- Garder les erreurs Hibernate sans imprimer chaque requête sur stdout. -->
+            <property name="hibernate.show_sql" value="false" />
+            <property name="hibernate.format_sql" value="false" />
+            <property name="hibernate.enable_lazy_load_no_trans" value="true"/>
+            <property name="hibernate.connection.characterEncoding" value="UTF-8"/>
+            <property name="hibernate.connection.useUnicode" value="true"/>
+            <property name="hibernate.connection.charSet" value="UTF-8"/>
+            <property name="hibernate.connection.useSSL" value="false"/>
+            <property name="hibernate.connection.autoReconnect" value="true"/>
+            <property name="hibernate.connection.autoReconnectForPools" value="true"/>
+
+
+        </properties>
+    </persistence-unit>
+</persistence>

@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Utilisateurs"/>
+    <ui:param name="pageSubtitle" value="Comptes et rattachements"/>
+    <ui:define name="title">Utilisateurs</ui:define>
+
+    <ui:define name="content">
+        <h:form id="frmUsers" prependId="false">
+
+            <div class="hx-page-head">
+                <div>
+                    <h2>Utilisateurs</h2>
+                    <p>Chaque collaborateur a un compte, un profil, une direction et un N+1, qui est son évaluateur.</p>
+                </div>
+                <div class="hx-page-head__actions">
+                    <p:commandButton value="Importer depuis l'annuaire" icon="pi pi-cloud-download" styleClass="hx-btn-secondary" process="@this"
+                                     rendered="#{privilegeBean.hasPrivilege('USR_LDAP')}"
+                                     update="dlgLdap" oncomplete="PF('dlgLdap').show()"/>
+                    <p:commandButton value="Nouveau compte" icon="pi pi-user-plus" process="@this"
+                                     rendered="#{privilegeBean.hasPrivilege('USR_EDIT')}"
+                                     actionListener="#{userAdminView.nouveau}" update="dlgUser" oncomplete="PF('dlgUser').show()"/>
+                </div>
+            </div>
+
+            <!-- Chiffres clés -->
+            <div class="hx-grid hx-grid--kpi hx-kpis-compact">
+                <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-users"></i> Comptes actifs</span><span class="hx-kpi__value">#{userAdminView.nbActifs}</span></div>
+                <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-flag"></i> Collaborateurs évaluables</span><span class="hx-kpi__value hx-kpi__value--gold">#{userAdminView.nbEvaluables}</span></div>
+                <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-user-minus"></i> Comptes inactifs</span><span class="hx-kpi__value">#{userAdminView.nbInactifs}</span></div>
+            </div>
+
+            <!-- Filtres -->
+            <h:panelGroup id="barre" layout="block" styleClass="hx-toolbar">
+                <div class="hx-pane__search hx-toolbar__search">
+                    <i class="pi pi-search"></i>
+                    <p:inputText value="#{userAdminView.recherche}" placeholder="Nom, identifiant, e-mail, matricule, fonction">
+                        <p:ajax event="keyup" update="table" delay="250"/>
+                    </p:inputText>
+                </div>
+                <p:selectOneMenu value="#{userAdminView.filtreProfilId}" styleClass="hx-select hx-toolbar__select">
+                    <f:selectItem itemLabel="Tous les profils" itemValue="#{null}" noSelectionOption="true"/>
+                    <f:selectItems value="#{userAdminView.profils}" var="pf" itemLabel="#{pf.nom}" itemValue="#{pf.id}"/>
+                    <p:ajax update="table"/>
+                </p:selectOneMenu>
+                <p:selectOneMenu value="#{userAdminView.filtreDirectionId}" styleClass="hx-select hx-toolbar__select">
+                    <f:selectItem itemLabel="Toutes les directions" itemValue="#{null}" noSelectionOption="true"/>
+                    <f:selectItems value="#{userAdminView.directions}" var="dr" itemLabel="#{dr.nom}" itemValue="#{dr.id}"/>
+                    <p:ajax update="table"/>
+                </p:selectOneMenu>
+                <p:selectOneButton value="#{userAdminView.filtreStatut}" styleClass="hx-segment" unselectable="false">
+                    <f:selectItem itemLabel="Actifs" itemValue="actifs"/>
+                    <f:selectItem itemLabel="Inactifs" itemValue="inactifs"/>
+                    <f:selectItem itemLabel="Tous" itemValue="tous"/>
+                    <p:ajax update="table"/>
+                </p:selectOneButton>
+            </h:panelGroup>
+
+            <!-- Table -->
+            <div class="hx-card">
+                <p:dataTable id="table" var="u" value="#{userAdminView.usersFiltres}" rowKey="#{u.id}"
+                             paginator="true" rows="15" paginatorPosition="bottom" paginatorAlwaysVisible="false"
+                             paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="{startRecord}–{endRecord} sur {totalRecords}" rowsPerPageTemplate="15,30,60"
+                             emptyMessage="Aucun compte ne correspond aux filtres." styleClass="hx-table" rowHover="true">
+
+                    <p:column headerText="Collaborateur" sortBy="#{u.nom}" style="min-width: 260px;">
+                        <div class="hx-person">
+                            <span class="hx-avatar hx-avatar--sm #{u.statut eq 1 ? '' : 'is-off'}">#{userAdminView.initiales(u)}</span>
+                            <span class="hx-person__text">
+                                <strong>#{u.nomComplet}
+                                    <ui:fragment rendered="#{u.id eq loginBean.users.id}"><span class="hx-tag">vous</span></ui:fragment>
+                                </strong>
+                                <small>#{u.login}<ui:fragment rendered="#{not empty u.matricule}"> - #{u.matricule}</ui:fragment></small>
+                            </span>
+                        </div>
+                    </p:column>
+                    <p:column headerText="Fonction" sortBy="#{u.fonction}">
+                        <span class="hx-cell-main">#{empty u.fonction ? '—' : u.fonction}</span>
+                        <small class="hx-cell-sub">#{u.email}</small>
+                    </p:column>
+                    <p:column headerText="Direction" sortBy="#{u.direction.nom}">
+                        <ui:fragment rendered="#{not empty u.direction}"><span class="hx-cell-main">#{u.direction.abrege}</span><small class="hx-cell-sub">#{u.direction.nom}</small></ui:fragment>
+                        <ui:fragment rendered="#{empty u.direction}"><span class="hx-muted">—</span></ui:fragment>
+                    </p:column>
+                    <p:column headerText="N+1" sortBy="#{u.superieurHierarchique.nom}">
+                        <ui:fragment rendered="#{not empty u.superieurHierarchique}">#{u.superieurHierarchique.nomComplet}</ui:fragment>
+                        <ui:fragment rendered="#{empty u.superieurHierarchique}"><span class="hx-muted">Non défini</span></ui:fragment>
+                    </p:column>
+                    <p:column headerText="Profil" sortBy="#{u.profil.nom}" style="width: 160px;">
+                        <span class="hx-badge hx-badge--info">#{u.profil.nom}</span>
+                    </p:column>
+                    <p:column headerText="Statut" style="width: 150px;">
+                        <span class="hx-badge #{u.statut eq 1 ? 'hx-badge--done' : 'hx-badge--draft'}">#{u.statut eq 1 ? 'Actif' : 'Inactif'}</span>
+                        <ui:fragment rendered="#{u.evaluable ne 1}"><span class="hx-badge hx-badge--pending" title="Exclu des campagnes">non évaluable</span></ui:fragment>
+                    </p:column>
+                    <p:column headerText="" style="width: 150px; text-align: right;">
+                        <div class="hx-row-actions">
+                            <p:commandLink process="@this" title="Modifier" styleClass="hx-icon-btn" rendered="#{privilegeBean.hasPrivilege('USR_EDIT')}"
+                                           actionListener="#{userAdminView.modifier(u)}" update="dlgUser" oncomplete="PF('dlgUser').show()"><i class="pi pi-pencil"></i></p:commandLink>
+                            <p:commandLink process="@this" title="Réinitialiser le mot de passe" styleClass="hx-icon-btn" rendered="#{privilegeBean.hasPrivilege('USR_RESET')}"
+                                           actionListener="#{userAdminView.preparerReset(u)}" update="dlgReset" oncomplete="PF('dlgReset').show()"><i class="pi pi-key"></i></p:commandLink>
+                            <p:commandLink process="@this" title="#{u.statut eq 1 ? 'Désactiver' : 'Activer'}" styleClass="hx-icon-btn" rendered="#{privilegeBean.hasPrivilege('USR_EDIT')}"
+                                           actionListener="#{userAdminView.basculerStatut(u)}" update="table barre"><i class="pi #{u.statut eq 1 ? 'pi-eye-slash' : 'pi-eye'}"></i></p:commandLink>
+                            <p:commandLink process="@this" title="Supprimer" styleClass="hx-icon-btn hx-icon-btn--danger" rendered="#{privilegeBean.hasPrivilege('USR_EDIT')}"
+                                           actionListener="#{userAdminView.supprimer(u)}" update="table">
+                                <p:confirm header="Supprimer le compte" message="Supprimer définitivement le compte de #{u.nomComplet} ? Préférez la désactivation si la personne a déjà des évaluations." icon="pi pi-exclamation-triangle"/>
+                                <i class="pi pi-trash"></i></p:commandLink>
+                        </div>
+                    </p:column>
+                </p:dataTable>
+            </div>
+
+            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" responsive="true" width="440">
+                <p:commandButton value="Annuler" type="button" styleClass="ui-confirmdialog-no hx-btn-secondary" icon="pi pi-times"/>
+                <p:commandButton value="Supprimer" type="button" styleClass="ui-confirmdialog-yes hx-btn-danger" icon="pi pi-trash"/>
+            </p:confirmDialog>
+        </h:form>
+
+        <!-- Fiche utilisateur -->
+        <p:dialog id="dlgUser" widgetVar="dlgUser" header="#{userAdminView.edit.id eq 0 ? 'Nouveau compte' : 'Modifier le compte'}"
+                  modal="true" responsive="true" width="760" fitViewport="true" closeOnEscape="true" showEffect="fade" hideEffect="fade" styleClass="hx-dialog-lg">
+            <h:form id="frmUser">
+                <p:messages showDetail="true" closable="true"/>
+                <div class="hx-form">
+                    <h4 class="hx-form__section">Identité</h4>
+                    <div class="hx-field__grid hx-field__grid--3">
+                        <div class="hx-field"><p:outputLabel for="uPrenom" value="Prénom"/><p:inputText id="uPrenom" value="#{userAdminView.edit.prenom}" required="true" requiredMessage="Le prénom est obligatoire" maxlength="80"/></div>
+                        <div class="hx-field"><p:outputLabel for="uNom" value="Nom"/><p:inputText id="uNom" value="#{userAdminView.edit.nom}" required="true" requiredMessage="Le nom est obligatoire" maxlength="80"/></div>
+                        <div class="hx-field"><p:outputLabel for="uPostnom" value="Post-nom"/><p:inputText id="uPostnom" value="#{userAdminView.edit.postnom}" maxlength="80" placeholder="facultatif"/></div>
+                    </div>
+                    <div class="hx-field__grid hx-field__grid--3">
+                        <div class="hx-field"><p:outputLabel for="uLogin" value="Identifiant réseau"/><p:inputText id="uLogin" value="#{userAdminView.edit.login}" required="true" requiredMessage="L'identifiant est obligatoire" maxlength="60" placeholder="prenom.nom"/></div>
+                        <div class="hx-field"><p:outputLabel for="uEmail" value="E-mail"/><p:inputText id="uEmail" value="#{userAdminView.edit.email}" required="true" requiredMessage="L'e-mail est obligatoire" maxlength="120"/></div>
+                        <div class="hx-field"><p:outputLabel for="uPhone" value="Téléphone"/><p:inputText id="uPhone" value="#{userAdminView.edit.phone}" maxlength="30"/></div>
+                    </div>
+
+                    <h4 class="hx-form__section">Rattachement RH</h4>
+                    <div class="hx-field__grid hx-field__grid--3">
+                        <div class="hx-field"><p:outputLabel for="uMatricule" value="Matricule"/><p:inputText id="uMatricule" value="#{userAdminView.edit.matricule}" maxlength="30"/></div>
+                        <div class="hx-field"><p:outputLabel for="uFonction" value="Fonction"/><p:inputText id="uFonction" value="#{userAdminView.edit.fonction}" maxlength="150"/></div>
+                        <div class="hx-field">
+                            <p:outputLabel for="uCategorie" value="Catégorie"/>
+                            <p:selectOneMenu id="uCategorie" value="#{userAdminView.edit.categorie}" styleClass="hx-select">
+                                <f:selectItem itemLabel="—" itemValue="#{null}" noSelectionOption="true"/>
+                                <f:selectItem itemLabel="Cadre supérieur" itemValue="CADRE_SUP"/>
+                                <f:selectItem itemLabel="Cadre" itemValue="CADRE"/>
+                                <f:selectItem itemLabel="Agent de maîtrise" itemValue="MAITRISE"/>
+                                <f:selectItem itemLabel="Employé" itemValue="EMPLOYE"/>
+                            </p:selectOneMenu>
+                        </div>
+                    </div>
+                    <div class="hx-field__grid hx-field__grid--3">
+                        <div class="hx-field">
+                            <p:outputLabel for="uDirection" value="Direction"/>
+                            <p:selectOneMenu id="uDirection" value="#{userAdminView.editDirectionId}" styleClass="hx-select" filter="true" filterMatchMode="contains">
+                                <f:selectItem itemLabel="—" itemValue="#{null}" noSelectionOption="true"/>
+                                <f:selectItems value="#{userAdminView.directions}" var="dr" itemLabel="#{dr.abrege} - #{dr.nom}" itemValue="#{dr.id}"/>
+                            </p:selectOneMenu>
+                        </div>
+                        <div class="hx-field">
+                            <p:outputLabel for="uSup" value="Supérieur hiérarchique (N+1)"/>
+                            <p:selectOneMenu id="uSup" value="#{userAdminView.editSuperieurId}" styleClass="hx-select" filter="true" filterMatchMode="contains">
+                                <f:selectItem itemLabel="—" itemValue="#{null}" noSelectionOption="true"/>
+                                <f:selectItems value="#{userAdminView.superieursPossibles}" var="su" itemLabel="#{su.nomComplet}" itemValue="#{su.id}"/>
+                            </p:selectOneMenu>
+                        </div>
+                        <div class="hx-field">
+                            <p:outputLabel for="uEmbauche" value="Date d'embauche"/>
+                            <p:datePicker id="uEmbauche" value="#{userAdminView.edit.dateEmbauche}" pattern="dd/MM/yyyy" locale="fr" showIcon="true" styleClass="hx-date" yearNavigator="true" yearRange="1980:2030"/>
+                        </div>
+                    </div>
+
+                    <h4 class="hx-form__section">Accès</h4>
+                    <div class="hx-field__grid">
+                        <div class="hx-field">
+                            <p:outputLabel for="uProfil" value="Profil (droits)"/>
+                            <p:selectOneMenu id="uProfil" value="#{userAdminView.editProfilId}" styleClass="hx-select" required="true" requiredMessage="Le profil est obligatoire">
+                                <f:selectItem itemLabel="Choisir un profil" itemValue="#{null}" noSelectionOption="true"/>
+                                <f:selectItems value="#{userAdminView.profils}" var="pf" itemLabel="#{pf.nom}" itemValue="#{pf.id}"/>
+                            </p:selectOneMenu>
+                        </div>
+                        <div class="hx-field hx-field--inline" style="align-self: end; padding-bottom: 8px;">
+                            <p:selectBooleanCheckbox id="uEval" value="#{userAdminView.editEvaluable}"/>
+                            <p:outputLabel for="uEval" value="Collaborateur évaluable (intégré aux campagnes)"/>
+                        </div>
+                    </div>
+                    <ui:fragment rendered="#{userAdminView.edit.id eq 0}">
+                        <p class="hx-field__help"><i class="pi pi-info-circle"></i> Mot de passe initial généré à la création (comptes locaux) ; les comptes réseau utilisent leur mot de passe Windows.</p>
+                    </ui:fragment>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgUser').hide()"/>
+                    <p:commandButton value="Enregistrer" icon="pi pi-check" process="@form" update="@form :table :barre :globalGrowl"
+                                     actionListener="#{userAdminView.enregistrer}"
+                                     oncomplete="if (!args.validationFailed) PF('dlgUser').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <!-- Réinitialisation -->
+        <p:dialog id="dlgReset" widgetVar="dlgReset" header="Réinitialiser le mot de passe" modal="true" responsive="true" width="460" closeOnEscape="true" showEffect="fade" hideEffect="fade">
+            <h:form id="frmReset">
+                <div class="hx-form">
+                    <p class="hx-field__help" style="margin:0">Compte <strong>#{userAdminView.cible.nomComplet}</strong> (#{userAdminView.cible.login}). Sans effet sur un compte réseau, dont le mot de passe est géré par l'annuaire.</p>
+                    <div class="hx-field">
+                        <p:outputLabel for="rMdp" value="Nouveau mot de passe"/>
+                        <div class="hx-field__row">
+                            <p:inputText id="rMdp" value="#{userAdminView.nouveauMdp}" styleClass="hx-mono-plain" maxlength="40"/>
+                            <p:commandButton icon="pi pi-refresh" title="Générer un autre mot de passe" styleClass="hx-btn-secondary" process="@this" update="rMdp" actionListener="#{userAdminView.regenerer}"/>
+                        </div>
+                    </div>
+                    <div class="hx-field hx-field--inline">
+                        <p:selectBooleanCheckbox id="rForce" value="#{userAdminView.forcerChangement}"/>
+                        <p:outputLabel for="rForce" value="Exiger un nouveau mot de passe à la prochaine connexion"/>
+                    </div>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgReset').hide()"/>
+                    <p:commandButton value="Réinitialiser" icon="pi pi-key" process="@form" update="@form :globalGrowl"
+                                     actionListener="#{userAdminView.reinitialiser}" oncomplete="PF('dlgReset').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <!-- Import LDAP -->
+        <p:dialog id="dlgLdap" widgetVar="dlgLdap" header="Importer des collaborateurs depuis l'annuaire" modal="true" responsive="true" width="860" closeOnEscape="true" showEffect="fade" hideEffect="fade" styleClass="hx-dialog-lg">
+            <h:form id="frmLdap">
+                <p:messages showDetail="true" closable="true"/>
+                <div class="hx-ldap">
+                    <div class="hx-ldap__head">
+                        <div>
+                            <strong>#{ldapUserImporter.ldapStatus}</strong>
+                            <small>Les comptes machines et les comptes déjà présents sont ignorés. Les nouveaux comptes reçoivent le profil par défaut
+                                <ui:fragment rendered="#{not empty ldapUserImporter.profilDefault}"> « #{ldapUserImporter.profilDefault.nom} »</ui:fragment>.</small>
+                        </div>
+                        <p:commandButton value="Rechercher dans l'annuaire" icon="pi pi-search" process="@this" update="@form"
+                                         actionListener="#{ldapUserImporter.searchLdapUsers}" disableOnAjax="true"/>
+                    </div>
+
+                    <h:panelGroup id="ldapResult" layout="block">
+                        <ui:fragment rendered="#{ldapUserImporter.hasUsers}">
+                            <div class="hx-ldap__stats">
+                                <span><strong>#{ldapUserImporter.totalFound}</strong> trouvés</span>
+                                <span><strong>#{ldapUserImporter.totalActive}</strong> actifs</span>
+                                <span><strong>#{ldapUserImporter.totalDisabled}</strong> désactivés</span>
+                                <span><strong>#{ldapUserImporter.totalAlreadyExists}</strong> déjà importés</span>
+                                <span class="hx-ldap__sel"><strong>#{ldapUserImporter.totalSelected}</strong> sélectionnés</span>
+                                <p:commandLink value="Tous les actifs" styleClass="hx-link-sm" process="@this" update="@form" actionListener="#{ldapUserImporter.selectAllActiveUsers}"/>
+                                <p:commandLink value="Aucun" styleClass="hx-link-sm" process="@this" update="@form" actionListener="#{ldapUserImporter.unselectAll}"/>
+                            </div>
+                            <p:dataTable id="ldapTable" var="lu" value="#{ldapUserImporter.availableUsers}" rowKey="#{lu.login}"
+                                         selection="#{ldapUserImporter.selectedUsers}" scrollable="true" scrollHeight="320" styleClass="hx-table hx-table--compact" emptyMessage="Aucun compte trouvé.">
+                                <p:ajax event="rowSelectCheckbox" update=":frmLdap:ldapResult" process=":frmLdap:ldapTable"/>
+                                <p:ajax event="rowUnselectCheckbox" update=":frmLdap:ldapResult" process=":frmLdap:ldapTable"/>
+                                <p:ajax event="toggleSelect" update=":frmLdap:ldapResult" process=":frmLdap:ldapTable"/>
+                                <p:column selectionMode="multiple" style="width: 40px;"/>
+                                <p:column headerText="Collaborateur"><strong>#{lu.prenom} #{lu.nom}</strong><br/><small class="hx-cell-sub">#{lu.login}</small></p:column>
+                                <p:column headerText="E-mail">#{lu.email}</p:column>
+                                <p:column headerText="Téléphone">#{lu.phone}</p:column>
+                                <p:column headerText="État annuaire" style="width: 130px;"><span class="hx-badge #{lu.statut eq 1 ? 'hx-badge--done' : 'hx-badge--draft'}">#{lu.statut eq 1 ? 'Actif' : 'Désactivé'}</span></p:column>
+                            </p:dataTable>
+                        </ui:fragment>
+                        <ui:fragment rendered="#{not ldapUserImporter.hasUsers}">
+                            <div class="hx-empty hx-empty--sm"><i class="pi pi-cloud-download"></i><strong>Aucune recherche lancée</strong>Cliquez sur « Rechercher dans l'annuaire » pour lister les comptes importables.</div>
+                        </ui:fragment>
+                    </h:panelGroup>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Fermer" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgLdap').hide()"/>
+                    <p:commandButton value="Importer la sélection" icon="pi pi-download" process="@form" update="@form :table :barre :globalGrowl"
+                                     rendered="#{ldapUserImporter.hasUsers}"
+                                     actionListener="#{ldapUserImporter.importSelectedUsers}" action="#{userAdminView.load}"
+                                     oncomplete="if (!args.validationFailed) { PF('dlgLdap').hide(); }"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>

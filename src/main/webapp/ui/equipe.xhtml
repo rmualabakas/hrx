@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Mon équipe"/>
+    <ui:param name="pageSubtitle" value="Objectifs et évaluations de votre équipe"/>
+    <ui:define name="title">Mon équipe</ui:define>
+
+    <ui:define name="content">
+        <h:form id="frmEquipe" prependId="false">
+
+            <div class="hx-page-head">
+                <div>
+                    <h2>Mon équipe</h2>
+                    <p>Vos collaborateurs directs et ceux qui leur sont rattachés. Vous gérez les objectifs et les évaluations de vos collaborateurs directs ; pour les autres, vous suivez l'avancement.</p>
+                </div>
+                <div class="hx-page-head__actions">
+                    <p:button value="Suivi des objectifs" icon="pi pi-flag" outcome="/ui/suiviObjectifs" styleClass="hx-btn-secondary"/>
+                    <p:selectBooleanButton value="#{equipeView.inclureIndirects}" onLabel="Tout le périmètre" offLabel="Directs seulement" onIcon="pi pi-sitemap" offIcon="pi pi-user" styleClass="hx-day">
+                        <p:ajax listener="#{equipeView.charger}" update="kpis grille barre"/>
+                    </p:selectBooleanButton>
+                </div>
+            </div>
+
+            <!-- Bandeau campagne -->
+            <h:panelGroup id="bandeau" layout="block">
+                <ui:fragment rendered="#{not empty equipeView.campagne}">
+                    <div class="hx-camp #{equipeView.campagne.enRetard ? 'is-late' : ''}">
+                        <span class="hx-camp__dot"></span>
+                        <div class="hx-camp__text">
+                            <strong>#{equipeView.campagne.libelle}</strong>
+                            <span>#{equipeView.campagne.typeLabel} · exercice #{equipeView.campagne.exercice}
+                                <ui:fragment rendered="#{not empty equipeView.campagne.dateFin}"> · fiches attendues au plus tard le <h:outputText value="#{equipeView.campagne.dateFin}"><f:convertDateTime type="localDate" pattern="dd MMMM yyyy" locale="fr"/></h:outputText></ui:fragment>
+                            </span>
+                        </div>
+                        <div class="hx-camp__progress" title="#{equipeView.nbFinalisees} fiche(s) validée(s) sur #{equipeView.nbEvaluables} évaluable(s)">
+                            <span style="width:#{equipeView.tauxAvancement}%"></span>
+                        </div>
+                        <strong class="hx-camp__pct">#{equipeView.tauxAvancement} %</strong>
+                        <p:commandButton value="Constituer la liste des évaluables" icon="pi pi-user-plus" styleClass="hx-btn-sm" process="@this"
+                                         rendered="#{not empty equipeView.candidats}" actionListener="#{equipeView.preparerSelection}" update=":dlgPop" oncomplete="PF('dlgPop').show()"
+                                         title="#{equipeView.candidats.size()} collaborateur(s) direct(s) pas encore intégré(s)"/>
+                    </div>
+                    <ui:fragment rendered="#{not empty equipeView.candidats}">
+                        <div class="hx-alert hx-alert--info"><i class="pi pi-info-circle"></i><div><strong>Étape 1 - constituer la population évaluable</strong><span>La campagne « #{equipeView.campagne.libelle} » est ouverte par la DCHT du <h:outputText value="#{equipeView.campagne.dateDebut}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText> au <h:outputText value="#{equipeView.campagne.dateFin}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText>. Indiquez quels collaborateurs de votre périmètre sont évaluables sur la période : ils recevront leur fiche et pourront s'auto-évaluer. #{equipeView.candidats.size()} collaborateur#{equipeView.candidats.size() gt 1 ? 's restent' : ' reste'} à intégrer.</span></div></div>
+                    </ui:fragment>
+                </ui:fragment>
+                <ui:fragment rendered="#{empty equipeView.campagne}">
+                    <div class="hx-camp hx-camp--none">
+                        <span class="hx-camp__dot"></span>
+                        <div class="hx-camp__text"><strong>Aucune campagne d'évaluation ouverte</strong><span>La fixation des objectifs ne dépend pas d'une campagne : elle se fait en début d'exercice, ou à la prise de poste pour une recrue, et vous pouvez signer les fiches dès maintenant. Les évaluations (mi-parcours, fin d'année) s'ouvriront quand la DCHT lancera une campagne.</span></div>
+                    </div>
+                </ui:fragment>
+            </h:panelGroup>
+
+            <h:panelGroup id="kpis" layout="block" styleClass="hx-grid hx-grid--kpi hx-kpis-compact">
+                <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-users"></i> Périmètre</span><span class="hx-kpi__value">#{equipeView.membres.size()}<small class="hx-kpi__sub">dont #{equipeView.nbDirects} direct#{equipeView.nbDirects gt 1 ? 's' : ''}</small></span></div>
+                <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-flag"></i> Évaluables</span><span class="hx-kpi__value hx-kpi__value--gold">#{equipeView.nbEvaluables}</span></div>
+                <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-flag"></i> Objectifs à fixer</span><span class="hx-kpi__value #{equipeView.nbSansObjectifs gt 0 ? 'hx-kpi__value--gold' : ''}">#{equipeView.nbSansObjectifs}<ui:fragment rendered="#{equipeView.nbPropositions gt 0}"><small class="hx-kpi__sub">#{equipeView.nbPropositions} proposition#{equipeView.nbPropositions gt 1 ? 's' : ''} à valider</small></ui:fragment></span></div>
+                <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-inbox"></i> À traiter</span><span class="hx-kpi__value">#{equipeView.nbATraiter}</span></div>
+                <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-clock"></i> En retard</span><span class="hx-kpi__value #{equipeView.nbRetard gt 0 ? 'hx-kpi__value--danger' : ''}">#{equipeView.nbRetard}</span></div>
+            </h:panelGroup>
+
+            <h:panelGroup id="barre" layout="block" styleClass="hx-toolbar">
+                <div class="hx-pane__search hx-toolbar__search">
+                    <i class="pi pi-search"></i>
+                    <p:inputText value="#{equipeView.recherche}" placeholder="Nom, fonction, matricule">
+                        <p:ajax event="keyup" update="grille" delay="250"/>
+                    </p:inputText>
+                </div>
+                <p:selectOneButton value="#{equipeView.filtre}" styleClass="hx-segment" unselectable="false">
+                    <f:selectItem itemLabel="Tous" itemValue="tous"/>
+                    <f:selectItem itemLabel="À initier" itemValue="aInitier"/>
+                    <f:selectItem itemLabel="À traiter" itemValue="aTraiter"/>
+                    <f:selectItem itemLabel="En retard" itemValue="retard"/>
+                    <f:selectItem itemLabel="Validées" itemValue="finalisees"/>
+                    <p:ajax update="grille"/>
+                </p:selectOneButton>
+                <div class="hx-viewsw" role="group" aria-label="Affichage">
+                    <p:commandLink process="@this" update="grille barre" action="#{equipeView.choisirVue('cartes')}" styleClass="hx-viewsw__btn #{equipeView.vue eq 'cartes' ? 'is-active' : ''}" title="Cartes"><i class="pi pi-th-large"></i><span>Cartes</span></p:commandLink>
+                    <p:commandLink process="@this" update="grille barre" action="#{equipeView.choisirVue('liste')}" styleClass="hx-viewsw__btn #{equipeView.vue eq 'liste' ? 'is-active' : ''}" title="Liste"><i class="pi pi-list"></i><span>Liste</span></p:commandLink>
+                    <p:commandLink process="@this" update="grille barre" action="#{equipeView.choisirVue('hierarchie')}" styleClass="hx-viewsw__btn #{equipeView.vue eq 'hierarchie' ? 'is-active' : ''}" title="Hiérarchie : chaque collaborateur sous son N+1"><i class="pi pi-sitemap"></i><span>Hiérarchie</span></p:commandLink>
+                </div>
+            </h:panelGroup>
+
+            <h:panelGroup id="grille" layout="block">
+                <ui:fragment rendered="#{empty equipeView.membres}">
+                    <div class="hx-card"><div class="hx-empty"><i class="pi pi-sitemap"></i><strong>Aucun collaborateur rattaché</strong>Personne ne vous est rattaché comme N+1. L'administration renseigne le supérieur hiérarchique dans la fiche de chaque compte.</div></div>
+                </ui:fragment>
+                <ui:fragment rendered="#{not empty equipeView.membres and empty equipeView.membresFiltres}">
+                    <div class="hx-card"><div class="hx-empty hx-empty--sm"><i class="pi pi-filter"></i><strong>Aucun collaborateur ne correspond au filtre</strong></div></div>
+                </ui:fragment>
+                <ui:fragment rendered="#{equipeView.vue eq 'cartes'}">
+                <div class="hx-grid hx-grid--cards hx-grid--team">
+                    <ui:repeat value="#{equipeView.membresFiltres}" var="u">
+                        <div class="hx-card hx-team #{u.evaluable ne 1 ? 'is-off' : ''} #{equipeView.enRetard(u) ? 'is-late' : ''} #{equipeView.isDirect(u) ? '' : 'hx-team--indirect'}" style="--hx-level:#{equipeView.niveau(u) - 1}">
+                            <div class="hx-team__head">
+                                <span class="hx-avatar">#{equipeView.initiales(u)}</span>
+                                <div class="hx-team__who">
+                                    <strong>#{u.nomComplet}
+                                        <ui:fragment rendered="#{not equipeView.isDirect(u)}"><span class="hx-tag" title="Collaborateur indirect">N-#{equipeView.niveau(u)}</span></ui:fragment>
+                                        <ui:fragment rendered="#{equipeView.recrue(u)}"><span class="hx-tag hx-tag--gold" title="Recruté durant l'exercice : objectifs à fixer à la prise de poste">recrue #{equipeView.exercice}</span></ui:fragment>
+                                    </strong>
+                                    <small>#{empty u.fonction ? 'Fonction non renseignée' : u.fonction}<ui:fragment rendered="#{not empty u.direction}"> · #{u.direction.abrege}</ui:fragment></small>
+                                    <ui:fragment rendered="#{not equipeView.isDirect(u)}"><small class="hx-team__via"><i class="pi pi-arrow-up-right"></i> N+1 : #{u.superieurHierarchique.nomComplet}</small></ui:fragment>
+                                </div>
+                                <span class="hx-badge #{equipeView.etatClasse(u)}">#{equipeView.etat(u)}</span>
+                            </div>
+
+                            <ol class="hx-steps" aria-label="Avancement de la fiche">
+                                <li class="#{equipeView.etape(u) ge 1 ? 'is-done' : ''}" title="Objectifs fixés"><i class="pi pi-flag"></i><span>Objectifs</span></li>
+                                <li class="#{equipeView.etape(u) ge 2 ? 'is-done' : ''}" title="Auto-évaluation soumise"><i class="pi pi-user-edit"></i><span>Auto-éval.</span></li>
+                                <li class="#{equipeView.etape(u) ge 3 ? 'is-done' : ''}" title="Évaluation N+1"><i class="pi pi-star"></i><span>Évaluation</span></li>
+                                <li class="#{equipeView.etape(u) ge 4 ? 'is-done' : ''}" title="Validation DCHT"><i class="pi pi-verified"></i><span>Validation</span></li>
+                            </ol>
+
+                            <div class="hx-team__meta">
+                                <span><i class="pi pi-list"></i> #{equipeView.nbObjectifs(u)} objectif#{equipeView.nbObjectifs(u) gt 1 ? 's' : ''}
+                                    <ui:fragment rendered="#{equipeView.objectifsSignes(u)}"> · <b class="hx-ok">fiche signée</b></ui:fragment>
+                                    <ui:fragment rendered="#{equipeView.fixationEnRetard(u) and equipeView.isDirect(u)}"> · <b class="hx-warn" title="Fenêtre de fixation dépassée (fin janvier, ou 1 mois après l'embauche)">fixation en retard</b></ui:fragment>
+                                    <ui:fragment rendered="#{equipeView.nbProposes(u) gt 0}"> · <b class="hx-warn">#{equipeView.nbProposes(u)} proposition#{equipeView.nbProposes(u) gt 1 ? 's' : ''}</b></ui:fragment>
+                                </span>
+                                <ui:fragment rendered="#{not empty equipeView.fiche(u) and not empty equipeView.fiche(u).dateSoumission}">
+                                    <span title="Auto-évaluation soumise le #{equipeView.fiche(u).dateSoumission}"><i class="pi #{equipeView.fiche(u).soumiseATemps ? 'pi-check' : 'pi-clock'}"></i> <b class="#{equipeView.fiche(u).soumiseATemps ? 'hx-ok' : 'hx-warn'}">#{equipeView.fiche(u).soumiseATemps ? 'soumise à temps' : 'soumise hors délai'}</b></span>
+                                </ui:fragment>
+                                <span><i class="pi pi-calendar"></i>
+                                    <ui:fragment rendered="#{not empty u.dateEmbauche}">depuis <h:outputText value="#{u.dateEmbauche}"><f:convertDateTime pattern="MM/yyyy"/></h:outputText></ui:fragment>
+                                    <ui:fragment rendered="#{empty u.dateEmbauche}">embauche non renseignée</ui:fragment>
+                                </span>
+                            </div>
+
+                            <div class="hx-team__actions">
+                                <ui:fragment rendered="#{u.evaluable eq 1 and equipeView.isDirect(u)}">
+                                    <p:button value="#{equipeView.objectifsSignes(u) ? 'Objectifs' : 'Fixer les objectifs'}" icon="pi pi-flag" styleClass="hx-btn-secondary hx-btn-sm" outcome="/ui/objectifs">
+                                        <f:param name="salarie" value="#{u.id}"/><f:param name="exercice" value="#{equipeView.exercice}"/>
+                                    </p:button>
+                                    <p:commandButton value="Initier l'évaluation" icon="pi pi-play" styleClass="hx-btn-sm" process="@this"
+                                                     rendered="#{empty equipeView.fiche(u) and not empty equipeView.campagne and equipeView.nbObjectifs(u) gt 0}"
+                                                     actionListener="#{equipeView.initier(u)}" update=":grille :kpis :bandeau :globalGrowl"/>
+                                    <p:button value="#{equipeView.fiche(u).statut eq 'SOUMISE' ? 'Évaluer' : 'Ouvrir la fiche'}" icon="pi pi-file-edit" styleClass="hx-btn-sm"
+                                              rendered="#{not empty equipeView.fiche(u)}" outcome="/ui/fiche">
+                                        <f:param name="id" value="#{equipeView.fiche(u).id}"/>
+                                    </p:button>
+                                </ui:fragment>
+                                <ui:fragment rendered="#{not equipeView.isDirect(u)}">
+                                    <p:button value="Consulter" icon="pi pi-eye" styleClass="hx-btn-secondary hx-btn-sm" outcome="/ui/objectifs"><f:param name="salarie" value="#{u.id}"/><f:param name="exercice" value="#{equipeView.exercice}"/></p:button>
+                                    <small class="hx-muted"><i class="pi pi-lock"></i> géré par #{u.superieurHierarchique.prenom} #{u.superieurHierarchique.nom}</small>
+                                </ui:fragment>
+                            </div>
+                        </div>
+                    </ui:repeat>
+                </div>
+                </ui:fragment>
+
+                <!-- Liste et hiérarchie -->
+                <ui:fragment rendered="#{equipeView.vue ne 'cartes' and not empty equipeView.membresFiltres}">
+                    <div class="hx-card hx-teamlist-card">
+                        <div class="hx-teamlist-scroll">
+                        <table class="hx-dirtable hx-teamlist #{equipeView.vue eq 'hierarchie' ? 'is-tree' : ''}">
+                            <thead>
+                                <tr>
+                                    <th>Collaborateur</th>
+                                    <ui:fragment rendered="#{equipeView.vue eq 'liste' and equipeView.inclureIndirects}"><th>N+1</th></ui:fragment>
+                                    <th>Objectifs</th>
+                                    <th>Avancement</th>
+                                    <th>Statut</th>
+                                    <th class="hx-teamlist__act">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            <ui:repeat value="#{equipeView.membresFiltres}" var="u">
+                                <tr class="#{u.evaluable ne 1 ? 'is-off' : ''} #{equipeView.enRetard(u) ? 'is-late' : ''} #{equipeView.isDirect(u) ? '' : 'is-indirect'}" style="--hx-level:#{equipeView.niveau(u) - 1}">
+                                    <td>
+                                        <div class="hx-teamlist__who">
+                                            <span class="hx-avatar hx-avatar--sm">#{equipeView.initiales(u)}</span>
+                                            <div>
+                                                <strong>#{u.nomComplet}
+                                                    <ui:fragment rendered="#{not equipeView.isDirect(u) and equipeView.vue eq 'liste'}"><span class="hx-tag">N-#{equipeView.niveau(u)}</span></ui:fragment>
+                                                    <ui:fragment rendered="#{equipeView.recrue(u)}"><span class="hx-tag hx-tag--gold">recrue</span></ui:fragment>
+                                                </strong>
+                                                <small>#{empty u.fonction ? 'Fonction non renseignée' : u.fonction}<ui:fragment rendered="#{not empty u.direction}"> · #{u.direction.abrege}</ui:fragment></small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <ui:fragment rendered="#{equipeView.vue eq 'liste' and equipeView.inclureIndirects}">
+                                        <td><small>#{equipeView.isDirect(u) ? 'Vous' : u.superieurHierarchique.nomComplet}</small></td>
+                                    </ui:fragment>
+                                    <td>
+                                        <strong>#{equipeView.nbObjectifs(u)}</strong>
+                                        <ui:fragment rendered="#{equipeView.objectifsSignes(u)}"> <small class="hx-ok">signée</small></ui:fragment>
+                                        <ui:fragment rendered="#{equipeView.fixationEnRetard(u) and equipeView.isDirect(u)}"> <small class="hx-warn">en retard</small></ui:fragment>
+                                        <ui:fragment rendered="#{equipeView.nbProposes(u) gt 0}"> <small class="hx-warn">+#{equipeView.nbProposes(u)} proposée#{equipeView.nbProposes(u) gt 1 ? 's' : ''}</small></ui:fragment>
+                                    </td>
+                                    <td>
+                                        <div class="hx-miniprog" title="#{equipeView.etapeLabel(u)}">
+                                            <span class="#{equipeView.etape(u) ge 1 ? 'is-done' : ''}"></span><span class="#{equipeView.etape(u) ge 2 ? 'is-done' : ''}"></span><span class="#{equipeView.etape(u) ge 3 ? 'is-done' : ''}"></span><span class="#{equipeView.etape(u) ge 4 ? 'is-done' : ''}"></span>
+                                        </div>
+                                        <small>#{equipeView.etapeLabel(u)}</small>
+                                    </td>
+                                    <td><span class="hx-badge #{equipeView.etatClasse(u)}">#{equipeView.etat(u)}</span></td>
+                                    <td class="hx-teamlist__act">
+                                        <ui:fragment rendered="#{u.evaluable eq 1 and equipeView.isDirect(u)}">
+                                            <p:button icon="pi pi-flag" title="#{equipeView.objectifsSignes(u) ? 'Objectifs' : 'Fixer les objectifs'}" styleClass="hx-icon-btn" outcome="/ui/objectifs">
+                                                <f:param name="salarie" value="#{u.id}"/><f:param name="exercice" value="#{equipeView.exercice}"/>
+                                            </p:button>
+                                            <p:commandButton icon="pi pi-play" title="Initier l'évaluation" styleClass="hx-icon-btn hx-icon-btn--send" process="@this"
+                                                             rendered="#{empty equipeView.fiche(u) and not empty equipeView.campagne and equipeView.nbObjectifs(u) gt 0}"
+                                                             actionListener="#{equipeView.initier(u)}" update=":grille :kpis :bandeau :globalGrowl"/>
+                                            <p:button icon="pi pi-file-edit" title="#{equipeView.fiche(u).statut eq 'SOUMISE' ? 'Évaluer' : 'Ouvrir la fiche'}" styleClass="hx-icon-btn hx-icon-btn--primary"
+                                                      rendered="#{not empty equipeView.fiche(u)}" outcome="/ui/fiche">
+                                                <f:param name="id" value="#{equipeView.fiche(u).id}"/>
+                                            </p:button>
+                                        </ui:fragment>
+                                        <ui:fragment rendered="#{not equipeView.isDirect(u)}">
+                                            <p:button icon="pi pi-eye" title="Consulter (géré par #{u.superieurHierarchique.prenom} #{u.superieurHierarchique.nom})" styleClass="hx-icon-btn" outcome="/ui/objectifs"><f:param name="salarie" value="#{u.id}"/><f:param name="exercice" value="#{equipeView.exercice}"/></p:button>
+                                        </ui:fragment>
+                                    </td>
+                                </tr>
+                            </ui:repeat>
+                            </tbody>
+                        </table>
+                        </div>
+                    </div>
+                </ui:fragment>
+            </h:panelGroup>
+        </h:form>
+
+        <!-- Population évaluable -->
+        <p:dialog id="dlgPop" widgetVar="dlgPop" header="Population évaluable - #{empty equipeView.campagne ? '' : equipeView.campagne.libelle}"
+                  modal="true" responsive="true" width="640" fitViewport="true" closeOnEscape="true" showEffect="fade" hideEffect="fade" styleClass="hx-dialog-lg">
+            <h:form id="frmPop">
+                <p:messages showDetail="true" closable="true"/>
+                <p class="hx-field__help" style="margin-bottom:10px"><i class="pi pi-info-circle"></i> Cochez les collaborateurs à évaluer. Décochez ceux qui ne le sont pas sur cette période (arrivée récente, longue absence, départ…). <b>Un collaborateur sans objectif validé pour l'exercice ne peut pas être intégré.</b></p>
+                <ui:fragment rendered="#{empty equipeView.candidatsEligibles}">
+                    <div class="hx-empty hx-empty--sm"><i class="pi pi-flag"></i><strong>Aucun collaborateur éligible</strong>Fixez et validez d'abord les objectifs de vos collaborateurs.</div>
+                </ui:fragment>
+                <p:selectManyCheckbox value="#{equipeView.selectionIds}" layout="responsive" columns="1" styleClass="hx-poplist" converter="jakarta.faces.Integer" rendered="#{not empty equipeView.candidatsEligibles}">
+                    <f:selectItems value="#{equipeView.candidatsEligibles}" var="c" itemValue="#{c.id}"
+                                   itemLabel="#{c.nomComplet} - #{empty c.fonction ? 'fonction non renseignée' : c.fonction} · #{equipeView.nbObjectifs(c)} objectif#{equipeView.nbObjectifs(c) gt 1 ? 's' : ''}#{equipeView.objectifsSignes(c) ? '' : ' (fiche non signée)'}#{equipeView.recrue(c) ? ' · recrue' : ''}"/>
+                </p:selectManyCheckbox>
+                <ui:fragment rendered="#{not empty equipeView.candidatsBloques}">
+                    <div class="hx-blocked">
+                        <h4><i class="pi pi-ban"></i> Non éligibles - aucun objectif validé pour l'exercice #{equipeView.exercice}</h4>
+                        <ui:repeat value="#{equipeView.candidatsBloques}" var="b">
+                            <div class="hx-blocked__row">
+                                <span><b>#{b.nomComplet}</b><small> - #{empty b.fonction ? 'fonction non renseignée' : b.fonction}<ui:fragment rendered="#{equipeView.nbProposes(b) gt 0}"> · #{equipeView.nbProposes(b)} proposition#{equipeView.nbProposes(b) gt 1 ? 's' : ''} à valider</ui:fragment></small></span>
+                                <p:button value="Fixer les objectifs" icon="pi pi-flag" styleClass="hx-btn-secondary hx-btn-sm" outcome="/ui/objectifs"><f:param name="salarie" value="#{b.id}"/><f:param name="exercice" value="#{equipeView.exercice}"/></p:button>
+                            </div>
+                        </ui:repeat>
+                    </div>
+                </ui:fragment>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgPop').hide()"/>
+                    <p:commandButton value="Intégrer à la campagne" icon="pi pi-check" process="@form" update="@form :grille :kpis :bandeau :barre :globalGrowl"
+                                     actionListener="#{equipeView.integrerSelection}" oncomplete="if (args &amp;&amp; args.ok) PF('dlgPop').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>

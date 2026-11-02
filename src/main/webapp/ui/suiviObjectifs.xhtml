@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Suivi des objectifs"/>
+    <ui:param name="pageSubtitle" value="Où en est la fixation des objectifs"/>
+    <ui:define name="title">Suivi des objectifs</ui:define>
+
+    <ui:define name="content">
+        <h:form id="frmSo" prependId="false">
+            <div class="hx-page-head">
+                <div>
+                    <h2>Fixation des objectifs #{suiviObjectifsView.exercice}</h2>
+                    <p>
+                        <ui:fragment rendered="#{suiviObjectifsView.dcht}">Toute la banque, direction par direction. Les rappels partent automatiquement aux jours et heure réglés dans Paramètres ; vous pouvez aussi les envoyer tout de suite.</ui:fragment>
+                        <ui:fragment rendered="#{not suiviObjectifsView.dcht}">Vos collaborateurs et ceux qui leur sont rattachés. Une fiche doit être signée par le collaborateur et son N+1 pour que l'évaluation soit possible.</ui:fragment>
+                    </p>
+                </div>
+                <div class="hx-page-head__actions">
+                    <p:selectOneMenu value="#{suiviObjectifsView.exercice}" styleClass="hx-select-inline" style="min-width:140px">
+                        <f:selectItems value="#{suiviObjectifsView.exercices}" var="y" itemValue="#{y}" itemLabel="Exercice #{y}"/>
+                        <p:ajax listener="#{suiviObjectifsView.changerExercice}" update="zone"/>
+                    </p:selectOneMenu>
+                    <p:commandButton value="Envoyer les rappels" icon="pi pi-send" process="@this" update="zone :globalGrowl" rendered="#{suiviObjectifsView.dcht}"
+                                     actionListener="#{suiviObjectifsView.envoyerRappels}">
+                        <p:confirm header="Envoyer les rappels" message="Chaque N+1 qui a des fiches non signées recevra la liste de ses collaborateurs, et la DCHT une synthèse par direction." icon="pi pi-send"/>
+                    </p:commandButton>
+                </div>
+            </div>
+
+            <h:panelGroup id="zone" layout="block">
+                <section class="hx-grid hx-grid--kpi hx-kpis-compact hx-suivi__kpis">
+                    <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-users"></i> Évaluables</span><span class="hx-kpi__value">#{suiviObjectifsView.total.effectif}</span><span class="hx-kpi__delta">#{suiviObjectifsView.dcht ? 'dans la banque' : 'dans votre périmètre'}</span></div>
+                    <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-verified"></i> Fiches signées</span><span class="hx-kpi__value hx-kpi__value--gold">#{suiviObjectifsView.total.signees}</span><div class="hx-kpi__bar hx-kpi__bar--gold"><span style="width:#{suiviObjectifsView.total.taux}%"></span></div><span class="hx-kpi__delta">#{suiviObjectifsView.total.taux} % de l'effectif</span></div>
+                    <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-pencil"></i> À signer</span><span class="hx-kpi__value">#{suiviObjectifsView.total.attenteSignature}</span><span class="hx-kpi__delta">objectifs validés, signature attendue</span></div>
+                    <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-hourglass"></i> En cours</span><span class="hx-kpi__value">#{suiviObjectifsView.total.enCours}</span><span class="hx-kpi__delta">#{suiviObjectifsView.total.propositions} proposition#{suiviObjectifsView.total.propositions gt 1 ? 's' : ''} à valider</span></div>
+                    <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-flag"></i> Aucun objectif</span><span class="hx-kpi__value #{suiviObjectifsView.total.sansObjectif gt 0 ? 'hx-kpi__value--gold' : ''}">#{suiviObjectifsView.total.sansObjectif}</span><span class="hx-kpi__delta">fiche vide ou absente</span></div>
+                    <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-exclamation-triangle"></i> En retard</span><span class="hx-kpi__value #{suiviObjectifsView.total.retard gt 0 ? 'hx-kpi__value--danger' : ''}">#{suiviObjectifsView.total.retard}</span><span class="hx-kpi__delta">au-delà de fin janvier (ou 1 mois après l'arrivée)</span></div>
+                </section>
+
+                <!-- Par direction (DCHT) -->
+                <ui:fragment rendered="#{suiviObjectifsView.dcht}">
+                    <section class="hx-card hx-dash__row">
+                        <div class="hx-card__head"><div><h3>Par direction</h3><small>#{suiviObjectifsView.nbManagersConcernes} N+1 ont encore des fiches à finaliser</small></div></div>
+                        <div class="hx-card__body hx-card__body--flush">
+                            <ui:fragment rendered="#{empty suiviObjectifsView.directions}"><div class="hx-empty hx-empty--sm"><i class="pi pi-building"></i><strong>Aucun collaborateur évaluable</strong></div></ui:fragment>
+                            <ui:fragment rendered="#{not empty suiviObjectifsView.directions}">
+                                <div class="hx-rpt__scroll">
+                                    <table class="hx-dirtable hx-rpt__table">
+                                        <thead><tr><th>Direction</th><th class="num">Évaluables</th><th class="num">Signées</th><th class="num">À signer</th><th class="num">En cours</th><th class="num">Aucun objectif</th><th>Avancement</th><th class="num">En retard</th></tr></thead>
+                                        <tbody>
+                                        <ui:repeat value="#{suiviObjectifsView.directions}" var="d">
+                                            <tr class="#{d.retard gt 0 ? 'is-late' : ''}">
+                                                <td><p:commandLink process="@this" update="zone" styleClass="hx-so__dir" title="Filtrer la liste sur cette direction">
+                                                        <f:setPropertyActionListener target="#{suiviObjectifsView.filtreDirection}" value="#{d.nom}"/>
+                                                        <f:setPropertyActionListener target="#{suiviObjectifsView.onglet}" value="tous"/>
+                                                        <strong>#{d.nom}</strong></p:commandLink><ui:fragment rendered="#{not empty d.abrege}"><small> #{d.abrege}</small></ui:fragment></td>
+                                                <td class="num">#{d.effectif}</td>
+                                                <td class="num">#{d.signees}</td>
+                                                <td class="num">#{d.attenteSignature}</td>
+                                                <td class="num">#{d.enCours}</td>
+                                                <td class="num">#{d.sansObjectif}</td>
+                                                <td><div class="hx-rpt__taux">
+                                                    <div class="hx-campaign__bar hx-dirtable__bar" title="#{d.signees} signées · #{d.attenteSignature} à signer · #{d.enCours} en cours · #{d.sansObjectif} sans objectif">
+                                                        <span class="seg seg--done" style="width:#{d.pct(d.signees)}%"></span>
+                                                        <span class="seg seg--eval" style="width:#{d.pct(d.attenteSignature)}%"></span>
+                                                        <span class="seg seg--sub" style="width:#{d.pct(d.enCours)}%"></span>
+                                                    </div><b>#{d.taux} %</b></div></td>
+                                                <td class="num"><span class="#{d.retard gt 0 ? 'hx-ko' : 'hx-muted'}">#{d.retard}</span></td>
+                                            </tr>
+                                        </ui:repeat>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="hx-campaign__legend hx-rpt__legend">
+                                    <span><i class="seg--done"></i>Signées</span><span><i class="seg--eval"></i>À signer</span><span><i class="seg--sub"></i>En cours</span><span><i class="seg--rest"></i>Aucun objectif</span>
+                                </div>
+                            </ui:fragment>
+                        </div>
+                    </section>
+                </ui:fragment>
+
+                <!-- Liste -->
+                <div class="hx-toolbar hx-suivi__toolbar hx-dash__row">
+                    <p:selectOneButton value="#{suiviObjectifsView.onglet}" styleClass="hx-segment" unselectable="false">
+                        <f:selectItem itemValue="aFaire" itemLabel="À finaliser (#{suiviObjectifsView.compter('aFaire')})"/>
+                        <f:selectItem itemValue="retard" itemLabel="En retard (#{suiviObjectifsView.compter('retard')})"/>
+                        <f:selectItem itemValue="aSigner" itemLabel="À signer (#{suiviObjectifsView.compter('aSigner')})"/>
+                        <f:selectItem itemValue="signees" itemLabel="Signées (#{suiviObjectifsView.compter('signees')})"/>
+                        <f:selectItem itemValue="tous" itemLabel="Tous (#{suiviObjectifsView.compter('tous')})"/>
+                        <p:ajax update="tbl"/>
+                    </p:selectOneButton>
+                    <p:selectOneMenu value="#{suiviObjectifsView.filtreDirection}" styleClass="hx-select-inline" rendered="#{suiviObjectifsView.dcht}">
+                        <f:selectItem itemValue="" itemLabel="Toutes les directions"/>
+                        <f:selectItems value="#{suiviObjectifsView.nomsDirections}"/>
+                        <p:ajax update="tbl"/>
+                    </p:selectOneMenu>
+                    <span class="hx-search"><i class="pi pi-search"></i>
+                        <p:inputText value="#{suiviObjectifsView.recherche}" placeholder="Nom, matricule, N+1…"><p:ajax event="keyup" delay="300" update="tbl"/></p:inputText>
+                    </span>
+                </div>
+
+                <div class="hx-card hx-card--table">
+                    <p:dataTable id="tbl" value="#{suiviObjectifsView.lignesFiltrees}" var="l" styleClass="hx-table hx-suivi__table" paginator="true" rows="25" paginatorPosition="bottom"
+                                 paginatorTemplate="{CurrentPageReport} {PreviousPageLink} {PageLinks} {NextPageLink} {RowsPerPageDropdown}" rowsPerPageTemplate="25,50,100"
+                                 currentPageReportTemplate="{startRecord}–{endRecord} sur {totalRecords}" emptyMessage="Aucun collaborateur dans cette liste."
+                                 rowStyleClass="#{l.enRetard() ? 'hx-row--anomalie' : ''}">
+                        <p:column headerText="Collaborateur" sortBy="#{l.salarie().nom}">
+                            <div class="hx-suivi__who">
+                                <span class="hx-avatar hx-avatar--sm">#{suiviObjectifsView.initiales(l.salarie())}</span>
+                                <div><strong>#{l.salarie().nomComplet}</strong><small>#{l.salarie().matricule}<ui:fragment rendered="#{not empty l.salarie().fonction}"> · #{l.salarie().fonction}</ui:fragment></small></div>
+                            </div>
+                        </p:column>
+                        <p:column headerText="Direction" sortBy="#{l.direction()}"><span title="#{l.direction()}">#{empty l.abrege() ? l.direction() : l.abrege()}</span></p:column>
+                        <p:column headerText="N+1" sortBy="#{l.n1().nomComplet}">#{empty l.n1() ? '—' : l.n1().nomComplet}</p:column>
+                        <p:column headerText="Situation" sortBy="#{l.statut()}">
+                            <span class="hx-badge #{l.statutClasse()}">#{l.statutLabel()}</span>
+                            <ui:fragment rendered="#{l.enRetard()}"><small class="hx-suivi__delai hx-ko">en retard</small></ui:fragment>
+                        </p:column>
+                        <p:column headerText="Objectifs" styleClass="num">
+                            <b>#{l.valides()}</b><small class="hx-muted"> validé#{l.valides() gt 1 ? 's' : ''}</small>
+                            <ui:fragment rendered="#{l.proposes() gt 0}"><small class="hx-suivi__delai" style="color:var(--hx-warning)">#{l.proposes()} proposé#{l.proposes() gt 1 ? 's' : ''}</small></ui:fragment>
+                        </p:column>
+                        <p:column headerText="Signatures">
+                            <span class="hx-so__sig #{l.signeSalarie() ? 'is-on' : ''}" title="Collaborateur"><i class="pi #{l.signeSalarie() ? 'pi-check' : 'pi-minus'}"></i> Collab.</span>
+                            <span class="hx-so__sig #{l.signeN1() ? 'is-on' : ''}" title="N+1"><i class="pi #{l.signeN1() ? 'pi-check' : 'pi-minus'}"></i> N+1</span>
+                        </p:column>
+                        <p:column headerText="Actions" styleClass="hx-col-actions">
+                            <div class="hx-row-actions">
+                                <p:button icon="pi pi-flag" title="Ouvrir la fiche d'objectifs" styleClass="hx-icon-btn" outcome="/ui/objectifs"><f:param name="salarie" value="#{l.salarie().id}"/><f:param name="exercice" value="#{suiviObjectifsView.exercice}"/></p:button>
+                                <p:commandButton icon="pi pi-send" title="Envoyer un rappel au N+1" styleClass="hx-icon-btn hx-icon-btn--send" process="@this" update=":globalGrowl"
+                                                 rendered="#{suiviObjectifsView.dcht and not l.signee and not empty l.n1()}" actionListener="#{suiviObjectifsView.relancer(l)}"/>
+                            </div>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+            </h:panelGroup>
+
+            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" responsive="true" width="460">
+                <p:commandButton value="Annuler" type="button" styleClass="ui-confirmdialog-no hx-btn-secondary" icon="pi pi-times"/>
+                <p:commandButton value="Envoyer" type="button" styleClass="ui-confirmdialog-yes" icon="pi pi-send"/>
+            </p:confirmDialog>
+        </h:form>
+    </ui:define>
+</ui:composition>

@@ -1,0 +1,37 @@
+<pretty-config xmlns="http://ocpsoft.org/schema/rewrite-config-prettyfaces"
+               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xsi:schemaLocation="http://ocpsoft.org/schema/rewrite-config-prettyfaces
+                      http://ocpsoft.org/xml/ns/prettyfaces/rewrite-config-prettyfaces.xsd">
+
+    <!-- ===== Authentification ===== -->
+    <url-mapping id="login"><pattern value="/login"/><view-id value="/login.xhtml"/></url-mapping>
+    <url-mapping id="erreur"><pattern value="/erreur"/><view-id value="/erreur.xhtml"/></url-mapping>
+    <url-mapping id="passChange"><pattern value="/passChange"/><view-id value="/passChange.xhtml"/></url-mapping>
+
+    <!-- ===== Coque ===== -->
+    <url-mapping id="home"><pattern value="/ui/home"/><view-id value="/ui/home.xhtml"/></url-mapping>
+    <url-mapping id="monCompte"><pattern value="/ui/monCompte"/><view-id value="/ui/monCompte.xhtml"/></url-mapping>
+
+    <!-- ===== Administration : utilisateurs & habilitations (copié de clix) ===== -->
+    <url-mapping id="users"><pattern value="/ui/users"/><view-id value="/ui/users.xhtml"/></url-mapping>
+    <url-mapping id="profils"><pattern value="/ui/profils"/><view-id value="/ui/profils.xhtml"/></url-mapping>
+    <url-mapping id="module"><pattern value="/ui/module"/><view-id value="/ui/module.xhtml"/></url-mapping>
+    <url-mapping id="menu"><pattern value="/ui/menu"/><view-id value="/ui/menu.xhtml"/></url-mapping>
+    <url-mapping id="groupesUtilisateurs"><pattern value="/ui/groupesUtilisateurs"/><view-id value="/ui/groupesUtilisateurs.xhtml"/></url-mapping>
+    <url-mapping id="userLogs"><pattern value="/ui/userLogs"/><view-id value="/ui/userLogs.xhtml"/></url-mapping>
+    <url-mapping id="directions"><pattern value="/ui/directions"/><view-id value="/ui/directions.xhtml"/></url-mapping>
+    <url-mapping id="parametres"><pattern value="/ui/parametres"/><view-id value="/ui/parametres.xhtml"/></url-mapping>
+
+    <!-- ===== Module Évaluations (à venir) ===== -->
+    <url-mapping id="campagnes"><pattern value="/ui/campagnes"/><view-id value="/ui/campagnes.xhtml"/></url-mapping>
+    <url-mapping id="modelesFiche"><pattern value="/ui/modelesFiche"/><view-id value="/ui/modelesFiche.xhtml"/></url-mapping>
+    <url-mapping id="evaluations"><pattern value="/ui/evaluations"/><view-id value="/ui/evaluations.xhtml"/></url-mapping>
+    <url-mapping id="mesEvaluations"><pattern value="/ui/mesEvaluations"/><view-id value="/ui/mesEvaluations.xhtml"/></url-mapping>
+    <url-mapping id="naturesObjectif"><pattern value="/ui/naturesObjectif"/><view-id value="/ui/naturesObjectif.xhtml"/></url-mapping>
+    <url-mapping id="objectifs"><pattern value="/ui/objectifs"/><view-id value="/ui/objectifs.xhtml"/></url-mapping>
+    <url-mapping id="fiche"><pattern value="/ui/fiche"/><view-id value="/ui/fiche.xhtml"/></url-mapping>
+    <url-mapping id="equipe"><pattern value="/ui/equipe"/><view-id value="/ui/equipe.xhtml"/></url-mapping>
+    <url-mapping id="suiviObjectifs"><pattern value="/ui/suiviObjectifs"/><view-id value="/ui/suiviObjectifs.xhtml"/></url-mapping>
+    <url-mapping id="organigramme"><pattern value="/ui/organigramme"/><view-id value="/ui/organigramme.xhtml"/></url-mapping>
+    <url-mapping id="reporting"><pattern value="/ui/reporting"/><view-id value="/ui/reporting.xhtml"/></url-mapping>
+</pretty-config>

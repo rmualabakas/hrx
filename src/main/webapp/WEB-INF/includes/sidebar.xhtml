@@ -1,0 +1,27 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:ui="jakarta.faces.facelets">
+
+    <aside class="hx-sidebar" aria-label="Navigation principale">
+        <h:link outcome="/ui/home" styleClass="hx-sidebar__brand" title="Tableau de bord">
+            <span class="hx-sidebar__logo"><h:graphicImage library="hrx" name="img/logo_bgfi.png" alt="BGFIBank"/></span>
+            <span class="hx-sidebar__brand-copy">
+                <strong>#{appBean.app1.nomApp}</strong>
+                <small>Plateforme collaborative RH</small>
+            </span>
+        </h:link>
+
+        <nav class="hx-sidebar__scroll">
+            <!-- Menu construit par MenuView.getSidebarHtml() à partir des modules/menus autorisés pour le profil. -->
+            <h:outputText value="#{menuView.sidebarHtml}" escape="false"/>
+        </nav>
+
+        <div class="hx-sidebar__user">
+            <span class="hx-avatar">#{loginBean.users.prenom.substring(0,1)}#{loginBean.users.nom.substring(0,1)}</span>
+            <span class="hx-sidebar__user-copy">
+                <strong>#{loginBean.users.nomComplet}</strong>
+                <small>#{loginBean.users.profil.nom}#{empty loginBean.users.direction ? '' : ' · '.concat(loginBean.users.direction.abrege)}</small>
+            </span>
+        </div>
+    </aside>
+</ui:composition>

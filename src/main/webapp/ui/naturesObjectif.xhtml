@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Rubriques d'objectifs"/>
+    <ui:param name="pageSubtitle" value="Structure de la fiche d'objectifs"/>
+    <ui:define name="title">Rubriques d'objectifs</ui:define>
+
+    <ui:define name="content">
+        <h:form id="frmNat" prependId="false">
+
+            <div class="hx-page-head">
+                <div>
+                    <h2>Rubriques d'objectifs</h2>
+                    <p>La fiche MAF 066 est découpée en groupes (I. Tronc commun, II. Management…) et en rubriques. Si une rubrique ne sert plus, limitez-la à certains exercices plutôt que de la supprimer.</p>
+                </div>
+                <div class="hx-page-head__actions">
+                    <p:commandButton value="Nouveau groupe / rubrique" icon="pi pi-plus" process="@this" rendered="#{(privilegeBean.hasPrivilege('NAT_EDIT') or privilegeBean.hasPrivilege('MDL_EDIT'))}"
+                                     actionListener="#{natureObjectifAdminView.nouveau(null)}" update="dlgNat" oncomplete="PF('dlgNat').show()"/>
+                </div>
+            </div>
+
+            <h:panelGroup id="barre" layout="block" styleClass="hx-toolbar">
+                <span class="hx-toolbar__label">Aperçu de la fiche pour l'exercice</span>
+                <p:spinner value="#{natureObjectifAdminView.exerciceApercu}" min="2020" max="2100" styleClass="hx-spinner">
+                    <p:ajax update="liste kpi"/>
+                </p:spinner>
+                <h:panelGroup id="kpi" styleClass="hx-toolbar__hint">#{natureObjectifAdminView.nbActives} rubrique#{natureObjectifAdminView.nbActives gt 1 ? 's' : ''} applicable#{natureObjectifAdminView.nbActives gt 1 ? 's' : ''} sur #{natureObjectifAdminView.natures.size()}</h:panelGroup>
+            </h:panelGroup>
+
+            <h:panelGroup id="liste" layout="block" styleClass="hx-natlist">
+                <ui:fragment rendered="#{empty natureObjectifAdminView.natures}">
+                    <div class="hx-card"><div class="hx-empty"><i class="pi pi-list"></i><strong>Aucune rubrique</strong>Créez le premier groupe de la fiche, par exemple « I. Tronc commun ».</div></div>
+                </ui:fragment>
+                <ui:repeat value="#{natureObjectifAdminView.groupes}" var="g" varStatus="gs">
+                    <div class="hx-card hx-natgrp">
+                        <div class="hx-natgrp__head">
+                            <h3>#{g}</h3>
+                            <div class="hx-row-actions">
+                                <ui:fragment rendered="#{(privilegeBean.hasPrivilege('NAT_EDIT') or privilegeBean.hasPrivilege('MDL_EDIT'))}">
+                                    <p:commandLink process="@this" title="Monter le groupe" styleClass="hx-icon-btn" rendered="#{not gs.first}" actionListener="#{natureObjectifAdminView.monterGroupe(g)}" update="liste"><i class="pi pi-arrow-up"></i></p:commandLink>
+                                    <p:commandLink process="@this" title="Descendre le groupe" styleClass="hx-icon-btn" rendered="#{not gs.last}" actionListener="#{natureObjectifAdminView.descendreGroupe(g)}" update="liste"><i class="pi pi-arrow-down"></i></p:commandLink>
+                                    <p:commandButton value="Ajouter une rubrique" icon="pi pi-plus" styleClass="hx-btn-secondary hx-btn-sm" process="@this"
+                                                     actionListener="#{natureObjectifAdminView.nouveau(g)}" update=":dlgNat" oncomplete="PF('dlgNat').show()"/>
+                                </ui:fragment>
+                            </div>
+                        </div>
+                        <ui:repeat value="#{natureObjectifAdminView.naturesDu(g)}" var="n" varStatus="st">
+                            <div class="hx-natrow #{natureObjectifAdminView.applicable(n) ? '' : 'is-off'}">
+                                <span class="hx-natrow__ordre">#{st.index + 1}</span>
+                                <div class="hx-natrow__text">
+                                    <strong>#{n.libelle} <code class="hx-natrow__code">#{n.code}</code></strong>
+                                    <small><ui:fragment rendered="#{not empty n.aide}">#{n.aide}</ui:fragment><ui:fragment rendered="#{not empty n.condition}"><ui:fragment rendered="#{not empty n.aide}"> · </ui:fragment><em>#{n.condition}</em></ui:fragment></small>
+                                </div>
+                                <div class="hx-natrow__meta">
+                                    <span class="hx-badge #{n.statut eq 1 ? 'hx-badge--done' : 'hx-badge--draft'}">#{n.statut eq 1 ? 'Active' : 'Inactive'}</span>
+                                    <span class="hx-badge hx-badge--info" title="Exercices d'application">#{n.plageLabel}</span>
+                                    <ui:fragment rendered="#{not natureObjectifAdminView.applicable(n) and n.statut eq 1}"><span class="hx-badge hx-badge--pending">hors #{natureObjectifAdminView.exerciceApercu}</span></ui:fragment>
+                                    <small class="hx-muted" title="Objectifs saisis sous cette rubrique"><i class="pi pi-flag"></i> #{natureObjectifAdminView.nbObjectifs(n)}</small>
+                                </div>
+                                <div class="hx-row-actions">
+                                    <ui:fragment rendered="#{(privilegeBean.hasPrivilege('NAT_EDIT') or privilegeBean.hasPrivilege('MDL_EDIT'))}">
+                                        <p:commandLink process="@this" title="Monter" styleClass="hx-icon-btn" rendered="#{not st.first}" actionListener="#{natureObjectifAdminView.monter(n)}" update="liste"><i class="pi pi-chevron-up"></i></p:commandLink>
+                                        <p:commandLink process="@this" title="Descendre" styleClass="hx-icon-btn" rendered="#{not st.last}" actionListener="#{natureObjectifAdminView.descendre(n)}" update="liste"><i class="pi pi-chevron-down"></i></p:commandLink>
+                                        <p:commandLink process="@this" title="Modifier" styleClass="hx-icon-btn" actionListener="#{natureObjectifAdminView.modifier(n)}" update=":dlgNat" oncomplete="PF('dlgNat').show()"><i class="pi pi-pencil"></i></p:commandLink>
+                                        <p:commandLink process="@this" title="#{n.statut eq 1 ? 'Désactiver' : 'Activer'}" styleClass="hx-icon-btn" actionListener="#{natureObjectifAdminView.basculer(n)}" update="liste kpi"><i class="pi #{n.statut eq 1 ? 'pi-eye-slash' : 'pi-eye'}"></i></p:commandLink>
+                                        <p:commandLink process="@this" title="Supprimer" styleClass="hx-icon-btn hx-icon-btn--danger" actionListener="#{natureObjectifAdminView.supprimer(n)}" update="liste kpi :globalGrowl">
+                                            <p:confirm header="Supprimer la rubrique" message="Supprimer « #{n.libelle} » ? Préférez une borne d'exercice si elle a déjà servi." icon="pi pi-exclamation-triangle"/>
+                                            <i class="pi pi-trash"></i></p:commandLink>
+                                    </ui:fragment>
+                                </div>
+                            </div>
+                        </ui:repeat>
+                    </div>
+                </ui:repeat>
+            </h:panelGroup>
+
+            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" responsive="true" width="440">
+                <p:commandButton value="Annuler" type="button" styleClass="ui-confirmdialog-no hx-btn-secondary" icon="pi pi-times"/>
+                <p:commandButton value="Supprimer" type="button" styleClass="ui-confirmdialog-yes hx-btn-danger" icon="pi pi-trash"/>
+            </p:confirmDialog>
+        </h:form>
+
+        <p:dialog id="dlgNat" widgetVar="dlgNat" header="#{natureObjectifAdminView.edit.id eq 0 ? 'Nouvelle rubrique' : 'Modifier la rubrique'}"
+                  modal="true" responsive="true" width="640" fitViewport="true" closeOnEscape="true" showEffect="fade" hideEffect="fade">
+            <h:form id="frmNatEdit">
+                <p:messages showDetail="true" closable="true"/>
+                <div class="hx-form">
+                    <div class="hx-field">
+                        <p:outputLabel for="nGroupe" value="Groupe de la fiche"/>
+                        <p:autoComplete id="nGroupe" value="#{natureObjectifAdminView.edit.groupe}" completeMethod="#{natureObjectifAdminView.completerGroupe}" dropdown="true" minQueryLength="0" forceSelection="false"
+                                        required="true" requiredMessage="Le groupe est obligatoire" placeholder="I. Tronc commun" maxlength="120" styleClass="hx-autocomplete"/>
+                        <p class="hx-field__help">Choisissez un groupe existant ou saisissez-en un nouveau (numérotez-le : I., II., III.).</p>
+                    </div>
+                    <div class="hx-field__grid hx-field__grid--ind">
+                        <div class="hx-field"><p:outputLabel for="nLib" value="Libellé de la rubrique"/><p:inputText id="nLib" value="#{natureObjectifAdminView.edit.libelle}" required="true" requiredMessage="Le libellé est obligatoire" maxlength="150" placeholder="A. Activités opérationnelles"/></div>
+                        <div class="hx-field"><p:outputLabel for="nCode" value="Code technique"/><p:inputText id="nCode" value="#{natureObjectifAdminView.edit.code}" maxlength="40" placeholder="généré si vide" styleClass="hx-mono-plain"/></div>
+                    </div>
+                    <div class="hx-field"><p:outputLabel for="nAide" value="Texte d'aide (sous le titre)"/><p:inputTextarea id="nAide" value="#{natureObjectifAdminView.edit.aide}" rows="2" autoResize="true" maxlength="500" placeholder="Il s'agit de la mise en œuvre des objectifs spécifiques poursuivis par votre fonction"/></div>
+                    <div class="hx-field"><p:outputLabel for="nCond" value="Condition d'applicabilité"/><p:inputText id="nCond" value="#{natureObjectifAdminView.edit.condition}" maxlength="200" placeholder="Si pilote de processus ou manager de proximité"/></div>
+                    <div class="hx-field__grid hx-field__grid--3">
+                        <div class="hx-field"><p:outputLabel for="nDeb" value="Exercice de début"/><p:inputNumber id="nDeb" value="#{natureObjectifAdminView.edit.exerciceDebut}" decimalPlaces="0" thousandSeparator="" minValue="2000" maxValue="2100" placeholder="sans borne"/></div>
+                        <div class="hx-field"><p:outputLabel for="nFin" value="Exercice de fin"/><p:inputNumber id="nFin" value="#{natureObjectifAdminView.edit.exerciceFin}" decimalPlaces="0" thousandSeparator="" minValue="2000" maxValue="2100" placeholder="sans borne"/></div>
+                        <div class="hx-field hx-field--inline" style="align-self:end; padding-bottom:8px;">
+                            <p:selectBooleanCheckbox id="nActif" value="#{natureObjectifAdminView.editActif}"/>
+                            <p:outputLabel for="nActif" value="Rubrique active"/>
+                        </div>
+                    </div>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgNat').hide()"/>
+                    <p:commandButton value="Enregistrer" icon="pi pi-check" process="@form" update="@form :liste :kpi :globalGrowl" actionListener="#{natureObjectifAdminView.enregistrer}"
+                                     oncomplete="if (args &amp;&amp; args.ok) PF('dlgNat').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>

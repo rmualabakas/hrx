@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Bloc d'une famille de compétences (fiche MAF 159) -->
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui">
+    <div class="hx-comp">
+        <div class="hx-comp__fam">#{ficheView.familleLabel(fam)}</div>
+        <div class="hx-comp__grid">
+            <div class="hx-comp__head"><span>Compétences</span><span>Auto-positionnement<br/><small>salarié</small></span><span>Niveau retenu<br/><small>N+1</small></span><span>Axes d'amélioration</span></div>
+            <ui:repeat value="#{ficheView.criteresDe(fam)}" var="c">
+                <div class="hx-comp__row">
+                    <div class="hx-comp__lib">#{c.critere.libelle}<ui:fragment rendered="#{not empty c.critere.description}"><small class="hx-muted"> - #{c.critere.description}</small></ui:fragment></div>
+                    <div class="hx-comp__lvl">
+                        <ui:fragment rendered="#{ficheView.saisieSalarie}">
+                            <p:selectOneButton value="#{c.autoNiveau}" styleClass="hx-segment hx-segment--lvl" unselectable="true">
+                                <f:selectItems value="#{niveaux}" var="n" itemLabel="#{n}" itemValue="#{n}"/>
+                            </p:selectOneButton>
+                        </ui:fragment>
+                        <ui:fragment rendered="#{not ficheView.saisieSalarie}"><span class="hx-lvl hx-lvl--#{empty c.autoNiveau ? 'none' : c.autoNiveau}" title="#{ficheView.niveauLabel(c.autoNiveau)}">#{empty c.autoNiveau ? '—' : c.autoNiveau}</span></ui:fragment>
+                    </div>
+                    <div class="hx-comp__lvl">
+                        <ui:fragment rendered="#{ficheView.revisionN1}">
+                            <p:selectOneButton value="#{c.niveau}" styleClass="hx-segment hx-segment--lvl" unselectable="true">
+                                <f:selectItems value="#{niveaux}" var="n" itemLabel="#{n}" itemValue="#{n}"/>
+                            </p:selectOneButton>
+                        </ui:fragment>
+                        <ui:fragment rendered="#{not ficheView.revisionN1}"><span class="hx-lvl hx-lvl--#{empty c.niveau ? 'none' : c.niveau} hx-lvl--n1" title="#{ficheView.niveauLabel(c.niveau)}">#{empty c.niveau ? '—' : c.niveau}</span></ui:fragment>
+                    </div>
+                    <div class="hx-comp__axes">
+                        <ui:fragment rendered="#{ficheView.revisionN1}"><p:inputTextarea value="#{c.axesAmelioration}" rows="1" autoResize="true" maxlength="2000" placeholder="Si NA ou EA : axes d'amélioration proposés"/></ui:fragment>
+                        <ui:fragment rendered="#{not ficheView.revisionN1}"><span class="#{empty c.axesAmelioration ? 'hx-muted' : ''}">#{empty c.axesAmelioration ? '—' : c.axesAmelioration}</span></ui:fragment>
+                    </div>
+                </div>
+            </ui:repeat>
+        </div>
+    </div>
+</ui:composition>
