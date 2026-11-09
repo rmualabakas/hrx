@@ -324,9 +324,10 @@ public class UserBean implements Serializable {
 
     // Helpers validations
     private boolean validateNewPasswords(String pwd, String confirm) {
-        if (pwd == null || pwd.length() < MIN_PWD_LEN) {
-            error("Mot de passe trop court",
-                    "Le mot de passe doit contenir au moins " + MIN_PWD_LEN + " caractères.");
+        String violation = cd.mura.hrx.include.PasswordPolicy.violation(pwd,
+                loginBean.getUsers() == null ? null : loginBean.getUsers().getLogin());
+        if (violation != null) {
+            error("Mot de passe non conforme", violation);
             return false;
         }
         if (!safeEquals(pwd, confirm)) {

@@ -24,22 +24,24 @@ public class SecurityHeadersFilter implements Filter {
         httpResponse.setHeader("X-Content-Type-Options", "nosniff");
         httpResponse.setHeader("X-Frame-Options", "DENY");
         httpResponse.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-        httpResponse.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+        httpResponse.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()");
+        httpResponse.setHeader("X-Permitted-Cross-Domain-Policies", "none");
         httpResponse.setHeader("Cross-Origin-Opener-Policy", "same-origin");
         httpResponse.setHeader("Cross-Origin-Resource-Policy", "same-origin");
         // JSF/PrimeFaces utilise encore des gestionnaires inline. Cette politique les
         // autorise temporairement tout en interdisant plugins, frames et base externes.
         httpResponse.setHeader("Content-Security-Policy",
                 "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; "
-                        + "form-action 'self'; img-src 'self' data:; font-src 'self' data:; "
+                        + "form-action 'self'; connect-src 'self'; frame-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; "
                         + "style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'");
 
         if (httpRequest.isSecure()) {
             httpResponse.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
         }
-        if (httpRequest.getRequestURI().contains("/ui/")
-                || httpRequest.getRequestURI().endsWith("/login")
-                || httpRequest.getRequestURI().endsWith("/login.xhtml")) {
+        String uri = httpRequest.getRequestURI();
+        if (uri.contains("/ui/")
+                || uri.endsWith("/login") || uri.endsWith("/login.xhtml")
+                || uri.endsWith("/passChange") || uri.endsWith("/passChange.xhtml")) {
             httpResponse.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
             httpResponse.setHeader("Pragma", "no-cache");
         }

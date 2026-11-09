@@ -49,7 +49,7 @@
 
                     <!-- Renseignements -->
                     <div class="hx-card hx-fiche__id">
-                        <span class="hx-avatar hx-avatar--lg">#{ficheView.initiales()}</span>
+                        <span class="hx-avatar hx-avatar--lg #{empty photo.url(ficheView.e.salarie) ? '' : 'has-photo'}"><ui:fragment rendered="#{not empty photo.url(ficheView.e.salarie)}"><img src="#{photo.url(ficheView.e.salarie)}" alt=""/></ui:fragment><ui:fragment rendered="#{empty photo.url(ficheView.e.salarie)}">#{ficheView.initiales()}</ui:fragment></span>
                         <dl class="hx-fiche__facts">
                             <div><dt>Nom et prénom du salarié</dt><dd><strong>#{ficheView.e.salarie.nomComplet}</strong></dd></div>
                             <div><dt>Poste occupé</dt><dd>#{empty ficheView.e.salarie.fonction ? '—' : ficheView.e.salarie.fonction}</dd></div>

@@ -108,7 +108,7 @@
                                      emptyMessage="Aucune ligne ne correspond aux filtres." rowStyleClass="#{l.anomalie ? 'hx-row--anomalie' : ''}">
                             <p:column headerText="Collaborateur" sortBy="#{l.salarie.nom}" exportValue="#{l.salarie.nomComplet} (#{l.salarie.matricule})">
                                 <div class="hx-suivi__who">
-                                    <span class="hx-avatar hx-avatar--sm">#{suiviEvaluationsView.initiales(l.salarie)}</span>
+                                    <span class="hx-avatar hx-avatar--sm #{empty photo.url(l.salarie) ? '' : 'has-photo'}"><ui:fragment rendered="#{not empty photo.url(l.salarie)}"><img src="#{photo.url(l.salarie)}" alt=""/></ui:fragment><ui:fragment rendered="#{empty photo.url(l.salarie)}">#{suiviEvaluationsView.initiales(l.salarie)}</ui:fragment></span>
                                     <div><strong>#{l.salarie.nomComplet}</strong><small>#{l.salarie.matricule}<ui:fragment rendered="#{not empty l.salarie.fonction}"> · #{l.salarie.fonction}</ui:fragment></small></div>
                                 </div>
                             </p:column>
@@ -171,7 +171,7 @@
                 <ui:fragment rendered="#{not empty suiviEvaluationsView.cible}">
                     <div class="hx-form">
                         <div class="hx-relance__to">
-                            <span class="hx-avatar hx-avatar--sm">#{suiviEvaluationsView.initiales(suiviEvaluationsView.cible.cibleRelance)}</span>
+                            <span class="hx-avatar hx-avatar--sm #{empty photo.url(suiviEvaluationsView.cible.cibleRelance) ? '' : 'has-photo'}"><ui:fragment rendered="#{not empty photo.url(suiviEvaluationsView.cible.cibleRelance)}"><img src="#{photo.url(suiviEvaluationsView.cible.cibleRelance)}" alt=""/></ui:fragment><ui:fragment rendered="#{empty photo.url(suiviEvaluationsView.cible.cibleRelance)}">#{suiviEvaluationsView.initiales(suiviEvaluationsView.cible.cibleRelance)}</ui:fragment></span>
                             <div><strong>#{suiviEvaluationsView.cible.cibleRelance.nomComplet}</strong><small>#{suiviEvaluationsView.cible.cibleRelanceRole} · #{empty suiviEvaluationsView.cible.cibleRelance.email ? 'aucune adresse e-mail' : suiviEvaluationsView.cible.cibleRelance.email}</small></div>
                             <span class="hx-badge #{suiviEvaluationsView.cible.statutClasse}">#{suiviEvaluationsView.cible.statutLabel}</span>
                         </div>

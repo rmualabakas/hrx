@@ -10,6 +10,7 @@
         <meta charset="UTF-8"/>
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
     </f:facet>
+    <meta name="robots" content="noindex, nofollow"/>
     <title>Nouveau mot de passe - #{appBean.app1.nomApp}</title>
     <link rel="icon" type="image/x-icon" href="#{resource['hrx:img/favicon-bgfi.ico']}"/>
     <link rel="apple-touch-icon" sizes="180x180" href="#{resource['hrx:img/apple-touch-icon.png']}"/>
@@ -21,94 +22,103 @@
 
 <h:body styleClass="hx-auth-body">
     <main class="hx-auth">
-        <header class="hx-auth__top">
-            <span class="hx-auth__lockup">
+        <aside class="hx-auth__aside" aria-label="Sécurité de la plateforme">
+            <div class="hx-auth__lockup">
                 <span class="hx-auth__logo"><h:graphicImage library="hrx" name="img/logo_bgfi.png" alt="BGFIBank"/></span>
                 <span class="hx-auth__brand-copy">
                     <strong>#{appBean.app1.nomApp}</strong>
                     <small>Plateforme collaborative RH</small>
                 </span>
-            </span>
-            <nav class="hx-auth__top-links" aria-label="Liens utiles">
-                <span>#{loginBean.users.prenom} #{loginBean.users.nom}</span>
-            </nav>
-        </header>
+            </div>
 
-        <div class="hx-auth__body">
-            <section class="hx-auth__visual" aria-label="Sécurité de la plateforme">
-                <ui:include src="/WEB-INF/includes/dial.xhtml">
-                    <ui:param name="dialDash" value="1000"/>
-                </ui:include>
-                <div class="hx-auth__copy">
-                    <h2>Avant la première fiche, un mot de passe qui vous appartient.</h2>
-                    <p>Vous vous connectez avec un mot de passe provisoire. Choisissez le vôtre : il protège des évaluations que seuls vous, votre responsable et la DCHT pouvez consulter.</p>
-                    <ul class="hx-auth__steps">
-                        <li><i class="pi pi-eye-slash"></i><span><strong>Confidentialité</strong> : droits par rôle, aucun accès transverse non autorisé.</span></li>
-                        <li><i class="pi pi-history"></i><span><strong>Traçabilité</strong> : chaque consultation et modification est journalisée.</span></li>
-                        <li><i class="pi pi-box"></i><span><strong>Archivage</strong> : fiches et rapports conservés selon la politique interne.</span></li>
-                    </ul>
+            <div class="hx-auth__copy">
+                <span class="hx-auth__eyebrow">Première connexion</span>
+                <h2>Un mot de passe qui<br/>vous appartient.</h2>
+                <p class="hx-auth__lead">Vous vous connectez avec un mot de passe provisoire. Choisissez le vôtre : il protège des évaluations que seuls vous, votre responsable et la DCHT pouvez consulter.</p>
+            </div>
+
+            <ul class="hx-auth__steps">
+                <li><i class="pi pi-eye-slash" aria-hidden="true"></i><span><strong>Confidentialité</strong>Droits par rôle, aucun accès transverse non autorisé.</span></li>
+                <li><i class="pi pi-history" aria-hidden="true"></i><span><strong>Traçabilité</strong>Chaque consultation et modification est journalisée.</span></li>
+                <li><i class="pi pi-box" aria-hidden="true"></i><span><strong>Archivage</strong>Fiches et rapports conservés selon la politique interne.</span></li>
+            </ul>
+
+            <p class="hx-auth__tagline">Des objectifs partagés, une performance reconnue.</p>
+        </aside>
+
+        <section class="hx-auth__main" aria-labelledby="passHeading">
+            <header class="hx-auth__top">
+                <div class="hx-auth__lockup hx-auth__lockup--compact">
+                    <span class="hx-auth__logo"><h:graphicImage library="hrx" name="img/logo_bgfi.png" alt="BGFIBank"/></span>
+                    <span class="hx-auth__brand-copy"><strong>#{appBean.app1.nomApp}</strong></span>
                 </div>
-            </section>
+                <span class="hx-auth__user"><i class="pi pi-user" aria-hidden="true"></i> #{loginBean.users.prenom} #{loginBean.users.nom}</span>
+            </header>
 
-            <section class="hx-auth__card" aria-labelledby="passHeading">
+            <div class="hx-auth__panel">
                 <div class="hx-auth__heading">
                     <h1 id="passHeading">Nouveau mot de passe</h1>
                     <p>Obligatoire avant d'accéder à votre espace.</p>
                 </div>
 
                 <div class="hx-auth__policy" role="note">
-                    <i class="pi pi-key"></i>
-                    <div>
-                        <strong>Ce qu'il doit contenir</strong>
-                        <ul class="hx-auth__rules">
-                            <li><i class="pi pi-check"></i> 8 caractères minimum</li>
-                            <li><i class="pi pi-check"></i> Majuscules et minuscules</li>
-                            <li><i class="pi pi-check"></i> Au moins un chiffre</li>
-                            <li><i class="pi pi-check"></i> Un symbole (@#$%&amp;*)</li>
-                        </ul>
-                    </div>
+                    <strong>Votre mot de passe doit contenir</strong>
+                    <ul class="hx-auth__rules" id="pwdRules">
+                        <li data-rule="len"><i class="pi pi-circle" aria-hidden="true"></i> 8 caractères minimum</li>
+                        <li data-rule="case"><i class="pi pi-circle" aria-hidden="true"></i> Majuscule et minuscule</li>
+                        <li data-rule="digit"><i class="pi pi-circle" aria-hidden="true"></i> Au moins un chiffre</li>
+                        <li data-rule="symbol"><i class="pi pi-circle" aria-hidden="true"></i> Un symbole (@#$%&amp;*)</li>
+                    </ul>
                 </div>
 
                 <h:form id="frmPass" styleClass="hx-auth__form">
-                    <p:messages id="msgPass" showDetail="true" closable="true"><p:autoUpdate/></p:messages>
+                    <p:messages id="msgPass" showDetail="true" showSummary="false" closable="true"><p:autoUpdate/></p:messages>
 
                     <div class="hx-auth__field">
                         <label for="frmPass:oldpass">Mot de passe actuel</label>
-                        <div class="hx-auth__input">
-                            <p:password id="oldpass" value="#{userBean.currentPassword}" feedback="false" required="true"
-                                        requiredMessage="Saisissez votre mot de passe actuel" placeholder="Mot de passe provisoire"/>
+                        <div class="hx-auth__input hx-auth__input--icon">
+                            <i class="pi pi-key hx-auth__input-icon" aria-hidden="true"></i>
+                            <p:password id="oldpass" value="#{userBean.currentPassword}" feedback="false" required="true" toggleMask="true"
+                                        requiredMessage="Saisissez votre mot de passe actuel" placeholder="Mot de passe provisoire"
+                                        autocomplete="current-password" redisplay="false"/>
                         </div>
                     </div>
                     <div class="hx-auth__field">
                         <label for="frmPass:newpass">Nouveau mot de passe</label>
-                        <div class="hx-auth__input">
-                            <p:password id="newpass" value="#{userBean.newPassword}" toggleMask="true" feedback="true" required="true"
-                                        promptLabel="Saisissez un mot de passe" weakLabel="Faible" goodLabel="Correct" strongLabel="Robuste"
-                                        requiredMessage="Saisissez un nouveau mot de passe" placeholder="••••••••"/>
+                        <div class="hx-auth__input hx-auth__input--icon">
+                            <i class="pi pi-lock hx-auth__input-icon" aria-hidden="true"></i>
+                            <p:password id="newpass" value="#{userBean.newPassword}" toggleMask="true" feedback="false" required="true"
+                                        requiredMessage="Saisissez un nouveau mot de passe" placeholder="Nouveau mot de passe"
+                                        autocomplete="new-password" redisplay="false" maxlength="72"/>
                         </div>
                     </div>
                     <div class="hx-auth__field">
                         <label for="frmPass:confirm">Confirmation</label>
-                        <div class="hx-auth__input">
-                            <p:password id="confirm" value="#{userBean.confirmPassword}" toggleMask="true" required="true"
-                                        requiredMessage="Confirmez votre mot de passe" placeholder="••••••••"/>
+                        <div class="hx-auth__input hx-auth__input--icon">
+                            <i class="pi pi-lock hx-auth__input-icon" aria-hidden="true"></i>
+                            <p:password id="confirm" value="#{userBean.confirmPassword}" toggleMask="true" feedback="false" required="true"
+                                        requiredMessage="Confirmez votre mot de passe" placeholder="Retapez le nouveau mot de passe"
+                                        autocomplete="new-password" redisplay="false" maxlength="72"/>
                         </div>
+                        <p id="pwdMatch" class="hx-auth__match" role="status" hidden="hidden"></p>
                     </div>
 
-                    <p:commandButton value="Enregistrer le mot de passe" update="frmPass msgPass" process="@form"
+                    <p:commandButton value="Enregistrer le mot de passe" icon="pi pi-check" update="frmPass msgPass" process="@form"
                                      action="#{userBean.changeMyPassword()}" styleClass="hx-auth__submit"/>
 
-                    <p:commandLink styleClass="hx-auth__back" process="@this" actionListener="#{loginBean.deconnection()}">
-                        <i class="pi pi-arrow-left"></i> Revenir à la connexion
+                    <p:commandLink styleClass="hx-auth__back" process="@this" immediate="true" action="#{loginBean.deconnection()}">
+                        <i class="pi pi-arrow-left" aria-hidden="true"></i> Annuler et revenir à la connexion
                     </p:commandLink>
                 </h:form>
-            </section>
-        </div>
+            </div>
 
-        <footer class="hx-auth__footer">
-            <span>© BGFIBank RDC SA, Direction du Capital Humain et de la Transformation</span>
-            <span class="hx-auth__footer-links"><span>Des objectifs partagés, une performance reconnue.</span><span>v1.0</span></span>
-        </footer>
+            <footer class="hx-auth__footer">
+                <span>© BGFIBank RDC SA · Direction du Capital Humain et de la Transformation</span>
+                <span>v1.0</span>
+            </footer>
+        </section>
     </main>
+
+    <h:outputScript library="hrx" name="js/hrx-login.js" target="body"/>
 </h:body>
 </html>

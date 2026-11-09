@@ -146,8 +146,9 @@ public class AccountBean implements Serializable {
             error("Mot de passe incorrect", "Le mot de passe actuel ne correspond pas.");
             return;
         }
-        if (newPassword == null || newPassword.length() < 8) {
-            error("Mot de passe trop court", "Utilisez au moins 8 caractères.");
+        String violation = cd.mura.hrx.include.PasswordPolicy.violation(newPassword, me.getLogin());
+        if (violation != null) {
+            error("Mot de passe non conforme", violation);
             return;
         }
         if (!newPassword.equals(confirmPassword)) {

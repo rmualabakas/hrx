@@ -35,7 +35,7 @@
 
                     <!-- Identité -->
                     <div class="hx-card hx-fiche__id">
-                        <span class="hx-avatar hx-avatar--lg">#{objectifsView.initiales()}</span>
+                        <span class="hx-avatar hx-avatar--lg #{empty photo.url(objectifsView.salarie) ? '' : 'has-photo'}"><ui:fragment rendered="#{not empty photo.url(objectifsView.salarie)}"><img src="#{photo.url(objectifsView.salarie)}" alt=""/></ui:fragment><ui:fragment rendered="#{empty photo.url(objectifsView.salarie)}">#{objectifsView.initiales()}</ui:fragment></span>
                         <dl class="hx-fiche__facts">
                             <div><dt>Nom et prénom du salarié</dt><dd><strong>#{objectifsView.salarie.nomComplet}</strong></dd></div>
                             <div><dt>Poste occupé</dt><dd>#{empty objectifsView.salarie.fonction ? '—' : objectifsView.salarie.fonction}</dd></div>

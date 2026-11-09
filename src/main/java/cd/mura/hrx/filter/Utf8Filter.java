@@ -24,9 +24,8 @@ public class Utf8Filter implements Filter {
 
         // IMPORTANT: forcer AVANT lecture des params JSF
         request.setCharacterEncoding("UTF-8");
-        response.setCharacterEncoding("UTF-8");
-
-        response.setContentType("text/html; charset=UTF-8");
+        // Pas de Content-Type forcé ici : chaque ressource (CSS, JS, images, polices) garde le sien,
+        // ce qui est indispensable avec X-Content-Type-Options: nosniff.
 
         chain.doFilter(request, response);
     }

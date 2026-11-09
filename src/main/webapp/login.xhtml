@@ -4,7 +4,8 @@
       xmlns:h="jakarta.faces.html"
       xmlns:f="jakarta.faces.core"
       xmlns:ui="jakarta.faces.facelets"
-      xmlns:p="http://primefaces.org/ui">
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:pt="jakarta.faces.passthrough">
 <h:head>
     <f:facet name="first">
         <meta charset="UTF-8"/>
@@ -12,7 +13,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
     </f:facet>
     <title>Connexion - #{appBean.app1.nomApp}</title>
-    <meta name="theme-color" content="#eef3f6"/>
+    <meta name="theme-color" content="#07294a"/>
+    <meta name="robots" content="noindex, nofollow"/>
     <meta name="description" content="HRX - plateforme collaborative RH BGFIBank RDC : objectifs, performance, évaluations"/>
     <link rel="icon" type="image/x-icon" href="#{resource['hrx:img/favicon-bgfi.ico']}"/>
     <link rel="icon" type="image/png" sizes="32x32" href="#{resource['hrx:img/favicon-bgfi-32.png']}"/>
@@ -25,46 +27,61 @@
 </h:head>
 
 <h:body styleClass="hx-auth-body">
+    <a class="hx-skip" href="#frmLogin:username">Aller au formulaire de connexion</a>
+
     <main class="hx-auth">
 
-        <header class="hx-auth__top">
-            <h:link outcome="login" styleClass="hx-auth__lockup" aria-label="Accueil de connexion">
+        <!-- Panneau de marque : propos, illustration, point du cycle -->
+        <aside class="hx-auth__aside" aria-label="Présentation de la plateforme">
+            <div class="hx-auth__lockup">
                 <span class="hx-auth__logo"><h:graphicImage library="hrx" name="img/logo_bgfi.png" alt="BGFIBank"/></span>
                 <span class="hx-auth__brand-copy">
                     <strong>#{appBean.app1.nomApp}</strong>
                     <small>Plateforme collaborative RH</small>
                 </span>
-            </h:link>
-            <nav class="hx-auth__top-links" aria-label="Liens utiles">
-                <button type="button" class="hx-auth__link hx-auth__link--muted" onclick="PF('dlgAccess').show();">Besoin d'aide pour vous connecter ?</button>
-            </nav>
-        </header>
+            </div>
 
-        <div class="hx-auth__body">
+            <div class="hx-auth__copy">
+                <span class="hx-auth__eyebrow">Performance &amp; développement</span>
+                <h2>Des objectifs partagés,<br/>une performance reconnue.</h2>
+                <p class="hx-auth__lead">Collaborateurs, managers et DCHT réunis autour du même cycle : objectifs, mi-parcours, bilan.</p>
+            </div>
 
-            <!-- Vitrine : cadran du cycle + propos -->
-            <section class="hx-auth__visual hx-auth__visual--scene" aria-label="Présentation de la plateforme">
-                <div class="hx-auth__copy">
-                    <h2>Des objectifs partagés,<br/>une performance reconnue.</h2>
-                    <p class="hx-auth__lead">Collaborateurs, managers et DCHT réunis autour du même cycle : objectifs, mi-parcours, bilan.</p>
-                </div>
+            <div class="hx-auth__art">
                 <ui:include src="/WEB-INF/includes/scene.xhtml"/>
-                <p class="hx-auth__phase"><span class="hx-auth__phase-dot"></span> <strong>#{loginBean.cycleLabel}</strong><span>#{loginBean.cyclePhase}.</span></p>
-            </section>
+            </div>
 
-            <!-- Formulaire -->
-            <section class="hx-auth__card" aria-labelledby="loginHeading">
+            <div class="hx-auth__phase">
+                <span class="hx-auth__phase-dot" aria-hidden="true"></span>
+                <div>
+                    <strong>#{loginBean.cycleLabel}</strong>
+                    <span>#{loginBean.cyclePhase}.</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Formulaire -->
+        <section class="hx-auth__main" aria-labelledby="loginHeading">
+            <header class="hx-auth__top">
+                <div class="hx-auth__lockup hx-auth__lockup--compact">
+                    <span class="hx-auth__logo"><h:graphicImage library="hrx" name="img/logo_bgfi.png" alt="BGFIBank"/></span>
+                    <span class="hx-auth__brand-copy"><strong>#{appBean.app1.nomApp}</strong></span>
+                </div>
+                <button type="button" class="hx-auth__help" onclick="PF('dlgAccess').show();">
+                    <i class="pi pi-question-circle" aria-hidden="true"></i><span>Aide</span>
+                </button>
+            </header>
+
+            <div class="hx-auth__panel">
                 <div class="hx-auth__heading">
                     <h1 id="loginHeading">Connexion</h1>
-                    <p>Compte réseau BGFIBank ou compte local.</p>
+                    <p>Accédez à votre espace objectifs et évaluations.</p>
                 </div>
 
-                <h:form id="frmLogin" styleClass="hx-auth__form">
-                    <p:growl id="growl" showDetail="true" showSummary="false" life="6000"/>
-
+                <h:form id="frmLogin" styleClass="hx-auth__form" prependId="true">
                     <ui:fragment rendered="#{param.sessionExpired eq 'true'}">
                         <div class="hx-auth__alert" role="alert">
-                            <i class="pi pi-clock"></i>
+                            <i class="pi pi-clock" aria-hidden="true"></i>
                             <div><strong>Votre session a expiré</strong><small>Reconnectez-vous pour reprendre là où vous en étiez.</small></div>
                         </div>
                     </ui:fragment>
@@ -72,7 +89,7 @@
                     <p:messages id="msgs" showDetail="true" showSummary="false" closable="true"><p:autoUpdate/></p:messages>
 
                     <fieldset class="hx-auth__mode">
-                        <legend class="hx-sr-only">Mode de connexion</legend>
+                        <legend class="hx-auth__mode-legend">Type de compte</legend>
                         <p:selectOneButton id="modeConnexion" value="#{loginBean.modeConnexion}" unselectable="false">
                             <f:selectItem itemLabel="Compte réseau" itemValue="2"/>
                             <f:selectItem itemLabel="Compte local" itemValue="1"/>
@@ -81,11 +98,13 @@
 
                     <div class="hx-auth__field">
                         <label for="frmLogin:username">Identifiant</label>
-                        <div class="hx-auth__input">
+                        <div class="hx-auth__input hx-auth__input--icon">
+                            <i class="pi pi-user hx-auth__input-icon" aria-hidden="true"></i>
                             <p:inputText id="username" value="#{loginBean.email}" required="true"
                                          requiredMessage="Saisissez votre identifiant"
                                          placeholder="prenom.nom ou matricule"
-                                         autocomplete="username"/>
+                                         autocomplete="username" maxlength="120"
+                                         pt:autocapitalize="none" pt:spellcheck="false"/>
                         </div>
                     </div>
 
@@ -94,11 +113,15 @@
                             <label for="frmLogin:password">Mot de passe</label>
                             <button type="button" class="hx-auth__link" onclick="PF('dlgAccess').show();">Mot de passe oublié ?</button>
                         </div>
-                        <div class="hx-auth__input">
+                        <div class="hx-auth__input hx-auth__input--icon">
+                            <i class="pi pi-lock hx-auth__input-icon" aria-hidden="true"></i>
                             <p:password id="password" value="#{loginBean.pass}" required="true" feedback="false"
-                                        requiredMessage="Saisissez votre mot de passe" toggleMask="true" redisplay="true"
-                                        placeholder="••••••••" autocomplete="current-password"/>
+                                        requiredMessage="Saisissez votre mot de passe" toggleMask="true" redisplay="false"
+                                        placeholder="Votre mot de passe" autocomplete="current-password" maxlength="128"/>
                         </div>
+                        <p id="capsWarning" class="hx-auth__caps" role="status" hidden="hidden">
+                            <i class="pi pi-exclamation-triangle" aria-hidden="true"></i> Verrouillage majuscules activé
+                        </p>
                     </div>
 
                     <div class="hx-auth__options">
@@ -108,28 +131,25 @@
                         </div>
                     </div>
 
-                    <p:commandButton id="signIn" value="Se connecter"
+                    <p:commandButton id="signIn" value="Se connecter" icon="pi pi-arrow-right" iconPos="right"
                                      action="#{loginBean.connexion}" process="@form" update="@form"
                                      onclick="rememberLoginIdentifier();"
                                      onsuccess="return handleLoginAjaxSuccess(data, status, xhr);"
                                      disableOnAjax="true" global="true"
                                      styleClass="hx-auth__submit"/>
-
-                    <p class="hx-auth__hint">
-                        <i class="pi pi-lock"></i>
-                        Accès confidentiel et journalisé.
-                    </p>
                 </h:form>
-            </section>
-        </div>
 
+                <p class="hx-auth__hint">
+                    <i class="pi pi-shield" aria-hidden="true"></i>
+                    <span>Accès réservé au personnel BGFIBank RDC. Chaque connexion est journalisée.</span>
+                </p>
+            </div>
 
-        <footer class="hx-auth__footer">
-            <span>© <h:outputText value="#{loginBean.today}"><f:convertDateTime pattern="yyyy"/></h:outputText> BGFIBank RDC SA, Direction du Capital Humain et de la Transformation</span>
-            <span class="hx-auth__footer-links">
+            <footer class="hx-auth__footer">
+                <span>© <h:outputText value="#{loginBean.today}"><f:convertDateTime pattern="yyyy"/></h:outputText> BGFIBank RDC SA · Direction du Capital Humain et de la Transformation</span>
                 <span>v1.0</span>
-            </span>
-        </footer>
+            </footer>
+        </section>
     </main>
 
     <p:ajaxStatus id="loginAjaxStatus" delay="0"

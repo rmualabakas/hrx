@@ -264,7 +264,9 @@ public class LdapUserImporter implements Serializable {
             user.setPrenom(prenom != null ? prenom : "");
             user.setNom(nom != null ? nom : login);
             user.setPhone(phone);
-            user.setPassword(BCRYPT.hash("000000")); // ⚡ CORRECTION : Hash BCrypt du mot de passe temporaire
+            // Compte LDAP : l'authentification se fait sur l'annuaire. Le mot de passe local est un secret
+            // aléatoire jamais communiqué (un code fixe permettait la connexion en mode « Compte local »).
+            user.setPassword(BCRYPT.hash(randomUnusablePassword()));
             user.setProfil(profilDefault);
             user.setCreePar(loginBean.getUsers().getId());
             user.setEditable(1);
@@ -556,5 +558,11 @@ public class LdapUserImporter implements Serializable {
             return "Non configuré";
         }
         return "Configuré: " + ldapUrl;
+    }
+
+    private static String randomUnusablePassword() {
+        byte[] bytes = new byte[32];
+        new java.security.SecureRandom().nextBytes(bytes);
+        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 }

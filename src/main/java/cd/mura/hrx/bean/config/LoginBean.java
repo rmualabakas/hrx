@@ -41,6 +41,9 @@ public class LoginBean implements Serializable {
 
     private static final UpdatableBCrypt bcrypt = new UpdatableBCrypt(11);
     public static final String REDIRECT_AFTER_LOGIN_KEY = "HRX_REDIRECT_AFTER_LOGIN";
+    private static final String MSG_IDENTIFIANTS_INVALIDES = "Identifiant ou mot de passe incorrect.";
+    /** Hash factice : le temps de réponse est le même que le compte existe ou non. */
+    private static final String DUMMY_HASH = org.mindrot.jbcrypt.BCrypt.hashpw("hrx-dummy", org.mindrot.jbcrypt.BCrypt.gensalt(11));
 
     // Champs écran
     @NotNull(message = "Veuillez saisir votre mot de passe")
@@ -132,6 +135,15 @@ public class LoginBean implements Serializable {
 
     public String connexion() {
         try {
+            return authentifier();
+        } finally {
+            // Le mot de passe ne doit pas survivre en session (sérialisation, dump mémoire).
+            pass = null;
+        }
+    }
+
+    private String authentifier() {
+        try {
             if (email == null || email.isBlank() || pass == null || pass.isBlank()) {
                 addMsg(FacesMessage.SEVERITY_WARN, "", "Veuillez renseigner le login et le mot de passe.");
                 logAuthFailure("Login ou mot de passe vide");
@@ -158,16 +170,12 @@ public class LoginBean implements Serializable {
 
                 boolean ldapOk = authenticateAgainstLdap(app, email.trim(), pass);
                 if (!ldapOk) {
-                    Users knownUser=userDAO.findUserByLoginEmail(email.trim());
-                    LdapAccountStatusService.AccountStatus ldapStatus=knownUser==null?null:ldapAccountStatusService.check(knownUser,true);
-                    if(ldapStatus!=null&&!ldapStatus.assignable()){
-                        addMsg(FacesMessage.SEVERITY_ERROR, "Compte LDAP indisponible", ldapStatus.detail()+". Contactez votre administrateur.");
-                        logAuthFailure(ldapStatus.detail());
-                        resetFailedAuthentication();
-                        return "";
-                    }
-                    addMsg(FacesMessage.SEVERITY_ERROR, "", "Login ou mot de passe incorrect (LDAP).");
-                    logAuthFailure("Mot de passe LDAP incorrect");
+                    // Sans mot de passe valide, on ne révèle jamais l'existence ni l'état du compte
+                    // (énumération). Le motif précis reste dans le journal d'audit.
+                    Users knownUser = userDAO.findUserByLoginEmail(email.trim());
+                    LdapAccountStatusService.AccountStatus ldapStatus = knownUser == null ? null : ldapAccountStatusService.check(knownUser, true);
+                    addMsg(FacesMessage.SEVERITY_ERROR, "", MSG_IDENTIFIANTS_INVALIDES);
+                    logAuthFailure(ldapStatus != null && !ldapStatus.assignable() ? ldapStatus.detail() : "Mot de passe LDAP incorrect");
                     resetFailedAuthentication();
                     return "";
                 }
@@ -205,7 +213,8 @@ public class LoginBean implements Serializable {
                 // NATIF (DB)
                 Users dbUser = userDAO.findUserByLoginEmail(email.trim());
                 if (dbUser == null || dbUser.getId() < 1) {
-                    addMsg(FacesMessage.SEVERITY_ERROR, "", "Login ou mot de passe incorrect, veuillez modifier et reprendre !");
+                    org.mindrot.jbcrypt.BCrypt.checkpw(pass, DUMMY_HASH);
+                    addMsg(FacesMessage.SEVERITY_ERROR, "", MSG_IDENTIFIANTS_INVALIDES);
                     logAuthFailure("Utilisateur introuvable");
                     resetFailedAuthentication();
                     return "";
@@ -213,7 +222,7 @@ public class LoginBean implements Serializable {
 
                 mutableHash[0] = null;
                 if (!verifyAndUpdateHash(pass, dbUser.getPassword(), update)) {
-                    addMsg(FacesMessage.SEVERITY_ERROR, "", "Email ou mot de passe incorrect, veuillez changer et reprendre !");
+                    addMsg(FacesMessage.SEVERITY_ERROR, "", MSG_IDENTIFIANTS_INVALIDES);
                     logAuthFailure("Mot de passe natif incorrect");
                     resetFailedAuthentication();
                     return "";
@@ -253,6 +262,7 @@ public class LoginBean implements Serializable {
 
     private void afterSuccessfulAuth(Users dbUser) {
         loginAttemptService.success(email, clientIp());
+        renewSessionId();
         // last_login
         dbUser.setLastLogin(new Date());
         userDAO.merge(dbUser);
@@ -325,6 +335,18 @@ public class LoginBean implements Serializable {
         } catch (Exception ignore) {
         }
         return "/login?faces-redirect=true";
+    }
+
+    /** Protection contre la fixation de session : nouvel identifiant dès l'authentification. */
+    private void renewSessionId() {
+        try {
+            Object request = FacesContext.getCurrentInstance().getExternalContext().getRequest();
+            if (request instanceof HttpServletRequest http && http.getSession(false) != null) {
+                http.changeSessionId();
+            }
+        } catch (Exception e) {
+            log.warn("Renouvellement de l'identifiant de session impossible", e);
+        }
     }
 
     private void addMsg(FacesMessage.Severity severity, String summary, String detail) {

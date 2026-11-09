@@ -15,7 +15,29 @@
 
             <!-- Carte identité -->
             <aside class="hx-card hx-account__id">
-                <span class="hx-avatar hx-avatar--xl">#{accountBean.initiales}</span>
+                <h:form id="frmPhoto" enctype="multipart/form-data" styleClass="hx-photo">
+                    <span class="hx-avatar hx-avatar--xl #{empty photo.url(accountBean.profile) ? '' : 'has-photo'}">
+                        <ui:fragment rendered="#{not empty photo.url(accountBean.profile)}"><img src="#{photo.url(accountBean.profile)}" alt="Photo de #{accountBean.profile.nomComplet}"/></ui:fragment>
+                        <ui:fragment rendered="#{empty photo.url(accountBean.profile)}">#{accountBean.initiales}</ui:fragment>
+                    </span>
+                    <div class="hx-photo__actions">
+                        <p:fileUpload listener="#{maPhotoView.recevoir}" mode="advanced" auto="true" skinSimple="true" accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                                      label="#{empty photo.url(accountBean.profile) ? 'Ajouter une photo' : 'Changer la photo'}" chooseIcon="pi pi-camera"
+                                      update=":globalGrowl" styleClass="hx-photo__upload">
+                            <p:validateFile allowTypes="/(\.|\/)(jpe?g|png)$/" sizeLimit="5242880"/>
+                        </p:fileUpload>
+                        <p:commandLink rendered="#{not empty photo.url(accountBean.profile)}" process="@this" actionListener="#{maPhotoView.supprimer}"
+                                       update=":globalGrowl" oncomplete="setTimeout(function(){location.reload();}, 600)" styleClass="hx-photo__remove" title="Retirer la photo">
+                            <p:confirm header="Retirer la photo" message="Retirer votre photo ? Vos initiales s'afficheront à la place." icon="pi pi-exclamation-triangle"/>
+                            <i class="pi pi-trash"></i> Retirer
+                        </p:commandLink>
+                    </div>
+                    <small class="hx-photo__help">Photo professionnelle, visage bien cadré. JPEG ou PNG, 5 Mo au plus.</small>
+                    <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" responsive="true" width="420">
+                        <p:commandButton value="Annuler" type="button" styleClass="ui-confirmdialog-no hx-btn-secondary" icon="pi pi-times"/>
+                        <p:commandButton value="Retirer" type="button" styleClass="ui-confirmdialog-yes hx-btn-danger" icon="pi pi-trash"/>
+                    </p:confirmDialog>
+                </h:form>
                 <h3>#{accountBean.profile.nomComplet}</h3>
                 <p class="hx-muted">#{empty accountBean.profile.fonction ? 'Fonction non renseignée' : accountBean.profile.fonction}</p>
                 <dl class="hx-account__facts">
@@ -135,5 +157,31 @@
                 </p:tabView>
             </div>
         </div>
+
+        <!-- Recadrage de la photo -->
+        <p:dialog id="dlgPhoto" widgetVar="dlgPhoto" header="Recadrer votre photo" modal="true" responsive="true" width="620" fitViewport="true"
+                  closeOnEscape="true" showEffect="fade" hideEffect="fade" styleClass="hx-dialog-lg">
+            <p:ajax event="close" listener="#{maPhotoView.annuler}"/>
+            <style>
+                /* Zone de recadrage à hauteur fixe : Cropper.js y fait tenir l'image entière, les boutons restent visibles. */
+                #frmCrop\:crop { width: 100%; height: min(50vh, 440px); }
+                #frmCrop\:crop > img { display: block; max-width: 100%; max-height: 100%; }
+                #dlgPhoto .ui-dialog-content { max-height: calc(100vh - 120px); overflow-y: auto; }
+            </style>
+            <h:form id="frmCrop">
+                <p class="hx-field__help" style="margin-bottom:10px"><i class="pi pi-info-circle"></i> Déplacez et redimensionnez le cadre pour centrer votre visage. La photo sera carrée et affichée en rond dans HRX.</p>
+                <ui:fragment rendered="#{not empty maPhotoView.source}">
+                    <div class="hx-crop">
+                        <p:imageCropper id="crop" value="#{maPhotoView.recadrage}" image="#{maPhotoView.imageSource}" cache="false"
+                                        aspectRatio="1" viewMode="1" guides="true" responsive="true" minSize="80,80" zoomOnWheel="true" alt="Photo à recadrer"/>
+                    </div>
+                </ui:fragment>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgPhoto').hide()"/>
+                    <p:commandButton value="Enregistrer la photo" icon="pi pi-check" process="@form" update=":globalGrowl"
+                                     actionListener="#{maPhotoView.enregistrer}" oncomplete="if (args &amp;&amp; args.ok) { PF('dlgPhoto').hide(); setTimeout(function(){location.reload();}, 600); }"/>
+                </div>
+            </h:form>
+        </p:dialog>
     </ui:define>
 </ui:composition>

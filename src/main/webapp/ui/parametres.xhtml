@@ -90,7 +90,7 @@
                             </div>
                             <div class="hx-field">
                                 <p:outputLabel for="ldapBindPwd" value="Mot de passe du compte de service"/>
-                                <p:password id="ldapBindPwd" value="#{appBean.app1.ldapBindPassword}" redisplay="true" feedback="false" toggleMask="true" autocomplete="new-password"/>
+                                <p:password id="ldapBindPwd" value="#{appBean.ldapBindPasswordSaisie}" redisplay="false" feedback="false" toggleMask="true" autocomplete="new-password" placeholder="#{appBean.ldapBindPasswordDefini ? '•••••••• (inchangé si vide)' : ''}"/>
                             </div>
                         </div>
                         <div class="hx-test">
@@ -134,7 +134,7 @@
                             </div>
                             <div class="hx-field">
                                 <p:outputLabel for="smtpPwd" value="Mot de passe"/>
-                                <p:password id="smtpPwd" value="#{appBean.app1.passwordSmtp}" redisplay="true" feedback="false" toggleMask="true" autocomplete="new-password"/>
+                                <p:password id="smtpPwd" value="#{appBean.passwordSmtpSaisie}" redisplay="false" feedback="false" toggleMask="true" autocomplete="new-password" placeholder="#{appBean.passwordSmtpDefini ? '•••••••• (inchangé si vide)' : ''}"/>
                             </div>
                         </div>
                         <div class="hx-field__grid">

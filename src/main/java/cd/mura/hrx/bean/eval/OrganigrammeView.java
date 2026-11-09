@@ -48,6 +48,7 @@ public class OrganigrammeView implements Serializable {
     @EJB private DirectionDAO directionDAO;
     @EJB private OrganisationService organisation;
     @Inject private OrganigrammePdfService pdfService;
+    @Inject private cd.mura.hrx.service.PhotoService photos;
 
     /** Ce qu'affiche une case de l'organigramme. */
     public record Poste(int id, String nom, String fonction, String direction, String initiales,
@@ -217,6 +218,9 @@ public class OrganigrammeView implements Serializable {
         return parId.values().stream().filter(u -> editId == null || !exclus.contains(u.getId()))
                 .sorted(Comparator.comparing((Users x) -> s(x.getNom())).thenComparing(x -> s(x.getPrenom()))).toList();
     }
+
+    /** Adresse de la photo d'un collaborateur affiché, ou null. */
+    public String photo(int id) { return photos.url(parId.get(id)); }
 
     public Users getEdite() { return editId == null ? null : parId.get(editId); }
     public String getInitialesEdite() { Users u = getEdite(); return u == null ? "" : initiales(u); }

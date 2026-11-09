@@ -71,7 +71,7 @@
 
                     <p:column headerText="Collaborateur" sortBy="#{u.nom}" style="min-width: 260px;">
                         <div class="hx-person">
-                            <span class="hx-avatar hx-avatar--sm #{u.statut eq 1 ? '' : 'is-off'}">#{userAdminView.initiales(u)}</span>
+                            <span class="hx-avatar hx-avatar--sm #{u.statut eq 1 ? '' : 'is-off'} #{empty photo.url(u) ? '' : 'has-photo'}"><ui:fragment rendered="#{not empty photo.url(u)}"><img src="#{photo.url(u)}" alt=""/></ui:fragment><ui:fragment rendered="#{empty photo.url(u)}">#{userAdminView.initiales(u)}</ui:fragment></span>
                             <span class="hx-person__text">
                                 <strong>#{u.nomComplet}
                                     <ui:fragment rendered="#{u.id eq loginBean.users.id}"><span class="hx-tag">vous</span></ui:fragment>
@@ -128,6 +128,17 @@
             <h:form id="frmUser">
                 <p:messages showDetail="true" closable="true"/>
                 <div class="hx-form">
+                    <h:panelGroup id="uPhoto" layout="block" styleClass="hx-userphoto" rendered="#{userAdminView.edit.id ne 0}">
+                        <span class="hx-avatar hx-avatar--xl #{empty photo.url(userAdminView.edit) ? '' : 'has-photo'}"><ui:fragment rendered="#{not empty photo.url(userAdminView.edit)}"><img src="#{photo.url(userAdminView.edit)}" alt=""/></ui:fragment><ui:fragment rendered="#{empty photo.url(userAdminView.edit)}">#{userAdminView.initiales(userAdminView.edit)}</ui:fragment></span>
+                        <div>
+                            <strong>#{empty photo.url(userAdminView.edit) ? 'Pas de photo' : 'Photo professionnelle'}</strong>
+                            <small>Le collaborateur ajoute et recadre lui-même sa photo depuis Mon compte.</small>
+                            <p:commandLink rendered="#{not empty photo.url(userAdminView.edit)}" process="@this" actionListener="#{userAdminView.retirerPhoto}" update="uPhoto :globalGrowl" styleClass="hx-photo__remove">
+                                <p:confirm header="Retirer la photo" message="Retirer la photo de #{userAdminView.edit.nomComplet} ?" icon="pi pi-exclamation-triangle"/>
+                                <i class="pi pi-trash"></i> Retirer cette photo
+                            </p:commandLink>
+                        </div>
+                    </h:panelGroup>
                     <h4 class="hx-form__section">Identité</h4>
                     <div class="hx-field__grid hx-field__grid--3">
                         <div class="hx-field"><p:outputLabel for="uPrenom" value="Prénom"/><p:inputText id="uPrenom" value="#{userAdminView.edit.prenom}" required="true" requiredMessage="Le prénom est obligatoire" maxlength="80"/></div>

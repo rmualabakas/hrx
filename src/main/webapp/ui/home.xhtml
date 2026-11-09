@@ -194,7 +194,7 @@
                             <ul class="hx-dash__list">
                                 <ui:repeat value="#{tableauBordView.equipeFichesATraiter}" var="e">
                                     <li>
-                                        <span class="hx-avatar hx-avatar--sm">#{tableauBordView.initiales(e.salarie)}</span>
+                                        <span class="hx-avatar hx-avatar--sm #{empty photo.url(e.salarie) ? '' : 'has-photo'}"><ui:fragment rendered="#{not empty photo.url(e.salarie)}"><img src="#{photo.url(e.salarie)}" alt=""/></ui:fragment><ui:fragment rendered="#{empty photo.url(e.salarie)}">#{tableauBordView.initiales(e.salarie)}</ui:fragment></span>
                                         <div class="hx-dash__list-text"><strong>#{e.salarie.nomComplet}</strong><small>Soumise #{tableauBordView.depuis(e.dateSoumission)} · <span class="#{e.soumiseATemps ? 'hx-ok' : 'hx-ko'}">#{e.soumiseATemps ? 'à temps' : 'hors délai'}</span></small></div>
                                         <p:button value="Évaluer" icon="pi pi-star" styleClass="hx-btn-sm" outcome="/ui/fiche"><f:param name="id" value="#{e.id}"/></p:button>
                                     </li>
@@ -224,7 +224,7 @@
                         <ul class="hx-dash__list">
                             <ui:repeat value="#{tableauBordView.directionFichesAViser}" var="e">
                                 <li>
-                                    <span class="hx-avatar hx-avatar--sm">#{tableauBordView.initiales(e.salarie)}</span>
+                                    <span class="hx-avatar hx-avatar--sm #{empty photo.url(e.salarie) ? '' : 'has-photo'}"><ui:fragment rendered="#{not empty photo.url(e.salarie)}"><img src="#{photo.url(e.salarie)}" alt=""/></ui:fragment><ui:fragment rendered="#{empty photo.url(e.salarie)}">#{tableauBordView.initiales(e.salarie)}</ui:fragment></span>
                                     <div class="hx-dash__list-text"><strong>#{e.salarie.nomComplet}</strong><small>Évaluée par #{e.evaluateur.nomComplet} #{tableauBordView.depuis(e.dateEvaluation)}</small></div>
                                     <p:button value="Donner mon avis" icon="pi pi-comment" styleClass="hx-btn-sm" outcome="/ui/fiche"><f:param name="id" value="#{e.id}"/></p:button>
                                 </li>

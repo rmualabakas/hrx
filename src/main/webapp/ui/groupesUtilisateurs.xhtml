@@ -45,7 +45,7 @@
                             <p class="hx-dir__desc">#{empty g.description ? 'Aucune description.' : g.description}</p>
                             <div class="hx-members">
                                 <ui:repeat value="#{g.membres.toArray()}" var="m" varStatus="st">
-                                    <ui:fragment rendered="#{st.index lt 6}"><span class="hx-avatar hx-avatar--xs" title="#{m.nomComplet}">#{groupeUtilisateurBean.initiales(m)}</span></ui:fragment>
+                                    <ui:fragment rendered="#{st.index lt 6}"><span class="hx-avatar hx-avatar--xs #{empty photo.url(m) ? '' : 'has-photo'}" title="#{m.nomComplet}"><ui:fragment rendered="#{not empty photo.url(m)}"><img src="#{photo.url(m)}" alt=""/></ui:fragment><ui:fragment rendered="#{empty photo.url(m)}">#{groupeUtilisateurBean.initiales(m)}</ui:fragment></span></ui:fragment>
                                 </ui:repeat>
                                 <ui:fragment rendered="#{groupeUtilisateurBean.membreCount(g) gt 6}"><span class="hx-avatar hx-avatar--xs hx-avatar--more">+#{groupeUtilisateurBean.membreCount(g) - 6}</span></ui:fragment>
                                 <ui:fragment rendered="#{groupeUtilisateurBean.membreCount(g) eq 0}"><span class="hx-muted">Aucun membre</span></ui:fragment>

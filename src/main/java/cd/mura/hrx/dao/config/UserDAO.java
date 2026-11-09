@@ -207,4 +207,9 @@ public class UserDAO implements Serializable {
         return data;
     }
 
+
+    /** Version de la photo professionnelle (null : pas de photo). */
+    public void majAvatar(int userId, String version) {
+        entityManager.createQuery("update Users u set u.avatar = :v where u.id = :id").setParameter("v", version).setParameter("id", userId).executeUpdate();
+    }
 }

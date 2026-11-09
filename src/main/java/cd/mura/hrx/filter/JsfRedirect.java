@@ -30,6 +30,7 @@ final class JsfRedirect {
 
     private static boolean isFacesAjaxRequest(HttpServletRequest request) {
         return "partial/ajax".equals(request.getHeader("Faces-Request"))
+                || "true".equals(request.getParameter("jakarta.faces.partial.ajax"))
                 || "true".equals(request.getParameter("javax.faces.partial.ajax"));
     }
 

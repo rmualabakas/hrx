@@ -17,7 +17,7 @@
         </nav>
 
         <div class="hx-sidebar__user">
-            <span class="hx-avatar">#{loginBean.users.prenom.substring(0,1)}#{loginBean.users.nom.substring(0,1)}</span>
+            <span class="hx-avatar #{empty photo.url(loginBean.users) ? '' : 'has-photo'}"><ui:fragment rendered="#{not empty photo.url(loginBean.users)}"><img src="#{photo.url(loginBean.users)}" alt=""/></ui:fragment><ui:fragment rendered="#{empty photo.url(loginBean.users)}">#{loginBean.users.prenom.substring(0,1)}#{loginBean.users.nom.substring(0,1)}</ui:fragment></span>
             <span class="hx-sidebar__user-copy">
                 <strong>#{loginBean.users.nomComplet}</strong>
                 <small>#{loginBean.users.profil.nom}#{empty loginBean.users.direction ? '' : ' · '.concat(loginBean.users.direction.abrege)}</small>

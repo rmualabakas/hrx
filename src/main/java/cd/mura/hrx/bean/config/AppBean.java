@@ -45,6 +45,15 @@ public class AppBean implements Serializable {
     private App app1;
     private int ongletActif = 0;
 
+    /* Secrets (compte de service LDAP, SMTP) : jamais renvoyés au navigateur.
+       Un champ laissé vide conserve la valeur enregistrée ; une saisie la remplace. */
+    public String getLdapBindPasswordSaisie() { return null; }
+    public void setLdapBindPasswordSaisie(String v) { if (app1 != null && v != null && !v.isBlank()) app1.setLdapBindPassword(v); }
+    public boolean isLdapBindPasswordDefini() { return app1 != null && app1.getLdapBindPassword() != null && !app1.getLdapBindPassword().isBlank(); }
+    public String getPasswordSmtpSaisie() { return null; }
+    public void setPasswordSmtpSaisie(String v) { if (app1 != null && v != null && !v.isBlank()) app1.setPasswordSmtp(v); }
+    public boolean isPasswordSmtpDefini() { return app1 != null && app1.getPasswordSmtp() != null && !app1.getPasswordSmtp().isBlank(); }
+
     private boolean notificationLundi;
     private boolean notificationMardi;
     private boolean notificationMercredi;

@@ -8,6 +8,8 @@
         <locale-config>
             <default-locale>fr</default-locale>
         </locale-config>
+        <!-- Ajoute ?v=<version de déploiement> aux CSS/JS de l'application : pas de feuille périmée après une mise à jour. -->
+        <resource-handler>org.omnifaces.resourcehandler.VersionedResourceHandler</resource-handler>
     </application>
 
     <lifecycle>

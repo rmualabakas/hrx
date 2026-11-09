@@ -111,7 +111,7 @@
                                  rowStyleClass="#{l.enRetard() ? 'hx-row--anomalie' : ''}">
                         <p:column headerText="Collaborateur" sortBy="#{l.salarie().nom}">
                             <div class="hx-suivi__who">
-                                <span class="hx-avatar hx-avatar--sm">#{suiviObjectifsView.initiales(l.salarie())}</span>
+                                <span class="hx-avatar hx-avatar--sm #{empty photo.url(l.salarie()) ? '' : 'has-photo'}"><ui:fragment rendered="#{not empty photo.url(l.salarie())}"><img src="#{photo.url(l.salarie())}" alt=""/></ui:fragment><ui:fragment rendered="#{empty photo.url(l.salarie())}">#{suiviObjectifsView.initiales(l.salarie())}</ui:fragment></span>
                                 <div><strong>#{l.salarie().nomComplet}</strong><small>#{l.salarie().matricule}<ui:fragment rendered="#{not empty l.salarie().fonction}"> · #{l.salarie().fonction}</ui:fragment></small></div>
                             </div>
                         </p:column>

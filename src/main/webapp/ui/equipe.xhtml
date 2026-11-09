@@ -99,7 +99,7 @@
                     <ui:repeat value="#{equipeView.membresFiltres}" var="u">
                         <div class="hx-card hx-team #{u.evaluable ne 1 ? 'is-off' : ''} #{equipeView.enRetard(u) ? 'is-late' : ''} #{equipeView.isDirect(u) ? '' : 'hx-team--indirect'}" style="--hx-level:#{equipeView.niveau(u) - 1}">
                             <div class="hx-team__head">
-                                <span class="hx-avatar">#{equipeView.initiales(u)}</span>
+                                <span class="hx-avatar #{empty photo.url(u) ? '' : 'has-photo'}"><ui:fragment rendered="#{not empty photo.url(u)}"><img src="#{photo.url(u)}" alt=""/></ui:fragment><ui:fragment rendered="#{empty photo.url(u)}">#{equipeView.initiales(u)}</ui:fragment></span>
                                 <div class="hx-team__who">
                                     <strong>#{u.nomComplet}
                                         <ui:fragment rendered="#{not equipeView.isDirect(u)}"><span class="hx-tag" title="Collaborateur indirect">N-#{equipeView.niveau(u)}</span></ui:fragment>
@@ -176,7 +176,7 @@
                                 <tr class="#{u.evaluable ne 1 ? 'is-off' : ''} #{equipeView.enRetard(u) ? 'is-late' : ''} #{equipeView.isDirect(u) ? '' : 'is-indirect'}" style="--hx-level:#{equipeView.niveau(u) - 1}">
                                     <td>
                                         <div class="hx-teamlist__who">
-                                            <span class="hx-avatar hx-avatar--sm">#{equipeView.initiales(u)}</span>
+                                            <span class="hx-avatar hx-avatar--sm #{empty photo.url(u) ? '' : 'has-photo'}"><ui:fragment rendered="#{not empty photo.url(u)}"><img src="#{photo.url(u)}" alt=""/></ui:fragment><ui:fragment rendered="#{empty photo.url(u)}">#{equipeView.initiales(u)}</ui:fragment></span>
                                             <div>
                                                 <strong>#{u.nomComplet}
                                                     <ui:fragment rendered="#{not equipeView.isDirect(u) and equipeView.vue eq 'liste'}"><span class="hx-tag">N-#{equipeView.niveau(u)}</span></ui:fragment>

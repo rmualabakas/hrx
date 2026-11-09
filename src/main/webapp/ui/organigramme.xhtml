@@ -92,7 +92,7 @@
 
                             <p:organigramNode type="directeur" skipLeafHandling="true" expandedIcon="pi pi-chevron-up" collapsedIcon="pi pi-chevron-down" styleClass="hx-org__node hx-org__node--dir">
                                 <div class="hx-org__card">
-                                    <span class="hx-avatar hx-avatar--sm">#{n.data.initiales()}</span>
+                                    <span class="hx-avatar hx-avatar--sm #{empty organigrammeView.photo(n.data.id()) ? '' : 'has-photo'}"><ui:fragment rendered="#{not empty organigrammeView.photo(n.data.id())}"><img src="#{organigrammeView.photo(n.data.id())}" alt=""/></ui:fragment><ui:fragment rendered="#{empty organigrammeView.photo(n.data.id())}">#{n.data.initiales()}</ui:fragment></span>
                                     <div class="hx-org__txt">
                                         <strong>#{n.data.nom()}</strong>
                                         <small>#{empty n.data.fonction() ? 'Fonction non renseignée' : n.data.fonction()}</small>
@@ -103,7 +103,7 @@
 
                             <p:organigramNode type="salarie" skipLeafHandling="true" expandedIcon="pi pi-chevron-up" collapsedIcon="pi pi-chevron-down" styleClass="hx-org__node">
                                 <div class="hx-org__card">
-                                    <span class="hx-avatar hx-avatar--sm">#{n.data.initiales()}</span>
+                                    <span class="hx-avatar hx-avatar--sm #{empty organigrammeView.photo(n.data.id()) ? '' : 'has-photo'}"><ui:fragment rendered="#{not empty organigrammeView.photo(n.data.id())}"><img src="#{organigrammeView.photo(n.data.id())}" alt=""/></ui:fragment><ui:fragment rendered="#{empty organigrammeView.photo(n.data.id())}">#{n.data.initiales()}</ui:fragment></span>
                                     <div class="hx-org__txt">
                                         <strong>#{n.data.nom()}</strong>
                                         <small>#{empty n.data.fonction() ? 'Fonction non renseignée' : n.data.fonction()}</small>
@@ -134,7 +134,7 @@
                                         <tr class="#{l.niveau() gt 0 ? 'is-indirect' : ''}" style="--hx-level:#{l.niveau()}">
                                             <td>
                                                 <div class="hx-teamlist__who">
-                                                    <span class="hx-avatar hx-avatar--sm">#{l.poste().initiales()}</span>
+                                                    <span class="hx-avatar hx-avatar--sm #{empty organigrammeView.photo(l.poste().id()) ? '' : 'has-photo'}"><ui:fragment rendered="#{not empty organigrammeView.photo(l.poste().id())}"><img src="#{organigrammeView.photo(l.poste().id())}" alt=""/></ui:fragment><ui:fragment rendered="#{empty organigrammeView.photo(l.poste().id())}">#{l.poste().initiales()}</ui:fragment></span>
                                                     <div>
                                                         <strong>#{l.poste().nom()}<ui:fragment rendered="#{l.poste().directeur()}"> <span class="hx-tag hx-tag--gold">directeur</span></ui:fragment></strong>
                                                         <small>#{empty l.poste().fonction() ? 'Fonction non renseignée' : l.poste().fonction()}</small>
@@ -170,7 +170,7 @@
             <h:form id="frmRatt">
                 <ui:fragment rendered="#{not empty organigrammeView.edite}">
                     <div class="hx-org__who">
-                        <span class="hx-avatar">#{organigrammeView.initialesEdite}</span>
+                        <span class="hx-avatar #{empty photo.url(organigrammeView.edite) ? '' : 'has-photo'}"><ui:fragment rendered="#{not empty photo.url(organigrammeView.edite)}"><img src="#{photo.url(organigrammeView.edite)}" alt=""/></ui:fragment><ui:fragment rendered="#{empty photo.url(organigrammeView.edite)}">#{organigrammeView.initialesEdite}</ui:fragment></span>
                         <div>
                             <strong>#{organigrammeView.edite.nomComplet}</strong>
                             <small>#{empty organigrammeView.edite.fonction ? 'Fonction non renseignée' : organigrammeView.edite.fonction}<ui:fragment rendered="#{not empty organigrammeView.edite.direction}"> · #{organigrammeView.edite.direction.nom}</ui:fragment></small>

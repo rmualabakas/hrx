@@ -135,6 +135,7 @@ public class UserAdminView implements Serializable {
             error("Champs obligatoires", "Nom, prénom, identifiant et e-mail sont requis."); return;
         }
         if (editProfilId == null) { error("Profil requis", "Choisissez un profil."); return; }
+        if (!creation) { Users enBase = userDAO.findUserById(edit.getId()); if (enBase != null) edit.setAvatar(enBase.getAvatar()); }   // la photo est gérée par le collaborateur
         Users dbl = userDAO.findUserByLoginEmail(edit.getEmail());
         if (dbl != null && dbl.getId() != edit.getId()) { error("E-mail déjà utilisé", "Un autre compte utilise " + edit.getEmail()); return; }
         dbl = userDAO.findUserByLoginEmail(edit.getLogin());
@@ -252,4 +253,16 @@ public class UserAdminView implements Serializable {
 
     private void info(String summary, String detail) { FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_INFO, summary, detail)); }
     private void error(String summary, String detail) { FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, summary, detail)); }
+
+    @jakarta.inject.Inject private cd.mura.hrx.service.PhotoService photos;
+
+    /** Retrait d'une photo inappropriée par l'administration. */
+    public void retirerPhoto() {
+        authorization.requirePrivilege("USR_EDIT");
+        if (edit == null || edit.getId() == 0) return;
+        photos.supprimer(edit.getId());
+        edit.setAvatar(null);
+        auditService.updated("Administration", "Users", edit.getId(), "Photo retirée par l'administration", edit.getNomComplet());
+        FacesContext.getCurrentInstance().addMessage(null, new jakarta.faces.application.FacesMessage(jakarta.faces.application.FacesMessage.SEVERITY_INFO, "Photo retirée", edit.getNomComplet()));
+    }
 }

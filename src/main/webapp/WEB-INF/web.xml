@@ -57,6 +57,12 @@
         <param-value>fr</param-value>
     </context-param>
 
+    <!-- Version des ressources : change à chaque déploiement (voir BuildInfo). -->
+    <context-param>
+        <param-name>org.omnifaces.VERSIONED_RESOURCE_HANDLER_VERSION</param-name>
+        <param-value>#{buildInfo.version}</param-value>
+    </context-param>
+
     <context-param>
         <param-name>default-html-encoding</param-name>
         <param-value>UTF-8</param-value>
