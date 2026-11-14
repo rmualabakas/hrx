@@ -28,18 +28,19 @@
                 </div>
 
                 <h:panelGroup id="efEtat" styleClass="hx-ef-etat" style="display:none" pt:data-type="#{evalChaudAdminView.nature}" pt:data-statut="#{evalChaudAdminView.statutFiltre}" pt:data-vue="#{evalChaudAdminView.affichage}"/>
-                <nav class="hx-form-tabs" aria-label="Type d'évaluation">
-                    <p:commandLink process="@this" update="@form" styleClass="hx-form-tab #{evalChaudAdminView.froid ? '' : 'is-on'}" action="#{evalChaudAdminView.setNature('chaud')}">
-                        <span class="hx-form-tab__ico"><i class="pi pi-sun"></i></span>
-                        <span class="hx-form-tab__txt"><strong>À chaud <em>#{evalChaudAdminView.nbNature('chaud')}</em></strong><small>Satisfaction des participants en fin de formation · MAF 063 · anonyme</small></span>
-                        <ui:fragment rendered="#{evalChaudAdminView.nbOuvertesNature('chaud') gt 0}"><span class="hx-form-tab__live">#{evalChaudAdminView.nbOuvertesNature('chaud')} ouverte#{evalChaudAdminView.nbOuvertesNature('chaud') gt 1 ? 's' : ''}</span></ui:fragment>
+                <nav class="hx-ntabs" aria-label="Type d'évaluation" role="tablist">
+                    <p:commandLink process="@this" update="@form" styleClass="hx-ntab #{evalChaudAdminView.froid ? '' : 'is-on'}" action="#{evalChaudAdminView.setNature('chaud')}"
+                                   pt:role="tab" pt:aria-selected="#{not evalChaudAdminView.froid}" title="Satisfaction des participants en fin de formation · MAF 063 · anonyme">
+                        <i class="pi pi-sun"></i><span>Évaluations à chaud</span><em>#{evalChaudAdminView.nbNature('chaud')}</em>
+                        <ui:fragment rendered="#{evalChaudAdminView.nbOuvertesNature('chaud') gt 0}"><span class="hx-ntab__live">#{evalChaudAdminView.nbOuvertesNature('chaud')} ouverte#{evalChaudAdminView.nbOuvertesNature('chaud') gt 1 ? 's' : ''}</span></ui:fragment>
                     </p:commandLink>
-                    <p:commandLink process="@this" update="@form" styleClass="hx-form-tab #{evalChaudAdminView.froid ? 'is-on' : ''}" action="#{evalChaudAdminView.setNature('froid')}">
-                        <span class="hx-form-tab__ico is-froid"><i class="pi pi-chart-line"></i></span>
-                        <span class="hx-form-tab__txt"><strong>À froid <em>#{evalChaudAdminView.nbNature('froid')}</em></strong><small>Efficacité et impact quelques mois après · MAF 064 · avis du supérieur hiérarchique</small></span>
-                        <ui:fragment rendered="#{evalChaudAdminView.nbOuvertesNature('froid') gt 0}"><span class="hx-form-tab__live">#{evalChaudAdminView.nbOuvertesNature('froid')} ouverte#{evalChaudAdminView.nbOuvertesNature('froid') gt 1 ? 's' : ''}</span></ui:fragment>
+                    <p:commandLink process="@this" update="@form" styleClass="hx-ntab #{evalChaudAdminView.froid ? 'is-on' : ''}" action="#{evalChaudAdminView.setNature('froid')}"
+                                   pt:role="tab" pt:aria-selected="#{evalChaudAdminView.froid}" title="Efficacité et impact quelques mois après · MAF 064 · avis du supérieur hiérarchique">
+                        <i class="pi pi-chart-line"></i><span>Évaluations à froid</span><em>#{evalChaudAdminView.nbNature('froid')}</em>
+                        <ui:fragment rendered="#{evalChaudAdminView.nbOuvertesNature('froid') gt 0}"><span class="hx-ntab__live">#{evalChaudAdminView.nbOuvertesNature('froid')} ouverte#{evalChaudAdminView.nbOuvertesNature('froid') gt 1 ? 's' : ''}</span></ui:fragment>
                     </p:commandLink>
                 </nav>
+                <p class="hx-ntabs__desc">#{evalChaudAdminView.froid ? 'Efficacité et impact de la formation quelques mois après · MAF 064 · complétée par l’avis du supérieur hiérarchique' : 'Satisfaction des participants en fin de formation · MAF 063 · réponses anonymes'}</p>
 
                 <ui:fragment rendered="#{evalChaudAdminView.nbNature(evalChaudAdminView.nature) eq 0}">
                     <div class="hx-card"><div class="hx-empty"><i class="pi #{evalChaudAdminView.froid ? 'pi-chart-line' : 'pi-graduation-cap'}"></i>
