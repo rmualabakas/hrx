@@ -49,6 +49,7 @@ public class ReportingView implements Serializable {
     @EJB private UserDAO userDAO;
     @EJB private DirectionDAO directionDAO;
     @Inject private ReportingExportService exportService;
+    @Inject private cd.mura.hrx.service.ReportingPptxService pptxService;
     @EJB private cd.mura.hrx.dao.config.AppDAO appDAO;
 
     // structures
@@ -319,6 +320,14 @@ public class ReportingView implements Serializable {
         byte[] data = exportService.pdf(donnees());
         auditService.log("EXPORT", "Reporting", "Campagne", campagne.getId(), "Export PDF du reporting", campagne.getLibelle() + " : " + perimetreLibelle, true);
         return DefaultStreamedContent.builder().name(nomFichier("pdf")).contentType("application/pdf").stream(() -> new ByteArrayInputStream(data)).build();
+    }
+
+    public StreamedContent getExportPptx() {
+        authorization.requirePrivilege("RPT_EXPORT");
+        if (!isPeutExporter() || campagne == null) return null;
+        byte[] data = pptxService.pptx(donnees());
+        auditService.log("EXPORT", "Reporting", "Campagne", campagne.getId(), "Export PowerPoint du reporting", campagne.getLibelle() + " : " + perimetreLibelle, true);
+        return DefaultStreamedContent.builder().name(nomFichier("pptx")).contentType("application/vnd.openxmlformats-officedocument.presentationml.presentation").stream(() -> new ByteArrayInputStream(data)).build();
     }
 
     private static String s(String v) { return v == null ? "" : v; }

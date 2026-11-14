@@ -25,6 +25,9 @@
                     <p:commandButton value="Excel" icon="pi pi-file-excel" styleClass="hx-btn-secondary" ajax="false" rendered="#{reportingView.peutExporter and not empty reportingView.campagne}">
                         <p:fileDownload value="#{reportingView.exportExcel}"/>
                     </p:commandButton>
+                    <p:commandButton value="PowerPoint" icon="pi pi-desktop" styleClass="hx-btn-secondary" ajax="false" title="Présentation prête pour une réunion (16:9)" rendered="#{reportingView.peutExporter and not empty reportingView.campagne}">
+                        <p:fileDownload value="#{reportingView.exportPptx}"/>
+                    </p:commandButton>
                     <p:commandButton value="PDF" icon="pi pi-file-pdf" ajax="false" rendered="#{reportingView.peutExporter and not empty reportingView.campagne}">
                         <p:fileDownload value="#{reportingView.exportPdf}"/>
                     </p:commandButton>
