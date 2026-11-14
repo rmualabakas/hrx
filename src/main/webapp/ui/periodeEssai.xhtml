@@ -180,7 +180,7 @@
                         <div class="hx-card__body hx-card__body--flush">
                             <ui:fragment rendered="#{empty periodeEssaiView.courant.criteresObjectifs}"><div class="hx-empty"><i class="pi pi-flag"></i><strong>Aucun objectif validé</strong>Aucun objectif validé n'a été fixé à ce collaborateur sur la période. Fixez-les dans « Objectifs » : ils apparaîtront ici automatiquement tant que l'évaluation n'est pas transmise.</div></ui:fragment>
                             <ui:fragment rendered="#{not empty periodeEssaiView.courant.criteresObjectifs}">
-                            <ui:fragment rendered="#{periodeEssaiView.revisionDirecteur}"><p class="hx-mdl__note hx-lock" style="margin:12px 20px 0"><i class="pi pi-pencil"></i><span><b>Vous pouvez corriger les réalisations (R) retenues par le N+1</b> avant de rendre votre avis : modifiez directement les pourcentages surlignés. Chaque correction est enregistrée dans le journal, avec l'ancienne et la nouvelle valeur.</span></p></ui:fragment>
+                            <ui:fragment rendered="#{periodeEssaiView.revisionDirecteur}"><p class="hx-mdl__note hx-lock" style="margin:12px 20px 0"><i class="pi pi-pencil"></i><span><b>Vous pouvez corriger les réalisations (R) et les commentaires retenus par le N+1</b> avant de rendre votre avis : modifiez directement les pourcentages surlignés. Chaque correction est enregistrée dans le journal, avec l'ancienne et la nouvelle valeur.</span></p></ui:fragment>
                             <div class="hx-rpt__scroll">
                                 <table class="hx-dirtable hx-essai-obj">
                                     <thead>
@@ -202,8 +202,8 @@
                                             <td class="hx-essai-o">#{empty k.o4 ? '' : k.o4}</td>
                                             <td class="hx-essai-r #{periodeEssaiView.revisionDirecteur and not empty k.o4 ? 'is-rev' : ''}"><p:inputNumber value="#{k.r4Pct}" decimalPlaces="0" minValue="0" maxValue="999" symbol=" %" symbolPosition="s" emptyValue="empty" styleClass="hx-essai-rin" rendered="#{periodeEssaiView.saisieRealise and not empty k.o4}"/><ui:fragment rendered="#{not periodeEssaiView.saisieRealise or empty k.o4}">#{k.r4Aff}</ui:fragment></td>
                                             <td class="hx-essai-com">
-                                                <p:inputTextarea value="#{k.commentaire}" maxlength="500" rows="2" autoResize="true" styleClass="hx-essai-comin" placeholder="Commentaire" rendered="#{periodeEssaiView.peutEditer}"/>
-                                                <ui:fragment rendered="#{not periodeEssaiView.peutEditer}">#{k.commentaire}</ui:fragment>
+                                                <p:inputTextarea value="#{k.commentaire}" maxlength="500" rows="2" autoResize="true" styleClass="hx-essai-comin" placeholder="Commentaire" rendered="#{periodeEssaiView.saisieRealise}"/>
+                                                <ui:fragment rendered="#{not periodeEssaiView.saisieRealise}">#{k.commentaire}</ui:fragment>
                                             </td>
                                         </tr>
                                     </ui:repeat>
@@ -218,6 +218,7 @@
                     <div class="hx-card" style="margin-top:var(--hx-s5)">
                         <div class="hx-card__head"><div><h3>II. Intégration du salarié dans l'environnement professionnel</h3><small>#{periodeEssaiView.courant.maf070 ? 'TB = très bien · B = bien · P = passable · I = insuffisant · PC = pas concerné' : 'A = acquis · EA = en cours d\'acquisition · NA = non acquis · NM = non mesuré'}</small></div><small>#{periodeEssaiView.courant.nbNotesCompetences} / #{periodeEssaiView.courant.criteresCompetences.size()} noté#{periodeEssaiView.courant.nbNotesCompetences gt 1 ? 's' : ''}</small></div>
                         <div class="hx-card__body hx-card__body--flush">
+                            <ui:fragment rendered="#{periodeEssaiView.revisionDirecteur}"><p class="hx-mdl__note hx-lock" style="margin:12px 20px 0"><i class="pi pi-pencil"></i><span><b>Vous pouvez aussi corriger la notation et les axes d'amélioration</b> retenus par le N+1. Chaque correction est enregistrée dans le journal.</span></p></ui:fragment>
                             <div class="hx-rpt__scroll">
                                 <table class="hx-dirtable hx-essai-grille">
                                     <thead><tr><th>Compétences</th><th>Notation</th><th>Axes d'amélioration</th></tr></thead>
@@ -228,14 +229,14 @@
                                         <tr>
                                             <td class="#{empty k.description ? '' : 'hx-essai-ind'}">#{k.libelle}<ui:fragment rendered="#{not periodeEssaiView.courant.maf070 and not empty k.description}"><br/><small class="hx-muted">#{k.description}</small></ui:fragment></td>
                                             <td style="white-space:nowrap">
-                                                <p:selectOneButton value="#{k.niveau}" styleClass="hx-segment hx-segment--lvl" unselectable="true" rendered="#{periodeEssaiView.peutEditer}">
+                                                <p:selectOneButton value="#{k.niveau}" styleClass="hx-segment hx-segment--lvl" unselectable="true" rendered="#{periodeEssaiView.saisieRealise}">
                                                     <f:selectItems value="#{periodeEssaiView.niveaux}" var="n" itemLabel="#{n}" itemValue="#{n}" itemDescription="#{periodeEssaiView.niveauLabel(n)}"/>
                                                 </p:selectOneButton>
-                                                <ui:fragment rendered="#{not periodeEssaiView.peutEditer}"><span class="hx-lvl hx-lvl--#{empty k.niveau ? 'none' : k.niveau}" title="#{periodeEssaiView.niveauLabel(k.niveau)}">#{empty k.niveau ? '—' : k.niveau}</span></ui:fragment>
+                                                <ui:fragment rendered="#{not periodeEssaiView.saisieRealise}"><span class="hx-lvl hx-lvl--#{empty k.niveau ? 'none' : k.niveau}" title="#{periodeEssaiView.niveauLabel(k.niveau)}">#{empty k.niveau ? '—' : k.niveau}</span></ui:fragment>
                                             </td>
                                             <td class="hx-essai-com">
-                                                <p:inputTextarea value="#{k.commentaire}" maxlength="500" rows="2" autoResize="true" styleClass="hx-essai-comin" placeholder="Axes d'amélioration" rendered="#{periodeEssaiView.peutEditer}"/>
-                                                <ui:fragment rendered="#{not periodeEssaiView.peutEditer}">#{k.commentaire}</ui:fragment>
+                                                <p:inputTextarea value="#{k.commentaire}" maxlength="500" rows="2" autoResize="true" styleClass="hx-essai-comin" placeholder="Axes d'amélioration" rendered="#{periodeEssaiView.saisieRealise}"/>
+                                                <ui:fragment rendered="#{not periodeEssaiView.saisieRealise}">#{k.commentaire}</ui:fragment>
                                             </td>
                                         </tr>
                                     </ui:repeat>

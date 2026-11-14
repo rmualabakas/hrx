@@ -149,25 +149,29 @@ public class PeriodeEssaiView implements Serializable {
     /** Colonnes « R » éditables : par l'évaluateur pendant la saisie, ou par le directeur en révision. */
     public boolean isSaisieRealise() { return isPeutEditer() || isRevisionDirecteur(); }
 
-    /** Réalisés au chargement, pour tracer les corrections du directeur. */
+    /** Valeurs du N+1 au chargement (réalisés, notation, commentaires), pour tracer les corrections du directeur. */
     private java.util.Map<Integer, String[]> realisesInitiaux = new java.util.HashMap<>();
     private void photographierRealises() {
         realisesInitiaux.clear();
         if (courant == null) return;
-        for (cd.mura.hrx.entity.eval.EvaluationEssaiCritere k : courant.getCriteresObjectifs())
-            realisesInitiaux.put(k.getId(), new String[]{k.getR1(), k.getR2(), k.getR3(), k.getR4()});
+        for (cd.mura.hrx.entity.eval.EvaluationEssaiCritere k : courant.getCriteres())
+            realisesInitiaux.put(k.getId(), new String[]{k.getR1(), k.getR2(), k.getR3(), k.getR4(), k.getNiveau(), k.getCommentaire()});
     }
+    private static String v(String x) { return x == null ? "" : x.trim(); }
     private java.util.List<String> correctionsRealises() {
         java.util.List<String> l = new java.util.ArrayList<>();
         if (courant == null) return l;
-        for (cd.mura.hrx.entity.eval.EvaluationEssaiCritere k : courant.getCriteresObjectifs()) {
+        for (cd.mura.hrx.entity.eval.EvaluationEssaiCritere k : courant.getCriteres()) {
             String[] av = realisesInitiaux.get(k.getId());
             if (av == null) continue;
-            String[] ap = {k.getR1(), k.getR2(), k.getR3(), k.getR4()};
-            for (int t = 0; t < 4; t++) {
-                String a = av[t] == null ? "" : av[t], b = ap[t] == null ? "" : ap[t];
-                if (!a.equals(b)) l.add("« " + k.getLibelle() + " », T" + (t + 1) + " : " + (a.isEmpty() ? "vide" : cd.mura.hrx.entity.eval.EvaluationEssaiCritere.pourcent(a))
+            String[] ap = {k.getR1(), k.getR2(), k.getR3(), k.getR4(), k.getNiveau(), k.getCommentaire()};
+            for (int t = 0; t < 6; t++) {
+                String a = v(av[t]), b = v(ap[t]);
+                if (a.equals(b)) continue;
+                if (t < 4) l.add("« " + k.getLibelle() + " », réalisé T" + (t + 1) + " : " + (a.isEmpty() ? "vide" : cd.mura.hrx.entity.eval.EvaluationEssaiCritere.pourcent(a))
                         + " → " + (b.isEmpty() ? "vide" : cd.mura.hrx.entity.eval.EvaluationEssaiCritere.pourcent(b)));
+                else if (t == 4) l.add("« " + k.getLibelle() + " », notation : " + (a.isEmpty() ? "—" : a) + " → " + (b.isEmpty() ? "—" : b));
+                else l.add("« " + k.getLibelle() + " », " + (k.isObjectif() ? "commentaire" : "axes d'amélioration") + " : « " + (a.isEmpty() ? "vide" : a) + " » → « " + (b.isEmpty() ? "vide" : b) + " »");
             }
         }
         return l;
@@ -179,10 +183,10 @@ public class PeriodeEssaiView implements Serializable {
         try {
             java.util.List<String> c = correctionsRealises();
             service.corrigerRealises(courant, moi());
-            if (!c.isEmpty()) auditService.updated("Évaluations", "EvaluationEssai", courant.getId(), "Réalisés corrigés par le directeur (" + c.size() + ")",
+            if (!c.isEmpty()) auditService.updated("Évaluations", "EvaluationEssai", courant.getId(), "Évaluation du N+1 corrigée par le directeur (" + c.size() + ")",
                     courant.getSalarie().getNomComplet() + "\n" + String.join("\n", c));
             chargerFiche(); photographierRealises();
-            cd.mura.hrx.utils.Dialogue.succes("Corrections enregistrées", c.isEmpty() ? "Aucune réalisation modifiée." : c.size() + " réalisation(s) corrigée(s). Vous pouvez maintenant rendre votre avis.");
+            cd.mura.hrx.utils.Dialogue.succes("Corrections enregistrées", c.isEmpty() ? "Aucune modification par rapport à l'évaluation du N+1." : c.size() + " correction(s) enregistrée(s). Vous pouvez maintenant rendre votre avis.");
         } catch (Exception ex) { error("Enregistrement impossible", cause(ex)); }
     }
     /** Le collaborateur commente et signe une fois l'évaluation transmise par son N+1. */
@@ -290,7 +294,7 @@ public class PeriodeEssaiView implements Serializable {
             service.avisDirecteur(courant, moi(), courant.getAvisDirecteur());
             chargerFiche();
             auditService.updated("Évaluations", "EvaluationEssai", courant.getId(), "Avis du directeur", courant.getSalarie().getNomComplet());
-            if (!corrections.isEmpty()) auditService.updated("Évaluations", "EvaluationEssai", courant.getId(), "Réalisés corrigés par le directeur (" + corrections.size() + ")",
+            if (!corrections.isEmpty()) auditService.updated("Évaluations", "EvaluationEssai", courant.getId(), "Évaluation du N+1 corrigée par le directeur (" + corrections.size() + ")",
                     courant.getSalarie().getNomComplet() + "\n" + String.join("\n", corrections));
             realisesInitiaux.clear();
             try { notifications.essaiAvisDirecteur(courant); } catch (Exception ex) { }

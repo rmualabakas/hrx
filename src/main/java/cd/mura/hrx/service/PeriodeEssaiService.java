@@ -510,8 +510,8 @@ public class PeriodeEssaiService {
         Users attendu = directeurAttendu(x);
         boolean ok = directeur != null && x.getSalarie().getId() != directeur.getId()
                 && (attendu != null ? attendu.getId() == directeur.getId() : estDcht(directeur));
-        if (!ok) refuser("Seul le directeur de la direction peut corriger les réalisations");
-        if (x.getDateAvisDirecteur() != null) throw new IllegalStateException("L'avis du directeur est déjà rendu : les réalisations ne sont plus modifiables");
+        if (!ok) refuser("Seul le directeur de la direction peut corriger l'évaluation du N+1");
+        if (x.getDateAvisDirecteur() != null) throw new IllegalStateException("L'avis du directeur est déjà rendu : l'évaluation n'est plus modifiable");
         e.setDateMaj(new Date());
         return em.merge(e);
     }
