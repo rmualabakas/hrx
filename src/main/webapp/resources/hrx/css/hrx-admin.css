@@ -2045,7 +2045,7 @@ body .ui-dialog.hx-dialog-lg > .ui-dialog-content { height: auto !important; max
 /* ---------- Évaluations à chaud : barre d'outils et affichage grille / liste ---------- */
 .hx-chaud-bar-outils .hx-segment--vue { margin-left: 0; }
 .hx-chaud-bar-outils > .hx-segment:first-of-type { margin-left: auto; }
-.hx-camps--chaud.hx-camps--grid { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); }
+.hx-camps--chaud.hx-camps--grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
 .hx-camps--chaud.hx-camps--grid .hx-campaign__body { padding: 14px 18px; gap: 12px; }
 .hx-camps--chaud.hx-camps--grid .hx-chaud-bars { grid-template-columns: 1fr; gap: 10px; }
 .hx-camps--chaud.hx-camps--grid .hx-chaud-steps li { font-size: 11.5px; gap: 6px; padding-right: 6px; }
@@ -2204,6 +2204,6 @@ a.hx-ntab.is-on .pi { color: var(--hx-gold); }
 .hx-ntabs__desc { margin: 10px 0 var(--hx-s4); font-size: 12.5px; color: var(--hx-muted); }
 /* Corps de l'onglet : panneau blanc rattaché à l'onglet actif */
 .hx-ntabs { border-bottom-color: var(--hx-border-strong); }
-.hx-ntabs__corps { padding: 4px var(--hx-s5) var(--hx-s5); background: #fff; border: 1px solid var(--hx-border-strong); border-top: 0; border-radius: 0 0 var(--hx-radius-md) var(--hx-radius-md); box-shadow: var(--hx-shadow-sm); }
+.hx-ntabs__corps { padding: 2px var(--hx-s4) var(--hx-s4); background: #fff; border: 1px solid var(--hx-border-strong); border-top: 0; border-radius: 0 0 var(--hx-radius-md) var(--hx-radius-md); box-shadow: var(--hx-shadow-sm); }
 .hx-ntabs__corps .hx-ntabs__desc { margin-top: 14px; }
 .hx-ntabs__corps .hx-card { background: var(--hx-surface-2, #f7f9fb); box-shadow: none; }
