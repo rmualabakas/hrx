@@ -40,6 +40,7 @@
                         <ui:fragment rendered="#{evalChaudAdminView.nbOuvertesNature('froid') gt 0}"><span class="hx-ntab__live">#{evalChaudAdminView.nbOuvertesNature('froid')} ouverte#{evalChaudAdminView.nbOuvertesNature('froid') gt 1 ? 's' : ''}</span></ui:fragment>
                     </p:commandLink>
                 </nav>
+                <div class="hx-ntabs__corps">
                 <p class="hx-ntabs__desc">#{evalChaudAdminView.froid ? 'Efficacité et impact de la formation quelques mois après · MAF 064 · complétée par l’avis du supérieur hiérarchique' : 'Satisfaction des participants en fin de formation · MAF 063 · réponses anonymes'}</p>
 
                 <ui:fragment rendered="#{evalChaudAdminView.nbNature(evalChaudAdminView.nature) eq 0}">
@@ -139,6 +140,7 @@
                     </ui:repeat>
                 </div>
                 </h:panelGroup>
+                </div>
             </ui:fragment>
 
             <!-- Édition -->

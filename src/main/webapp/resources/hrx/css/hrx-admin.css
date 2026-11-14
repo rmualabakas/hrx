@@ -2202,3 +2202,8 @@ a.hx-ntab.is-on .pi { color: var(--hx-gold); }
 .hx-ntab.is-on em { background: var(--hx-primary); border-color: var(--hx-primary); color: #fff; }
 .hx-ntab__live { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--hx-success-soft); color: var(--hx-success); }
 .hx-ntabs__desc { margin: 10px 0 var(--hx-s4); font-size: 12.5px; color: var(--hx-muted); }
+/* Corps de l'onglet : panneau blanc rattaché à l'onglet actif */
+.hx-ntabs { border-bottom-color: var(--hx-border-strong); }
+.hx-ntabs__corps { padding: 4px var(--hx-s5) var(--hx-s5); background: #fff; border: 1px solid var(--hx-border-strong); border-top: 0; border-radius: 0 0 var(--hx-radius-md) var(--hx-radius-md); box-shadow: var(--hx-shadow-sm); }
+.hx-ntabs__corps .hx-ntabs__desc { margin-top: 14px; }
+.hx-ntabs__corps .hx-card { background: var(--hx-surface-2, #f7f9fb); box-shadow: none; }
