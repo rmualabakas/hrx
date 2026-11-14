@@ -144,6 +144,8 @@ public class PeriodeEssaiView implements Serializable {
     public boolean isSaisieDirecteur() { return courant != null && courant.isTransmise() && courant.getDateAvisDirecteur() == null && (isDirecteur() || (directeurAttendu == null && isDcht())) && !isSalarie(); }
     /** Le circuit passe par un directeur désigné. */
     public boolean isAvecDirecteur() { return directeurAttendu != null; }
+    /** C'est à la DCHT de statuer : transmise, avis du directeur rendu (ou pas de directeur), non encore validée. */
+    public boolean isSaisieDcht() { return isPeutValider() && !courant.isValidee() && (directeurAttendu == null || courant.getDateAvisDirecteur() != null); }
     /** Le directeur (ou la DCHT si la direction n'a pas de directeur) peut corriger les réalisés du N+1 tant qu'il n'a pas rendu son avis. */
     public boolean isRevisionDirecteur() { return isSaisieDirecteur(); }
     /** Colonnes « R » éditables : par l'évaluateur pendant la saisie, ou par le directeur en révision. */

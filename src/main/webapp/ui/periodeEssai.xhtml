@@ -136,12 +136,12 @@
                         <li class="#{periodeEssaiView.courant.validee ? 'is-done' : (periodeEssaiView.courant.transmise and not empty periodeEssaiView.courant.dateAvisDirecteur ? 'is-now' : '')}"><i class="pi #{periodeEssaiView.courant.validee ? 'pi-check' : 'pi-verified'}"></i><div><b>Validation DCHT</b><small>#{periodeEssaiView.courant.validee ? 'Validée' : 'Décision finale'}</small></div></li>
                     </ol>
 
-                    <ui:fragment rendered="#{periodeEssaiView.saisieN2 or periodeEssaiView.saisieDirecteur}">
+                    <ui:fragment rendered="#{periodeEssaiView.saisieN2 or periodeEssaiView.saisieDirecteur or periodeEssaiView.saisieDcht}">
                         <div class="hx-alert hx-alert--moi">
                             <i class="pi pi-pencil"></i>
-                            <div><strong>#{periodeEssaiView.saisieDirecteur ? 'Votre avis de directeur est attendu' : 'Votre visa de N+2 est attendu (facultatif)'}</strong>
-                                <span>Lisez l'évaluation du N+1 ci-dessous, puis renseignez la section « #{periodeEssaiView.saisieDirecteur ? 'Avis du directeur' : 'Visa du N+2'} » en bas de la fiche.</span></div>
-                            <a class="hx-pill-retour" href="##{periodeEssaiView.saisieDirecteur ? 'saisieDirecteur' : 'saisieN2'}"><i class="pi pi-arrow-down"></i> Aller à la saisie</a>
+                            <div><strong>#{periodeEssaiView.saisieDirecteur ? 'Votre avis de directeur est attendu' : (periodeEssaiView.saisieN2 ? 'Votre visa de N+2 est attendu (facultatif)' : 'La décision de la DCHT est attendue')}</strong>
+                                <span>#{periodeEssaiView.saisieDcht and not periodeEssaiView.saisieDirecteur and not periodeEssaiView.saisieN2 ? 'L\'évaluation, le visa du N+2 et l\'avis du directeur sont réunis : validez la fiche ou retournez-la au N+1 dans la section « Décision de la DCHT ».' : 'Lisez l\'évaluation du N+1 ci-dessous, puis renseignez la section « '.concat(periodeEssaiView.saisieDirecteur ? 'Avis du directeur' : 'Visa du N+2').concat(' » en bas de la fiche.')}</span></div>
+                            <a class="hx-pill-retour" href="##{periodeEssaiView.saisieDirecteur ? 'saisieDirecteur' : (periodeEssaiView.saisieN2 ? 'saisieN2' : 'saisieDcht')}"><i class="pi pi-arrow-down"></i> Aller à la saisie</a>
                         </div>
                     </ui:fragment>
 
@@ -373,8 +373,8 @@
                     </ui:fragment>
 
                     <ui:fragment rendered="#{periodeEssaiView.peutValider or periodeEssaiView.courant.validee or (periodeEssaiView.dcht and not periodeEssaiView.courant.validee)}">
-                        <div class="hx-card" style="margin-top:var(--hx-s5)">
-                            <div class="hx-card__head"><div><h3>Décision de la DCHT</h3><ui:fragment rendered="#{periodeEssaiView.courant.validee}"><small>Validée le <h:outputText value="#{periodeEssaiView.courant.dateValidation}"><f:convertDateTime pattern="dd/MM/yyyy"/></h:outputText></small></ui:fragment></div></div>
+                        <div id="saisieDcht" class="hx-card #{periodeEssaiView.saisieDcht ? 'hx-card--moi' : ''}" style="margin-top:var(--hx-s5)">
+                            <div class="hx-card__head"><div><h3>Décision de la DCHT<ui:fragment rendered="#{periodeEssaiView.saisieDcht}"><span class="hx-appr__moi"><i class="pi pi-pencil"></i> À vous de statuer</span></ui:fragment></h3><ui:fragment rendered="#{periodeEssaiView.courant.validee}"><small>Validée le <h:outputText value="#{periodeEssaiView.courant.dateValidation}"><f:convertDateTime pattern="dd/MM/yyyy"/></h:outputText></small></ui:fragment></div></div>
                             <div class="hx-card__body hx-form">
                                 <div class="hx-field">
                                     <p:inputTextarea styleClass="hx-essai-ta" value="#{periodeEssaiView.courant.commentaireDcht}" rows="3" autoResize="true" maxlength="3000" readonly="#{not periodeEssaiView.peutValider}" placeholder="#{periodeEssaiView.peutValider ? 'Commentaire de la DCHT (facultatif)' : ''}"/>
