@@ -134,7 +134,8 @@ public class ObjectifsView implements Serializable {
     public boolean isFigee() { return fiche != null && (fiche.isSignee() || fiche.isSigneeSalarie() || fiche.isSigneeN1()); }
     private boolean pilote() { return (n1 || hierarchie || dcht) && !moi; }
     public boolean isPeutTransmettre() { return pilote() && fiche != null && !fiche.isTransmise() && !fiche.isSigneeSalarie() && !isVerrouEvaluation(); }
-    public boolean isPeutSignerSalarie() { return moi && fiche != null && fiche.isTransmise() && !fiche.isSigneeSalarie() && !fiche.isSignee(); }
+    /** Le collaborateur signe une fiche transmise, sans demande de révision ni proposition en attente. */
+    public boolean isPeutSignerSalarie() { return moi && fiche != null && fiche.isTransmise() && !fiche.isSigneeSalarie() && !fiche.isSignee() && getNbContestations() == 0 && getNbProposes() == 0; }
     public boolean isPeutSignerN1() { return pilote() && fiche != null && fiche.isSigneeSalarie() && !fiche.isSigneeN1() && !fiche.isSignee(); }
     /** Étape du circuit, pour l'affichage. */
     public String getEtapeCircuit() {
@@ -182,8 +183,9 @@ public class ObjectifsView implements Serializable {
     public boolean isPeutModifier(Objectif o) {
         if (!ouverte()) return false;
         if (n1 || hierarchie || dcht) return true;
-        // le salarié peut créer et mettre à jour ses objectifs : toute modification repasse en proposition à valider
-        return moi && !Objectif.REFUSE.equals(o.getStatut());
+        // le salarié ne retouche que ses propres propositions non encore validées ;
+        // pour un objectif fixé par la hiérarchie, il passe par « Demander une révision »
+        return moi && o.isParSalarie() && o.isPropose();
     }
     public boolean isPeutSupprimer(Objectif o) {
         if (!ouverte()) return false;
@@ -272,7 +274,11 @@ public class ObjectifsView implements Serializable {
         Date now = new Date();
         boolean signeCollaborateur = false;
         if (moi) {
-            if (!isPeutSignerSalarie()) { cd.mura.hrx.utils.Dialogue.erreur("Signature impossible", fiche.isTransmise() ? "Vous avez déjà signé cette fiche." : "Votre N+1 ne vous a pas encore transmis la fiche : vous pourrez la signer dès qu'il l'aura fait."); return; }
+            if (!isPeutSignerSalarie()) { cd.mura.hrx.utils.Dialogue.erreur("Signature impossible",
+                    !fiche.isTransmise() ? "Votre N+1 ne vous a pas encore transmis la fiche : vous pourrez la signer dès qu'il l'aura fait."
+                    : getNbContestations() > 0 ? "Votre demande de révision est en attente de la réponse de votre N+1 : vous signerez ensuite."
+                    : getNbProposes() > 0 ? "Vos propositions d'objectifs doivent d'abord être validées ou refusées par votre N+1."
+                    : "Vous avez déjà signé cette fiche."); return; }
             fiche.setDateSignatureSalarie(now); signeCollaborateur = true;
         } else if (n1 || hierarchie || dcht) {
             if (!fiche.isSigneeSalarie()) { cd.mura.hrx.utils.Dialogue.erreur("Signature du collaborateur attendue", "Le N+1 signe toujours après le collaborateur : transmettez-lui la fiche, il la signera ou demandera une révision."); return; }
@@ -355,7 +361,10 @@ public class ObjectifsView implements Serializable {
         if (!isPeutFixer()) return;
         Objectif x = objectifDAO.find(o.getId());
         x.setStatut(Objectif.VALIDE); x.setValidePar(loginBean.getUsers().getId()); x.setDateValidation(new Date()); x.setMotifRefus(null);
+        boolean revision = x.isContestationEnAttente();
+        if (revision) { x.setContestationStatut(Objectif.CONTEST_REVISE); x.setDateReponseContestation(new Date()); x.setContestationReponse("Proposition du collaborateur acceptée."); }
         objectifDAO.save(x);
+        if (revision) { try { notifications.contestationTraitee(objectifDAO.findFiche(fiche.getId()), x); } catch (Exception ex) { } }
         auditService.updated("Objectifs", "Objectif", x.getId(), "Validation d'un objectif proposé", salarie.getNomComplet() + " : " + x.getLibelle());
         try { notifications.objectifTraite(objectifDAO.findFiche(fiche.getId()), x, true); } catch (Exception ex) { }
         info("Objectif validé", x.getLibelle());

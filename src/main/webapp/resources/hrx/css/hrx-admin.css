@@ -2258,3 +2258,7 @@ a.hx-contest-btn--ghost:hover { background: var(--hx-surface-2); color: var(--hx
 .hx-sign__hint .pi { margin-top: 2px; color: var(--hx-primary); }
 @media (max-width: 760px) { .hx-circuit { grid-template-columns: 1fr 1fr; row-gap: 10px; } }
 .hx-sign__hint { max-width: 340px; }
+/* encadré de demande de révision : texte en flux normal, sans colonnes tassées */
+.hx-contest__head { display: block; line-height: 1.45; }
+.hx-contest__head .pi { margin-right: 6px; vertical-align: -1px; }
+.hx-contest__head b { font-weight: 700; }
