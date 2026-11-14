@@ -101,7 +101,7 @@ public class ReportingExportService implements Serializable {
                 if (notee && e.getScoreObjectifs() != null) dec(row, 9, e.getScoreObjectifs(), st.dec); else txt(row, 9, "", st.cell);
                 if (notee && e.getNoteGlobale() != null) dec(row, 10, e.getNoteGlobale(), st.dec); else txt(row, 10, "", st.cell);
                 txt(row, 11, notee ? e.getAppreciation() : "", st.cell); txt(row, 12, notee ? Evaluation.niveauAtteinteLabel(e.getNiveauAtteinte()) : "", st.cell);
-                txt(row, 13, Evaluation.souhaitLabel(e.getSouhaitSalarie()), st.cell); txt(row, 14, date(e.getDateValidation()), st.cell);
+                txt(row, 13, e.getSouhaitsLabel(), st.cell); txt(row, 14, date(e.getDateValidation()), st.cell);
             }
             largeurs(s4, 12, 30, 28, 30, 26, 24, 14, 9, 14, 13, 10, 16, 26, 30, 12);
             s4.createFreezePane(2, 5);

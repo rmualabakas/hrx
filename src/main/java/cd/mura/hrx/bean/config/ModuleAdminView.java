@@ -245,11 +245,39 @@ public class ModuleAdminView implements Serializable {
 
     public boolean hasEnfants(Menu menu) { return !enfantsDe(menu).isEmpty(); }
 
-    /** Un dossier est ouvert quand lui-même ou l'un de ses enfants est sélectionné. */
+    /** Un dossier est ouvert quand lui-même ou l'un de ses descendants (à toute profondeur) est sélectionné. */
     public boolean isOuvert(Menu parent) {
-        if (selectedMenu == null) return false;
+        if (selectedMenu == null || parent == null) return false;
         if (selectedMenu.getId() == parent.getId()) return true;
-        return enfantsDe(parent).stream().anyMatch(c -> c.getId() == selectedMenu.getId());
+        java.util.Map<Integer, Menu> parId = new java.util.HashMap<>();
+        for (Menu m : menus) parId.put(m.getId(), m);
+        java.util.Set<Integer> vus = new java.util.HashSet<>();
+        for (Menu m = parId.get(selectedMenu.getId()); m != null && vus.add(m.getId()); m = parId.get(m.getParentId()))
+            if (m.getParentId() == parent.getId()) return true;
+        return false;
+    }
+
+    /** Nœud de l'arborescence aplatie : profondeur, ancêtres (« 3 7 ») et état d'ouverture. */
+    public record NoeudMenu(Menu menu, int profondeur, String ancetres, boolean enfants, boolean ouvert, boolean visible) implements java.io.Serializable {
+        public boolean isEnfants() { return enfants; }
+        public boolean isOuvert() { return ouvert; }
+        public boolean isVisible() { return visible; }
+    }
+
+    /** Menus du module en profondeur d'abord, sans limite de niveaux (protégé contre les cycles). */
+    public List<NoeudMenu> getArbreMenus() {
+        List<NoeudMenu> l = new ArrayList<>();
+        java.util.Set<Integer> vus = new java.util.HashSet<>();
+        for (Menu r : getMenusRacine()) parcourir(r, 0, "", true, vus, l);
+        return l;
+    }
+
+    private void parcourir(Menu m, int prof, String ancetres, boolean visible, java.util.Set<Integer> vus, List<NoeudMenu> l) {
+        if (!vus.add(m.getId())) return;
+        List<Menu> enfants = enfantsDe(m);
+        boolean ouvert = !enfants.isEmpty() && isOuvert(m);
+        l.add(new NoeudMenu(m, prof, ancetres.trim(), !enfants.isEmpty(), ouvert, visible));
+        for (Menu c : enfants) parcourir(c, prof + 1, ancetres + " " + m.getId(), visible && ouvert, vus, l);
     }
 
     // Privilèges

@@ -51,6 +51,8 @@ public class ObjectifsView implements Serializable {
     @EJB private NatureObjectifDAO natureObjectifDAO;
     @EJB private cd.mura.hrx.service.NotificationService notifications;
     @Inject private cd.mura.hrx.service.FicheObjectifsExportService exportService;
+    @Inject private cd.mura.hrx.service.recrutement.ClaudeCvService claude;
+    @EJB private cd.mura.hrx.dao.config.AppDAO appDAO;
 
     /** Paramètres de vue. */
     private Integer salarieId;
@@ -224,16 +226,16 @@ public class ObjectifsView implements Serializable {
     public void signer() {
         if (fiche == null) { error("Fiche vide", "Ajoutez au moins un objectif avant de signer."); return; }
         if (getNbValides() == 0) { error("Aucun objectif validé", "La fiche doit contenir au moins un objectif validé."); return; }
-        if (!isPonderationLibre() && getPoidsTotal() != 100) { error("Pondération incomplète", "La somme des poids doit faire 100 %. Laissez-les tous à 0 pour donner le même poids à chaque objectif."); return; }
+        if (!isPonderationLibre() && getPoidsTotal() != 100) { error("Pondération incomplète", "La somme des pondérations doit faire 100 %. Laissez-les toutes à 0 pour donner la même pondération à chaque objectif."); return; }
         if (getNbProposes() > 0 && (n1 || hierarchie || dcht)) { error("Propositions en attente", "Validez ou refusez d'abord les objectifs proposés par le collaborateur."); return; }
         Date now = new Date();
         if (moi && !fiche.isSigneeSalarie()) fiche.setDateSignatureSalarie(now);
-        if ((n1 || hierarchie || dcht) && !fiche.isSigneeN1()) fiche.setDateSignatureN1(now);
+        if ((n1 || hierarchie || dcht) && !fiche.isSigneeN1()) { fiche.setDateSignatureN1(now); fiche.setSignataireN1(loginBean.getUsers()); }
         if (fiche.isSigneeSalarie() && fiche.isSigneeN1()) fiche.setStatut(FicheObjectifs.SIGNEE);
         fiche = objectifDAO.saveFiche(fiche);
         auditService.updated("Objectifs", "FicheObjectifs", fiche.getId(), fiche.isSignee() ? "Fiche d'objectifs signée par les deux parties" : "Signature de la fiche d'objectifs", salarie.getNomComplet() + " : " + exercice);
         if (fiche.isSignee()) { try { notifications.ficheObjectifsSignee(objectifDAO.findFiche(fiche.getId())); } catch (Exception ex) { } }
-        info(fiche.isSignee() ? "Fiche signée" : "Signature enregistrée", fiche.isSignee() ? "Les objectifs sont figés pour l'exercice " + exercice + "." : "En attente de la signature de l'autre partie.");
+        cd.mura.hrx.utils.Dialogue.succes(fiche.isSignee() ? "Fiche signée" : "Signature enregistrée", fiche.isSignee() ? "Les objectifs sont figés pour l'exercice " + exercice + "." : "En attente de la signature de l'autre partie.");
     }
 
     public void rouvrir() {
@@ -242,9 +244,10 @@ public class ObjectifsView implements Serializable {
         fiche.setStatut(FicheObjectifs.EN_COURS);
         fiche.setDateSignatureSalarie(null);
         fiche.setDateSignatureN1(null);
+        fiche.setSignataireN1(null);
         fiche = objectifDAO.saveFiche(fiche);
         auditService.updated("Objectifs", "FicheObjectifs", fiche.getId(), "Réouverture de la fiche d'objectifs", salarie.getNomComplet() + " : " + exercice);
-        info("Fiche rouverte", "Les objectifs peuvent de nouveau être modifiés ; les signatures sont à refaire.");
+        cd.mura.hrx.utils.Dialogue.succes("Fiche rouverte", "Les objectifs peuvent de nouveau être modifiés ; les signatures sont à refaire.");
     }
 
     // objectifs
@@ -339,6 +342,175 @@ public class ObjectifsView implements Serializable {
     private String nomFichier(String ext) {
         String n = java.text.Normalizer.normalize(s(salarie.getNom()) + "_" + s(salarie.getPrenom()), java.text.Normalizer.Form.NFD).replaceAll("\\p{M}", "").replaceAll("[^A-Za-z0-9_]+", "_");
         return "MAF066_Fixation_Objectifs_" + exercice + "_" + n + "." + ext;
+    }
+
+    // ------------------------------------------------------------------ import d'une fiche par l'IA
+
+    /** Objectif lu par l'IA, en revue : rien n'est enregistré tant que l'utilisateur n'a pas confirmé. */
+    @Getter @Setter
+    public static class Brouillon implements Serializable {
+        private static final long serialVersionUID = 1L;
+        private boolean retenu = true;
+        private Integer natureId;
+        private String activite, libelle, moyens, indicateur, cible, periodicite = Periodicite.TRIMESTRIEL.name();
+        private boolean t1, t2, t3, t4;
+        private LocalDate echeance;
+        private int poids;
+        /** Signalement affiché sur la ligne (doublon, rubrique devinée…). */
+        private String alerte;
+    }
+
+    private List<Brouillon> brouillons = new ArrayList<>();
+    private String missionLue, remarquesImport, fichierImporte, avertissementSalarie;
+    private boolean reprendreMission;
+
+    private static final Map<String, String> TYPES_IMPORT = Map.of("pdf", "application/pdf", "jpg", "image/jpeg", "jpeg", "image/jpeg",
+            "png", "image/png", "webp", "image/webp", "docx", "docx", "txt", "text/plain");
+
+    public boolean isPeutImporter() { return isPeutFixer() || isPeutProposer(); }
+    public boolean isIaActive() {
+        cd.mura.hrx.entity.config.App a = appDAO.findFirst();
+        return a != null && Boolean.TRUE.equals(a.getIaActive());
+    }
+    public long getNbRetenus() { return brouillons.stream().filter(b -> b.isRetenu() && b.getLibelle() != null && !b.getLibelle().isBlank()).count(); }
+
+    /** Fait lire une fiche d'objectifs (Word, PDF, scan, photo) par l'IA puis ouvre la revue. */
+    public void importerFiche(org.primefaces.event.FileUploadEvent e) {
+        if (e.getPhaseId() != jakarta.faces.event.PhaseId.INVOKE_APPLICATION) {
+            e.setPhaseId(jakarta.faces.event.PhaseId.INVOKE_APPLICATION);
+            e.queue();
+            return;
+        }
+        if (!isPeutImporter()) { error("Import impossible", "La fiche n'est pas modifiable."); return; }
+        cd.mura.hrx.entity.config.App app = appDAO.findFirst();
+        if (app == null || !Boolean.TRUE.equals(app.getIaActive())) { error("IA désactivée", "Activez l'analyse de documents par l'IA dans Paramètres > IA."); return; }
+        try {
+            String nom = e.getFile().getFileName();
+            String ext = nom.contains(".") ? nom.substring(nom.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT) : "";
+            String mime = TYPES_IMPORT.get(ext);
+            if (mime == null) { error("Format non pris en charge", "Fiche en Word (.docx), PDF (même scanné), image ou texte. Un ancien .doc est à réenregistrer en .docx."); return; }
+            byte[] contenu = e.getFile().getContent();
+            String texte = "docx".equals(ext) || "txt".equals(ext) ? cd.mura.hrx.service.recrutement.AnalyseMoteur.texte(contenu, ext) : null;
+            StringBuilder rub = new StringBuilder();
+            for (NatureObjectif n : natures)
+                rub.append(n.getCode()).append(" : ").append(n.getGroupe()).append(" - ").append(n.getLibelle())
+                   .append(n.getAide() == null || n.getAide().isBlank() ? "" : " (" + n.getAide() + ")").append('\n');
+            var lu = claude.lireObjectifs(app, contenu, mime, nom, texte, rub.toString(), exercice, getTrimestreDebut());
+            preparerRevue(lu, nom);
+            auditService.log("IMPORT", "Objectifs", "FicheObjectifs", fiche == null ? 0 : fiche.getId(), "Lecture d'une fiche d'objectifs par l'IA",
+                    salarie.getNomComplet() + " : " + nom + " (" + brouillons.size() + " objectif(s) lu(s))", true);
+            if (brouillons.isEmpty()) { error("Aucun objectif trouvé", "L'IA n'a trouvé aucun objectif dans « " + nom + " »."); return; }
+            org.primefaces.PrimeFaces.current().ajax().update("frmImportObj:impCorps", "frmImportObj:impPied");
+            org.primefaces.PrimeFaces.current().executeScript("PF('dlgImportObj').show()");
+        } catch (Exception ex) {
+            Throwable c = ex; while (c.getCause() != null && c.getCause() != c) c = c.getCause();
+            error("Lecture de la fiche impossible", c.getMessage() == null ? c.getClass().getSimpleName() : c.getMessage());
+        }
+    }
+
+    private void preparerRevue(cd.mura.hrx.service.recrutement.ClaudeCvService.FicheObjectifsLue lu, String nom) {
+        fichierImporte = nom;
+        brouillons = new ArrayList<>();
+        missionLue = lu.mission() == null || lu.mission().isBlank() ? null : lu.mission().trim();
+        reprendreMission = missionLue != null && (fiche == null || fiche.getMission() == null || fiche.getMission().isBlank());
+        remarquesImport = lu.remarques() == null || lu.remarques().isBlank() ? null : lu.remarques().trim();
+        avertissementSalarie = null;
+        if (lu.salarie() != null && !lu.salarie().isBlank() && salarie.getNom() != null
+                && !sansAccents(lu.salarie()).contains(sansAccents(salarie.getNom()).trim()))
+            avertissementSalarie = "La fiche semble concerner « " + lu.salarie().trim() + " » et non " + salarie.getNomComplet() + ". Vérifiez le document.";
+        if (lu.exercice() > 0 && lu.exercice() != exercice)
+            avertissementSalarie = (avertissementSalarie == null ? "" : avertissementSalarie + " ") + "La fiche porte sur l'exercice " + lu.exercice() + ", vous êtes sur " + exercice + ".";
+        Map<String, Integer> parCode = new HashMap<>();
+        for (NatureObjectif n : natures) parCode.put(n.getCode().toUpperCase(Locale.ROOT), n.getId());
+        Set<String> existants = new HashSet<>();
+        for (Objectif o : objectifs) existants.add(sansAccents(o.getLibelle()).trim());
+        int t0 = getTrimestreDebut();
+        for (var o : lu.objectifs() == null ? List.<cd.mura.hrx.service.recrutement.ClaudeCvService.ObjectifLu>of() : lu.objectifs()) {
+            if (o.libelle() == null || o.libelle().isBlank()) continue;
+            Brouillon b = new Brouillon();
+            b.setNatureId(o.rubrique() == null ? null : parCode.get(o.rubrique().trim().toUpperCase(Locale.ROOT)));
+            if (b.getNatureId() == null) { b.setNatureId(natures.isEmpty() ? null : natures.get(0).getId()); b.setAlerte("Rubrique à vérifier"); }
+            b.setActivite(coupe(o.activite(), 200)); b.setLibelle(coupe(o.libelle(), 600)); b.setMoyens(coupe(o.moyens(), 1000));
+            recalerIndicateurCible(b, o.indicateur(), o.cible());
+            b.setPeriodicite(Periodicite.of(o.periodicite() == null ? "" : o.periodicite().trim().toUpperCase(Locale.ROOT)).name());
+            boolean aucun = !o.t1() && !o.t2() && !o.t3() && !o.t4();
+            b.setT1(aucun ? t0 <= 1 : o.t1()); b.setT2(aucun ? t0 <= 2 : o.t2()); b.setT3(aucun ? t0 <= 3 : o.t3()); b.setT4(aucun || o.t4());
+            if (o.echeance() != null && !o.echeance().isBlank()) try { b.setEcheance(LocalDate.parse(o.echeance().trim())); } catch (Exception ignored) { }
+            b.setPoids(isPeutFixer() ? Math.max(0, Math.min(100, o.poids())) : 0);
+            if (existants.contains(sansAccents(b.getLibelle()).trim())) { b.setRetenu(false); b.setAlerte("Déjà présent sur la fiche"); }
+            brouillons.add(b);
+        }
+    }
+
+    /**
+     * Indicateur = énoncé mesurable complet ; cible = valeur courte, 100 % par défaut.
+     * Si l'IA a placé un énoncé dans la cible (ou recopié l'indicateur), il revient dans l'indicateur et la cible repasse à 100 %.
+     */
+    static void recalerIndicateurCible(Brouillon b, String indicateur, String cible) {
+        String ind = indicateur == null ? "" : indicateur.trim(), cib = cible == null ? "" : cible.trim();
+        if (!cib.isEmpty() && !cibleCourte(cib)) {
+            if (ind.isEmpty() || sansAccents(ind).equals(sansAccents(cib))) ind = cib;
+            else if (!sansAccents(ind).contains(sansAccents(cib))) ind = ind + " ; " + cib;
+            cib = "";
+        }
+        if (!ind.isEmpty() && sansAccents(ind).equals(sansAccents(cib))) cib = "";
+        b.setIndicateur(coupe(ind, 400));
+        b.setCible(cib.isEmpty() ? "100 %" : coupe(cib, 100));
+    }
+
+    /** Une cible est une valeur courte (« 100 % », « 0 incident », « ≤ 48 h », « 5 jours ») et non un énoncé. */
+    static boolean cibleCourte(String c) {
+        String x = c.trim();
+        return x.length() <= 25 && x.split("\\s+").length <= 4;
+    }
+
+    public void toutRetenir() { boolean tous = brouillons.stream().allMatch(Brouillon::isRetenu); brouillons.forEach(b -> b.setRetenu(!tous)); }
+
+    /** Enregistre les objectifs retenus : fixés (N+1, N+n, DCHT) ou proposés (le collaborateur), comme une saisie manuelle. */
+    public void enregistrerImport() {
+        if (!isPeutImporter()) { error("Import impossible", "La fiche n'est plus modifiable."); return; }
+        List<Brouillon> l = brouillons.stream().filter(b -> b.isRetenu() && b.getLibelle() != null && !b.getLibelle().isBlank()).toList();
+        if (l.isEmpty()) { error("Aucun objectif retenu", "Cochez au moins un objectif à enregistrer."); return; }
+        for (Brouillon b : l) {
+            if (b.getNatureId() == null) { error("Rubrique manquante", "Choisissez la rubrique de « " + b.getLibelle() + " »."); return; }
+            if (!b.isT1() && !b.isT2() && !b.isT3() && !b.isT4()) { error("Période manquante", "Cochez au moins un trimestre pour « " + b.getLibelle() + " »."); return; }
+        }
+        boolean fixe = isPeutFixer();
+        FicheObjectifs f = ficheOuCreer();
+        int ordre = objectifs.size();
+        List<Objectif> proposes = new ArrayList<>();
+        for (Brouillon b : l) {
+            Objectif o = new Objectif();
+            o.setFiche(objectifDAO.refFiche(f.getId()));
+            o.setNature(natureObjectifDAO.find(b.getNatureId()));
+            o.setActivite(vide(b.getActivite())); o.setLibelle(b.getLibelle().trim()); o.setMoyens(vide(b.getMoyens()));
+            o.setIndicateur(vide(b.getIndicateur())); o.setCible(vide(b.getCible())); o.setPeriodicite(b.getPeriodicite());
+            o.setT1(b.isT1()); o.setT2(b.isT2()); o.setT3(b.isT3()); o.setT4(b.isT4()); o.setEcheance(b.getEcheance());
+            o.setOrdre(++ordre);
+            o.setCreePar(loginBean.getUsers().getId());
+            if (fixe) { o.setPoids(b.getPoids()); o.setOrigine(Objectif.ORIGINE_N1); o.setStatut(Objectif.VALIDE); o.setValidePar(loginBean.getUsers().getId()); o.setDateValidation(new Date()); }
+            else { o.setOrigine(Objectif.ORIGINE_SALARIE); o.setStatut(Objectif.PROPOSE); proposes.add(o); }
+            objectifDAO.save(o);
+        }
+        if (reprendreMission && missionLue != null) {
+            fiche = objectifDAO.findFiche(f.getId());
+            fiche.setMission(coupe(missionLue, 3000));
+            fiche = objectifDAO.saveFiche(fiche);
+        }
+        auditService.log("CREATE", "Objectifs", "FicheObjectifs", f.getId(), fixe ? "Fixation d'objectifs importés par l'IA" : "Propositions d'objectifs importées par l'IA",
+                salarie.getNomComplet() + " : " + l.size() + " objectif(s) depuis « " + fichierImporte + " »", true);
+        if (!proposes.isEmpty()) try { notifications.objectifPropose(objectifDAO.findFiche(f.getId()), proposes.get(0), loginBean.getUsers()); } catch (Exception ex) { }
+        info(fixe ? l.size() + " objectif(s) fixé(s)" : l.size() + " proposition(s) envoyée(s) à votre hiérarchie",
+                fixe ? "Ils sont validés. Vérifiez la pondération puis faites signer la fiche." : "Votre N+1 les validera ou les refusera avec un motif.");
+        brouillons = new ArrayList<>();
+        org.primefaces.PrimeFaces.current().ajax().addCallbackParam("ok", true);
+        charger();
+    }
+
+    private static String coupe(String v, int n) { if (v == null || v.isBlank()) return null; v = v.trim(); return v.length() <= n ? v : v.substring(0, n - 1) + "…"; }
+    private static String vide(String v) { return v == null || v.isBlank() ? null : v.trim(); }
+    private static String sansAccents(String v) {
+        return v == null ? "" : java.text.Normalizer.normalize(v, java.text.Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase(Locale.ROOT);
     }
 
     // utilitaires

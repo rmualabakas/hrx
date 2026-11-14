@@ -78,4 +78,13 @@ public class ObjectifDAO implements Serializable {
     }
 
     public FicheObjectifs refFiche(int id) { return em.getReference(FicheObjectifs.class, id); }
+
+    /** Collaborateurs ayant au moins un objectif validé pour l'exercice : id du salarié → nombre d'objectifs validés. */
+    public java.util.Map<Integer, Long> nbObjectifsValides(int exercice) {
+        java.util.Map<Integer, Long> m = new java.util.HashMap<>();
+        for (Object[] r : em.createQuery("select f.salarie.id, count(o) from FicheObjectifs f join f.objectifs o where f.exercice = :e and o.statut = :s group by f.salarie.id", Object[].class)
+                .setParameter("e", exercice).setParameter("s", cd.mura.hrx.entity.eval.Objectif.VALIDE).getResultList())
+            m.put((Integer) r[0], (Long) r[1]);
+        return m;
+    }
 }

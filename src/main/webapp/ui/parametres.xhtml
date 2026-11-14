@@ -206,6 +206,79 @@
                         </h:panelGroup>
                     </div>
                 </p:tab>
+                <p:tab title="Évaluations" titleStyleClass="hx-tabs__title">
+                    <f:facet name="title"><i class="pi pi-star"></i> Évaluations</f:facet>
+                    <p class="hx-tab__intro">Période d'essai des recrues et seuil d'atteinte des objectifs</p>
+<div class="hx-tab__body hx-form">
+                        <div class="hx-field__grid">
+                            <div class="hx-field">
+                                <p:outputLabel for="dureeEssai" value="Durée de la période d'essai (mois)"/>
+                                <p:inputNumber id="dureeEssai" value="#{appBean.app1.dureeEssaiMois}" decimalPlaces="0" minValue="1" maxValue="24" required="true" requiredMessage="La durée de la période d'essai est obligatoire"/>
+                                <small class="hx-field__help">Une recrue qui n'a pas encore cette ancienneté au début d'une campagne n'y est pas éligible. Une fois ce délai atteint, et si elle n'a jamais été évaluée, elle est signalée pour une évaluation de fin de période d'essai.</small>
+                            </div>
+                            <div class="hx-field">
+                                <p:outputLabel for="seuilAtt" value="Seuil d'atteinte des objectifs (%)"/>
+                                <p:inputNumber id="seuilAtt" value="#{appBean.app1.seuilAtteinte}" decimalPlaces="0" minValue="1" maxValue="100" required="true" requiredMessage="Le seuil d'atteinte est obligatoire"/>
+                                <small class="hx-field__help">Reporting : part des collaborateurs évaluables dont le taux de réalisation des objectifs atteint ce seuil.</small>
+                            </div>
+                        </div>
+                    </div>
+                </p:tab>
+                <p:tab title="Intelligence artificielle" titleStyleClass="hx-tabs__title">
+                    <f:facet name="title"><i class="pi pi-sparkles"></i> IA</f:facet>
+                    <p class="hx-tab__intro">Analyse de documents par Claude (Anthropic) : présélection des CV, lecture des fiches de poste et pré-remplissage des fiches de fixation des objectifs. L'IA prépare, l'utilisateur relit et valide toujours.</p>
+                    <div class="hx-tab__body hx-form">
+                        <div class="hx-field hx-field--inline">
+                            <p:selectBooleanCheckbox id="iaActive" value="#{appBean.app1.iaActive}"/>
+                            <p:outputLabel for="iaActive" value="Activer l'analyse de documents par l'IA"/>
+                        </div>
+                        <div class="hx-field">
+                            <p:outputLabel for="iaCle" value="Clé d'API Anthropic"/>
+                            <p:password id="iaCle" value="#{appBean.iaCleApiSaisie}" redisplay="false" feedback="false" toggleMask="true" autocomplete="new-password"
+                                        placeholder="#{appBean.iaCleDefinie ? '•••••••• '.concat(appBean.iaCleFin).concat(' (inchangée si vide)') : 'sk-ant-...'}"/>
+                            <small class="hx-field__help">
+                                Clé créée dans la console Anthropic (platform.claude.com). Elle n'est jamais réaffichée.
+                                <ui:fragment rendered="#{not appBean.iaCleDefinie and appBean.iaCleEnvironnement}"> Aucune clé saisie : la variable d'environnement ANTHROPIC_API_KEY du serveur est utilisée.</ui:fragment>
+                                <p:commandLink value="Effacer la clé enregistrée" process="@this" update="iaTest" actionListener="#{appBean.effacerCleIa}" rendered="#{appBean.iaCleDefinie}" styleClass="hx-link-sm"/>
+                            </small>
+                        </div>
+                        <div class="hx-field__grid hx-field__grid--3">
+                            <div class="hx-field">
+                                <p:outputLabel for="iaModele" value="Modèle"/>
+                                <p:selectOneMenu id="iaModele" value="#{appBean.app1.iaModele}" editable="true" styleClass="hx-select">
+                                    <f:selectItems value="#{appBean.modelesIa}"/>
+                                </p:selectOneMenu>
+                                <small class="hx-field__help">claude-opus-5-5 par défaut (le plus fiable sur les documents difficiles : scans, tableaux, photos). Sonnet ou Haiku coûtent moins cher.</small>
+                            </div>
+                            <div class="hx-field">
+                                <p:outputLabel for="iaEffort" value="Profondeur d'analyse"/>
+                                <p:selectOneMenu id="iaEffort" value="#{appBean.app1.iaEffort}" styleClass="hx-select">
+                                    <f:selectItem itemLabel="Rapide (low)" itemValue="low"/>
+                                    <f:selectItem itemLabel="Standard (medium)" itemValue="medium"/>
+                                    <f:selectItem itemLabel="Approfondie (high)" itemValue="high"/>
+                                </p:selectOneMenu>
+                                <small class="hx-field__help">Plus elle est élevée, plus l'analyse est lente et coûteuse.</small>
+                            </div>
+                            <div class="hx-field">
+                                <p:outputLabel for="iaPar" value="Documents analysés en parallèle"/>
+                                <p:inputNumber id="iaPar" value="#{appBean.app1.iaParallele}" decimalPlaces="0" minValue="1" maxValue="8"/>
+                                <small class="hx-field__help">Utilisé pour les analyses en lot (CV d'un poste). À réduire si l'API signale une limite de débit.</small>
+                            </div>
+                        </div>
+                        <div class="hx-test">
+                            <div class="hx-test__row">
+                                <p:commandButton value="Tester la connexion" icon="pi pi-bolt" styleClass="hx-btn-secondary hx-btn-sm"
+                                                 process="@form" update="iaTest msgParam" actionListener="#{appBean.testIa}"/>
+                            </div>
+                            <h:panelGroup id="iaTest" layout="block" styleClass="hx-test__result #{appBean.iaTestOk ? 'is-ok' : 'is-ko'}">
+                                <ui:fragment rendered="#{not empty appBean.iaTestResult}">
+                                    <i class="pi #{appBean.iaTestOk ? 'pi-check-circle' : 'pi-times-circle'}"></i> #{appBean.iaTestResult}
+                                </ui:fragment>
+                            </h:panelGroup>
+                        </div>
+                        <small class="hx-field__help"><i class="pi pi-shield"></i> Les documents analysés (CV, fiches de poste, fiches d'objectifs) sont transmis à l'API d'Anthropic. Assurez-vous que les personnes concernées en sont informées (politique de protection des données).</small>
+                    </div>
+                </p:tab>
                 <p:tab title="Fichiers" titleStyleClass="hx-tabs__title">
                     <f:facet name="title"><i class="pi pi-folder"></i> Fichiers</f:facet>
                     <p class="hx-tab__intro">Archivage des fiches, exports et logo</p>

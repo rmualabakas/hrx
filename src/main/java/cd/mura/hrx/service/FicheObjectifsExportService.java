@@ -70,7 +70,7 @@ public class FicheObjectifsExportService implements Serializable {
         String r = a + (a.isEmpty() || m.isEmpty() ? "" : " et ") + m;
         return r.isEmpty() ? "moins d'un mois" : r;
     }
-    private static byte[] logo() {
+    static byte[] logo() {
         try {
             var ctx = FacesContext.getCurrentInstance();
             if (ctx != null) try (InputStream in = ctx.getExternalContext().getResourceAsStream("/resources/hrx/img/logo_bgfi.png")) { if (in != null) return in.readAllBytes(); }
@@ -194,7 +194,7 @@ public class FicheObjectifsExportService implements Serializable {
             Table sg = new Table(UnitValue.createPercentArray(new float[]{33, 25, 42})).useAllAvailableWidth().setMarginTop(22).setKeepTogether(true);
             String[] sh = {"Date", "Signature du salarié", "Signature du N+1"};
             String[] sv = {fiche.isSignee() ? date(fiche.getDateSignatureN1()) : "", fiche.isSigneeSalarie() ? "Signé électroniquement le " + new SimpleDateFormat("dd/MM/yyyy HH:mm").format(fiche.getDateSignatureSalarie()) + "\n" + u.getNomComplet() : "",
-                    fiche.isSigneeN1() ? "Signé électroniquement le " + new SimpleDateFormat("dd/MM/yyyy HH:mm").format(fiche.getDateSignatureN1()) + "\n" + (fiche.getN1() == null ? "" : fiche.getN1().getNomComplet()) : ""};
+                    fiche.isSigneeN1() ? "Signé électroniquement le " + new SimpleDateFormat("dd/MM/yyyy HH:mm").format(fiche.getDateSignatureN1()) + "\n" + fiche.getSignataireN1Nom() + (fiche.isSigneeParAutreQueN1() ? "\n(pour le N+1 " + fiche.getN1().getNomComplet() + ")" : "") : ""};
             for (int i = 0; i < 3; i++) {
                 Cell c = new Cell().setBorder(b).setHeight(110).setPadding(4).setTextAlignment(TextAlignment.CENTER);
                 c.add(new Paragraph(sh[i]).setFont(bold).setFontSize(8).setUnderline().setMargin(0).setMarginBottom(14));
@@ -216,9 +216,10 @@ public class FicheObjectifsExportService implements Serializable {
     }
 
     /** Cadre de page, logo + direction en haut à gauche, pied MAF 066 + numéro de page, sur chaque page. */
-    private static final class PageDecor implements IEventHandler {
-        private final ImageData logo; private final PdfFont bold, reg; private final Color frame;
-        PageDecor(ImageData logo, PdfFont bold, PdfFont reg, Color frame) { this.logo = logo; this.bold = bold; this.reg = reg; this.frame = frame; }
+    static final class PageDecor implements IEventHandler {
+        private final ImageData logo; private final PdfFont bold, reg; private final Color frame; private final String pied, direction;
+        PageDecor(ImageData logo, PdfFont bold, PdfFont reg, Color frame) { this(logo, bold, reg, frame, PIED, "Direction du Capital Humain et de la Transformation"); }
+        PageDecor(ImageData logo, PdfFont bold, PdfFont reg, Color frame, String pied, String direction) { this.logo = logo; this.bold = bold; this.reg = reg; this.frame = frame; this.pied = pied; this.direction = direction; }
         @Override public void handleEvent(Event event) {
             PdfDocumentEvent ev = (PdfDocumentEvent) event; PdfPage page = ev.getPage(); PdfDocument pdf = ev.getDocument();
             Rectangle ps = page.getPageSize();
@@ -228,16 +229,16 @@ public class FicheObjectifsExportService implements Serializable {
             try (Canvas cv = new Canvas(pc, ps)) {
                 if (logo != null) { Image im = new Image(logo).setHeight(34); im.setFixedPosition(ps.getLeft() + 44, ps.getTop() - 72); cv.add(im); }
                 else cv.showTextAligned(new Paragraph("BGFIBank").setFont(bold).setFontSize(14).setFontColor(rgb(NAVY)), ps.getLeft() + 44, ps.getTop() - 62, TextAlignment.LEFT);
-                cv.showTextAligned(new Paragraph("Direction du Capital Humain et de la Transformation").setFont(reg).setFontSize(6.5f).setFontColor(ColorConstants.BLACK), ps.getLeft() + 46, ps.getTop() - 82, TextAlignment.LEFT);
-                cv.showTextAligned(new Paragraph(PIED).setFont(bold).setFontSize(8).setFontColor(ColorConstants.BLACK), ps.getWidth() / 2 - 20, ps.getBottom() + 34, TextAlignment.CENTER);
+                cv.showTextAligned(new Paragraph(direction).setFont(reg).setFontSize(6.5f).setFontColor(ColorConstants.BLACK), ps.getLeft() + 46, ps.getTop() - 82, TextAlignment.LEFT);
+                cv.showTextAligned(new Paragraph(pied).setFont(bold).setFontSize(pied.length() > 80 ? 6.5f : 8).setFontColor(ColorConstants.BLACK), ps.getWidth() / 2 - 20, ps.getBottom() + 34, TextAlignment.CENTER);
                 cv.showTextAligned(new Paragraph(String.valueOf(pdf.getPageNumber(page))).setFont(reg).setFontSize(10).setFontColor(rgb("0070C0")), ps.getRight() - 56, ps.getBottom() + 34, TextAlignment.RIGHT);
             }
         }
     }
 
-    private static Cell hcell(SolidBorder b, Color bg, int colspan, int rowspan) { return new Cell(rowspan, colspan).setBorder(b).setBackgroundColor(bg).setPadding(4).setTextAlignment(TextAlignment.CENTER).setVerticalAlignment(VerticalAlignment.MIDDLE); }
-    private static Cell nb() { return new Cell().setBorder(Border.NO_BORDER); }
-    private static Color rgb(String hex) { return new DeviceRgb(Integer.valueOf(hex.substring(0, 2), 16), Integer.valueOf(hex.substring(2, 4), 16), Integer.valueOf(hex.substring(4, 6), 16)); }
+    static Cell hcell(SolidBorder b, Color bg, int colspan, int rowspan) { return new Cell(rowspan, colspan).setBorder(b).setBackgroundColor(bg).setPadding(4).setTextAlignment(TextAlignment.CENTER).setVerticalAlignment(VerticalAlignment.MIDDLE); }
+    static Cell nb() { return new Cell().setBorder(Border.NO_BORDER); }
+    static Color rgb(String hex) { return new DeviceRgb(Integer.valueOf(hex.substring(0, 2), 16), Integer.valueOf(hex.substring(2, 4), 16), Integer.valueOf(hex.substring(4, 6), 16)); }
 
     // Word
     public byte[] docx(FicheObjectifs fiche, Users u, List<Objectif> objectifs, List<NatureObjectif> natures) {
@@ -349,7 +350,7 @@ public class FicheObjectifsExportService implements Serializable {
             XWPFTable sg = doc.createTable(1, 3); thinBorders(sg, FRAME); widths(sg, 3400, 2600, 4306); sg.getRow(0).setHeight(2300);
             String[] sh = {"Date", "Signature du salarié", "Signature du N+1"};
             String[] sv = {fiche.isSignee() ? date(fiche.getDateSignatureN1()) : "", fiche.isSigneeSalarie() ? "Signé électroniquement le " + new SimpleDateFormat("dd/MM/yyyy HH:mm").format(fiche.getDateSignatureSalarie()) + " : " + u.getNomComplet() : "",
-                    fiche.isSigneeN1() ? "Signé électroniquement le " + new SimpleDateFormat("dd/MM/yyyy HH:mm").format(fiche.getDateSignatureN1()) + " : " + (fiche.getN1() == null ? "" : fiche.getN1().getNomComplet()) : ""};
+                    fiche.isSigneeN1() ? "Signé électroniquement le " + new SimpleDateFormat("dd/MM/yyyy HH:mm").format(fiche.getDateSignatureN1()) + " : " + fiche.getSignataireN1Nom() + (fiche.isSigneeParAutreQueN1() ? " (pour le N+1 " + fiche.getN1().getNomComplet() + ")" : "") : ""};
             for (int i = 0; i < 3; i++) {
                 XWPFTableCell c = sg.getRow(0).getCell(i);
                 XWPFParagraph p = c.getParagraphs().get(0); p.setAlignment(ParagraphAlignment.CENTER); XWPFRun r = run(p, sh[i], true, 8, NAVY); r.setUnderline(UnderlinePatterns.SINGLE);
@@ -370,43 +371,43 @@ public class FicheObjectifsExportService implements Serializable {
         } catch (Exception e) { throw new IllegalStateException("Export Word impossible : " + e.getMessage(), e); }
     }
 
-    private static XWPFRun run(XWPFParagraph p, String text, boolean bold, double size, String color) {
+    static XWPFRun run(XWPFParagraph p, String text, boolean bold, double size, String color) {
         if (p.getSpacingAfter() < 0 || p.getSpacingAfter() == 0) p.setSpacingAfter(0);
         XWPFRun r = p.createRun(); r.setText(text); r.setBold(bold); r.setFontSize(size); r.setColor(color); r.setFontFamily("Arial"); return r;
     }
-    private static void centerRun(XWPFTableCell c, String text, boolean bold, double size, String color) { XWPFParagraph p = c.getParagraphs().get(0); p.setAlignment(ParagraphAlignment.CENTER); run(p, text, bold, size, color); }
-    private static void vcenter(XWPFTableCell c) { c.setVerticalAlignment(XWPFTableCell.XWPFVertAlign.CENTER); }
-    private static void spacer(XWPFDocument doc, int twips) { XWPFParagraph p = doc.createParagraph(); p.setSpacingAfter(twips); p.setSpacingBefore(0); }
-    private static void widths(XWPFTable t, int... w) {
+    static void centerRun(XWPFTableCell c, String text, boolean bold, double size, String color) { XWPFParagraph p = c.getParagraphs().get(0); p.setAlignment(ParagraphAlignment.CENTER); run(p, text, bold, size, color); }
+    static void vcenter(XWPFTableCell c) { c.setVerticalAlignment(XWPFTableCell.XWPFVertAlign.CENTER); }
+    static void spacer(XWPFDocument doc, int twips) { XWPFParagraph p = doc.createParagraph(); p.setSpacingAfter(twips); p.setSpacingBefore(0); }
+    static void widths(XWPFTable t, int... w) {
         t.setWidth("100%");
         CTTblGrid grid = t.getCTTbl().getTblGrid() == null ? t.getCTTbl().addNewTblGrid() : t.getCTTbl().getTblGrid();
         while (grid.sizeOfGridColArray() > 0) grid.removeGridCol(0);
         for (int x : w) grid.addNewGridCol().setW(BigInteger.valueOf(x));
         for (XWPFTableRow r : t.getRows()) for (int i = 0; i < r.getTableCells().size() && i < w.length; i++) r.getCell(i).setWidth(String.valueOf(w[i]));
     }
-    private static void noBorders(XWPFTable t) {
+    static void noBorders(XWPFTable t) {
         t.setTopBorder(XWPFTable.XWPFBorderType.NONE, 0, 0, "FFFFFF"); t.setBottomBorder(XWPFTable.XWPFBorderType.NONE, 0, 0, "FFFFFF");
         t.setLeftBorder(XWPFTable.XWPFBorderType.NONE, 0, 0, "FFFFFF"); t.setRightBorder(XWPFTable.XWPFBorderType.NONE, 0, 0, "FFFFFF");
         t.setInsideHBorder(XWPFTable.XWPFBorderType.NONE, 0, 0, "FFFFFF"); t.setInsideVBorder(XWPFTable.XWPFBorderType.NONE, 0, 0, "FFFFFF");
     }
-    private static void thinBorders(XWPFTable t, String color) {
+    static void thinBorders(XWPFTable t, String color) {
         t.setTopBorder(XWPFTable.XWPFBorderType.SINGLE, 6, 0, color); t.setBottomBorder(XWPFTable.XWPFBorderType.SINGLE, 6, 0, color);
         t.setLeftBorder(XWPFTable.XWPFBorderType.SINGLE, 6, 0, color); t.setRightBorder(XWPFTable.XWPFBorderType.SINGLE, 6, 0, color);
         t.setInsideHBorder(XWPFTable.XWPFBorderType.SINGLE, 6, 0, color); t.setInsideVBorder(XWPFTable.XWPFBorderType.SINGLE, 6, 0, color);
     }
-    private static void borders(XWPFTableCell c, int sz, String color) {
+    static void borders(XWPFTableCell c, int sz, String color) {
         CTTcPr pr = c.getCTTc().isSetTcPr() ? c.getCTTc().getTcPr() : c.getCTTc().addNewTcPr();
         CTTcBorders b = pr.isSetTcBorders() ? pr.getTcBorders() : pr.addNewTcBorders();
         for (CTBorder x : new CTBorder[]{b.addNewTop(), b.addNewBottom(), b.addNewLeft(), b.addNewRight()}) { x.setVal(STBorder.SINGLE); x.setSz(BigInteger.valueOf(sz)); x.setColor(color); }
     }
-    private static void mergeRange(XWPFTableRow r, int from, int to) {
+    static void mergeRange(XWPFTableRow r, int from, int to) {
         for (int i = from; i <= to; i++) {
             while (r.getTableCells().size() <= i) r.addNewTableCell();
             CTTcPr pr = r.getCell(i).getCTTc().isSetTcPr() ? r.getCell(i).getCTTc().getTcPr() : r.getCell(i).getCTTc().addNewTcPr();
             CTHMerge hm = pr.isSetHMerge() ? pr.getHMerge() : pr.addNewHMerge(); hm.setVal(i == from ? STMerge.RESTART : STMerge.CONTINUE);
         }
     }
-    private static void vmerge(XWPFTableCell c, boolean restart) {
+    static void vmerge(XWPFTableCell c, boolean restart) {
         CTTcPr pr = c.getCTTc().isSetTcPr() ? c.getCTTc().getTcPr() : c.getCTTc().addNewTcPr();
         CTVMerge vm = pr.isSetVMerge() ? pr.getVMerge() : pr.addNewVMerge(); vm.setVal(restart ? STMerge.RESTART : STMerge.CONTINUE);
     }

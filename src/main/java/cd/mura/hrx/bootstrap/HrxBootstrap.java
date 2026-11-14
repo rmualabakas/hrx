@@ -65,6 +65,17 @@ public class HrxBootstrap {
                     {"Suivre la fixation des objectifs et envoyer les rappels", "OBJ_SUIVI"}}),
             new MenuDef("Reporting", "reporting", "pi pi-chart-bar", new String[][]{
                     {"Consulter les tableaux de bord", "RPT_VIEW"}, {"Exporter (Excel / PDF)", "RPT_EXPORT"}}),
+            new MenuDef("Périodes d'essai", "periodeEssai", "pi pi-hourglass", new String[][]{
+                    {"Valider les fins de période d'essai", "ESSAI_DCHT"}}),
+            new MenuDef("Évaluations formations", "evaluationsFormations", "pi pi-graduation-cap", new String[][]{
+                    {"Gérer les évaluations des formations", "FORM_CHAUD"}}),
+    };
+
+    private static final MenuDef[] RECRUT_MENUS = {
+            new MenuDef("Présélection des CV", "recrutement", "pi pi-briefcase", new String[][]{
+                    {"Gérer les postes et analyser les CV", "RECRUT"}}),
+            new MenuDef("CVthèque", "cvtheque", "pi pi-folder-open", new String[][]{
+                    {"Consulter et ranger la CVthèque", "CVTHEQUE"}}),
     };
 
     @PostConstruct
@@ -81,6 +92,7 @@ public class HrxBootstrap {
                 elargirColonne("besoin_formation", "origine", 20);
                 elargirColonne("besoin_formation", "priorite", 10);
                 elargirColonne("evaluation_critere", "niveau", 2);
+                elargirColonneNullable("evaluation", "souhait_salarie", 120);
                 LOG.warning("HRX : migrations de schéma historiques explicitement activées");
             }
             try { natureObjectifDAO.initialiserSiVide(); } catch (Exception e) { LOG.log(Level.WARNING, "HRX : rubriques d'objectifs non initialisees", e); }
@@ -92,6 +104,8 @@ public class HrxBootstrap {
                 for (MenuDef def : ADMIN_MENUS) ensureMenu(admin, def);
                 int eval = ensureModule("Évaluations", "pi pi-star");
                 for (MenuDef def : EVAL_MENUS) ensureMenu(eval, def);
+                int recrut = ensureModule("Recrutement", "pi pi-briefcase");
+                for (MenuDef def : RECRUT_MENUS) ensureMenu(recrut, def);
                 LOG.info("HRX : référentiel initial des modules, menus et privilèges créé");
             } else {
                 // Les administrateurs gèrent ensuite le référentiel depuis l'écran Modules :
@@ -99,6 +113,9 @@ public class HrxBootstrap {
                 regrantRoot();
                 ajouterMenuSuiviObjectifs();
                 ajouterMenuOrganigramme();
+                ajouterMenuEval("periodeEssai", "ESSAI_DCHT");
+                ajouterMenuEval("evaluationsFormations", "FORM_CHAUD");
+                ajouterModuleRecrutement();
             }
             ensureApp();
             LOG.info("HRX : amorçage terminé");
@@ -125,6 +142,24 @@ public class HrxBootstrap {
         if (module == null) return;
         for (MenuDef def : ADMIN_MENUS) if ("organigramme".equals(def.url())) ensureMenu(module, def);
         LOG.info("HRX : menu « Organigramme » ajouté");
+    }
+
+    /** Ajout d'un menu du module Évaluations sur une base existante, une seule fois (son privilège sert de témoin). */
+    private void ajouterMenuEval(String url, String privilegeTemoin) {
+        if (firstInt("select id from privilege where code = ?1", privilegeTemoin) != null) return;
+        Integer module = firstInt("select module_id from menu where url = ?1 order by id", "evaluations");
+        if (module == null) module = firstInt("select module_id from menu where url = ?1 order by id", "campagnes");
+        if (module == null) return;
+        for (MenuDef def : EVAL_MENUS) if (url.equals(def.url())) ensureMenu(module, def);
+        LOG.info("HRX : menu « " + url + " » ajouté");
+    }
+
+    /** Ajout du module « Recrutement » sur une base existante, une seule fois (le privilège RECRUT sert de témoin). */
+    private void ajouterModuleRecrutement() {
+        if (firstInt("select id from privilege where code = ?1", "RECRUT") != null) return;
+        int module = ensureModule("Recrutement", "pi pi-briefcase");
+        for (MenuDef def : RECRUT_MENUS) ensureMenu(module, def);
+        LOG.info("HRX : module « Recrutement » ajouté");
     }
 
     /** Vrai tant qu'aucun module n'existe : la base vient d'être créée par Hibernate. */
@@ -279,6 +314,17 @@ public class HrxBootstrap {
             if (len == null) return;
             if (len < longueur) {
                 em.createNativeQuery("alter table " + table + " modify " + column + " varchar(" + longueur + ") not null").executeUpdate();
+                LOG.info("HRX : colonne " + table + "." + column + " elargie a " + longueur);
+            }
+        } catch (Exception e) { LOG.log(Level.WARNING, "HRX : impossible d'elargir " + table + "." + column + " : " + e.getMessage(), e); }
+    }
+
+    /** Élargit un varchar nullable (souhaits du salarié : plusieurs codes séparés par des virgules). */
+    private void elargirColonneNullable(String table, String column, int longueur) {
+        try {
+            Integer len = firstInt("select character_maximum_length from information_schema.columns where table_schema = database() and table_name = ?1 and column_name = ?2", table, column);
+            if (len != null && len < longueur) {
+                em.createNativeQuery("alter table " + table + " modify " + column + " varchar(" + longueur + ") null").executeUpdate();
                 LOG.info("HRX : colonne " + table + "." + column + " elargie a " + longueur);
             }
         } catch (Exception e) { LOG.log(Level.WARNING, "HRX : impossible d'elargir " + table + "." + column + " : " + e.getMessage(), e); }

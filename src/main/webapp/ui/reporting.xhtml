@@ -39,13 +39,14 @@
                 <ui:fragment rendered="#{not empty reportingView.campagne}">
                     <!-- Indicateurs clés -->
                     <section class="hx-grid hx-grid--kpi hx-kpis-compact hx-suivi__kpis" aria-label="Indicateurs clés">
-                        <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-users"></i> Attendues</span><span class="hx-kpi__value">#{reportingView.attendues}</span><span class="hx-kpi__delta">#{reportingView.total.effectif} évaluables actifs</span></div>
+                        <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-users"></i> Attendues</span><span class="hx-kpi__value">#{reportingView.attendues}</span><span class="hx-kpi__delta">#{reportingView.total.effectif} évaluables actifs<ui:fragment rendered="#{reportingView.nbEnEssai gt 0}"> · #{reportingView.nbEnEssai} en période d'essai exclu#{reportingView.nbEnEssai gt 1 ? 's' : ''}</ui:fragment></span></div>
                         <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-send"></i> Initiées</span><span class="hx-kpi__value">#{reportingView.total.initiees}</span><div class="hx-kpi__bar"><span style="width:#{reportingView.total.tauxIntegration}%"></span></div><span class="hx-kpi__delta">#{reportingView.total.tauxIntegration} % de l'effectif</span></div>
                         <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-check-circle"></i> Validées</span><span class="hx-kpi__value">#{reportingView.total.validees}</span><span class="hx-kpi__delta">#{reportingView.total.evaluees} en attente de validation</span></div>
                         <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-percentage"></i> Réalisation</span><span class="hx-kpi__value hx-kpi__value--gold">#{reportingView.tauxGlobal} %</span><div class="hx-kpi__bar hx-kpi__bar--gold"><span style="width:#{reportingView.tauxGlobal}%"></span></div><span class="hx-kpi__delta">validées / attendues</span></div>
                         <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-star"></i> Note moyenne</span>
                             <span class="hx-kpi__value"><ui:fragment rendered="#{not empty reportingView.total.noteMoyenne}"><h:outputText value="#{reportingView.total.noteMoyenne}"><f:convertNumber minFractionDigits="1" maxFractionDigits="1"/></h:outputText><small class="hx-rpt__unit">/20</small></ui:fragment><ui:fragment rendered="#{empty reportingView.total.noteMoyenne}">—</ui:fragment></span>
                             <span class="hx-kpi__delta">#{reportingView.total.notees} fiche#{reportingView.total.notees gt 1 ? 's' : ''} évaluée#{reportingView.total.notees gt 1 ? 's' : ''}</span></div>
+                        <div class="hx-kpi" title="Évalués dont le taux de réalisation des objectifs est d'au moins #{reportingView.seuil} %, rapportés à tous les évaluables (#{reportingView.attendues})"><span class="hx-kpi__label"><i class="pi pi-bullseye"></i> Objectifs atteints ≥ #{reportingView.seuil} %</span><span class="hx-kpi__value hx-kpi__value--gold">#{reportingView.pctAtteinteSeuil} %</span><div class="hx-kpi__bar hx-kpi__bar--gold"><span style="width:#{reportingView.pctAtteinteSeuil}%"></span></div><span class="hx-kpi__delta">#{reportingView.total.atteintSeuil} sur #{reportingView.attendues} évaluables · #{reportingView.campagne.typeLabel}</span></div>
                         <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-clock"></i> Soumises à temps</span><span class="hx-kpi__value">#{reportingView.total.pctATemps} %</span><span class="hx-kpi__delta">#{reportingView.total.horsDelai} hors délai</span></div>
                         <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-book"></i> Besoins de formation</span><span class="hx-kpi__value">#{reportingView.nbBesoins}</span><span class="hx-kpi__delta">#{reportingView.formations.size()} formation#{reportingView.formations.size() gt 1 ? 's' : ''} distincte#{reportingView.formations.size() gt 1 ? 's' : ''}</span></div>
                     </section>
@@ -69,7 +70,7 @@
                                     <table class="hx-dirtable hx-rpt__table">
                                         <thead><tr>
                                             <th>Direction</th><th class="num">Effectif</th><th class="num">Initiées</th><th class="num">Évaluées</th><th class="num">Validées</th>
-                                            <th>Réalisation</th><th class="num">Note moy.</th><th>Niveaux d'atteinte</th><th class="num">À temps</th>
+                                            <th>Réalisation</th><th class="num" title="Évalués dont le taux d'atteinte des objectifs est ≥ #{reportingView.seuil} %, rapportés à l'effectif évaluable">≥ #{reportingView.seuil} %</th><th class="num">Note moy.</th><th>Niveaux d'atteinte</th><th class="num">À temps</th>
                                         </tr></thead>
                                         <tbody>
                                         <ui:repeat value="#{reportingView.directions}" var="d">
@@ -80,6 +81,7 @@
                                                 <td class="num">#{d.evaluees + d.validees}</td>
                                                 <td class="num">#{d.validees}</td>
                                                 <td><div class="hx-rpt__taux"><div class="hx-att__bar"><span class="#{d.taux ge 80 ? 'hx-att--4' : (d.taux ge 50 ? 'hx-att--3' : (d.taux gt 0 ? 'hx-att--2' : 'hx-att--1'))}" style="width:#{d.taux}%"></span></div><b>#{d.taux} %</b></div></td>
+                                                <td class="num" title="#{d.atteintSeuil} sur #{d.effectif}"><b>#{d.pctAtteinteSeuil} %</b></td>
                                                 <td class="num"><ui:fragment rendered="#{not empty d.noteMoyenne}"><b><h:outputText value="#{d.noteMoyenne}"><f:convertNumber minFractionDigits="1" maxFractionDigits="1"/></h:outputText></b></ui:fragment><ui:fragment rendered="#{empty d.noteMoyenne}"><span class="hx-muted">—</span></ui:fragment></td>
                                                 <td>
                                                     <ui:fragment rendered="#{d.notees eq 0}"><span class="hx-muted">—</span></ui:fragment>
@@ -103,6 +105,7 @@
                                             <td class="num">#{reportingView.total.evaluees + reportingView.total.validees}</td>
                                             <td class="num">#{reportingView.total.validees}</td>
                                             <td><b>#{reportingView.total.taux} %</b></td>
+                                            <td class="num" title="#{reportingView.total.atteintSeuil} sur #{reportingView.attendues}"><b>#{reportingView.pctAtteinteSeuil} %</b></td>
                                             <td class="num"><ui:fragment rendered="#{not empty reportingView.total.noteMoyenne}"><b><h:outputText value="#{reportingView.total.noteMoyenne}"><f:convertNumber minFractionDigits="1" maxFractionDigits="1"/></h:outputText></b></ui:fragment></td>
                                             <td><small class="hx-muted">#{reportingView.total.notees} évaluée(s)</small></td>
                                             <td class="num">#{reportingView.total.pctATemps} %</td>

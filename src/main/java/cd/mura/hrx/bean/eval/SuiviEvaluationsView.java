@@ -135,7 +135,12 @@ public class SuiviEvaluationsView implements Serializable {
         campagnes = campagneDAO.findAll();
         String p = FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get("campagne");
         if (p != null && !p.isBlank()) { try { campagneId = Integer.valueOf(p); } catch (NumberFormatException ignored) { } }
-        if (campagneId == null) { Campagne o = campagneDAO.findOuverte(); campagneId = o != null ? o.getId() : campagnes.isEmpty() ? null : campagnes.get(0).getId(); }
+        if (campagneId == null) {
+            // Pas de ternaire int/null : il serait déballé en int et lèverait un NPE quand il n'y a aucune campagne.
+            Campagne o = campagneDAO.findOuverte();
+            if (o != null) campagneId = o.getId();
+            else if (!campagnes.isEmpty()) campagneId = campagnes.get(0).getId();
+        }
         charger();
     }
 
@@ -250,17 +255,20 @@ public class SuiviEvaluationsView implements Serializable {
     public void changerCampagne() { onglet = "tous"; filtreStatut = ""; filtreDirection = ""; charger(); }
 
     public boolean isPeutValider() { return dcht; }
+    /** Validable depuis le suivi : statut « évaluée » et avis du directeur rendu (si la direction en a un). */
+    public boolean validable(Ligne l) { return dcht && l.getFiche() != null && Evaluation.EVALUEE.equals(l.getFiche().getStatut()) && !service.avisDirecteurEnAttente(l.getFiche()); }
     public boolean isPeutRelancer() { return dcht || privilegeBean.hasPrivilege("EVAL_ANOM"); }
 
     public void valider(Ligne l) {
         authorization.requirePrivilege("EVAL_DCHT");
         if (!dcht || l.getFiche() == null || !Evaluation.EVALUEE.equals(l.getFiche().getStatut())) return;
         Evaluation e = service.charger(l.getFiche().getId());
+        if (service.avisDirecteurEnAttente(e)) { cd.mura.hrx.utils.Dialogue.alerte("Avis du directeur attendu", "La fiche de " + e.getSalarie().getNomComplet() + " ne peut être validée qu'après l'avis du directeur de sa direction."); return; }
         e = service.valider(e, e.getCommentaireDcht()); e = service.charger(e.getId());
         auditService.updated("Évaluations", "Evaluation", e.getId(), "Fiche validée par la DCHT (suivi)", e.getSalarie().getNomComplet() + " : " + campagne.getLibelle());
         try { notifications.ficheValidee(e); } catch (Exception ex) { }
         charger();
-        info("Fiche validée", e.getSalarie().getNomComplet() + " - évaluation définitive.");
+        cd.mura.hrx.utils.Dialogue.succes("Fiche validée", e.getSalarie().getNomComplet() + " - évaluation définitive.");
     }
 
     public void preparerRelance(Ligne l) {

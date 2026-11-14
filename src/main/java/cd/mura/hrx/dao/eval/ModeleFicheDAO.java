@@ -1,5 +1,7 @@
 package cd.mura.hrx.dao.eval;
 
+import cd.mura.hrx.entity.config.Users;
+import cd.mura.hrx.entity.eval.Campagne;
 import cd.mura.hrx.entity.eval.Critere;
 import cd.mura.hrx.entity.eval.ModeleFiche;
 import jakarta.ejb.Stateless;
@@ -38,6 +40,27 @@ public class ModeleFicheDAO implements Serializable {
         return l.isEmpty() ? null : l.get(0);
     }
 
+    /** Directeur (dirige une direction) ou manager (N+1 d'au moins un collaborateur actif). */
+    /** Directeur : collaborateur désigné comme dirigeant d'au moins une direction (qu'il ait ou non des N-1). */
+    public boolean estDirecteur(int userId) {
+        return em.createQuery("select count(d) from Direction d where d.dirigePar = :id", Long.class).setParameter("id", userId).getSingleResult() > 0;
+    }
+
+    /**
+     * Fiche à appliquer à un collaborateur dans une campagne : fiche des directeurs s'il dirige une direction,
+     * sinon fiche des autres collaborateurs ; à défaut, le modèle global de sa catégorie, puis le premier modèle actif.
+     */
+    public ModeleFiche pourCampagne(Campagne c, Users u) {
+        ModeleFiche m = null;
+        if (c != null) {
+            if (c.getModeleEncadrants() != null && u != null && estDirecteur(u.getId())) m = find(c.getModeleEncadrants().getId());
+            if (m == null && c.getModeleParDefaut() != null) m = find(c.getModeleParDefaut().getId());
+        }
+        if (m == null && u != null) m = findPourCategorie(u.getCategorie());
+        if (m == null) { List<ModeleFiche> actifs = findActifs(); if (!actifs.isEmpty()) m = actifs.get(0); }
+        return m;
+    }
+
     public ModeleFiche save(ModeleFiche m) {
         if (m.getId() == 0) { em.persist(m); em.flush(); return m; }
         return em.merge(m);
@@ -48,9 +71,9 @@ public class ModeleFicheDAO implements Serializable {
         return em.createQuery("select count(e) from Evaluation e where e.modele.id = :m", Long.class).setParameter("m", modeleId).getSingleResult();
     }
 
-    /** Nombre de campagnes qui utilisent ce modèle par défaut. */
+    /** Nombre de campagnes qui utilisent ce modèle (par défaut ou pour une catégorie). */
     public long nbCampagnes(int modeleId) {
-        return em.createQuery("select count(c) from Campagne c where c.modeleParDefaut.id = :m", Long.class).setParameter("m", modeleId).getSingleResult();
+        return em.createQuery("select count(c) from Campagne c where c.modeleParDefaut.id = :m or c.modeleEncadrants.id = :m", Long.class).setParameter("m", modeleId).getSingleResult();
     }
 
     public boolean codeExiste(String code, int saufId) {

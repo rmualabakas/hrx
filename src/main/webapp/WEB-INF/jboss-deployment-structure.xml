@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Le SDK Anthropic (IA de présélection des CV) exige Jackson >= 2.18 ; le WAR embarque Jackson 2.19.
+  WildFly ajoute implicitement ses propres modules Jackson 2.15 (sous-système JAX-RS), qui masquaient
+  ceux du WAR (NoSuchMethodError JsonProperty.isRequired()). L'application n'utilise pas JAX-RS :
+  on exclut donc ce sous-système (et avec lui ses modules Jackson) pour que seules les bibliothèques du WAR soient chargées.
+-->
+<jboss-deployment-structure xmlns="urn:jboss:deployment-structure:1.3">
+    <deployment>
+        <exclude-subsystems>
+            <subsystem name="jaxrs"/>
+        </exclude-subsystems>
+    </deployment>
+</jboss-deployment-structure>

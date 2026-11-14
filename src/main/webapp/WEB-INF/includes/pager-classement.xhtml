@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Pagination du classement des candidats (utilisée en haut et en bas du tableau). Paramètre : pos = « haut » ou « bas ». -->
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:f="jakarta.faces.core"
+                xmlns:p="primefaces"
+                xmlns:ui="jakarta.faces.facelets">
+    <ui:fragment rendered="#{recrutementView.vue ne 'graphique' and not empty recrutementView.lignesRecherche}">
+        <nav class="hx-pager hx-pager--#{pos}" aria-label="Pagination du classement (#{pos})">
+            <div class="hx-pager__size">
+                <span>Afficher</span>
+                <p:selectOneMenu value="#{recrutementView.tailleCand}" styleClass="hx-select hx-pager__select">
+                    <f:selectItem itemLabel="10" itemValue="10"/>
+                    <f:selectItem itemLabel="25" itemValue="25"/>
+                    <f:selectItem itemLabel="50" itemValue="50"/>
+                    <f:selectItem itemLabel="100" itemValue="100"/>
+                    <f:selectItem itemLabel="Tout" itemValue="0"/>
+                    <p:ajax process="@this" update=":frmRec:classementCorps :frmRec:pagerHaut" listener="#{recrutementView.premierePageCand}"/>
+                </p:selectOneMenu>
+                <span class="hx-pager__info">#{recrutementView.debutPageCand}–#{recrutementView.finPageCand} sur #{recrutementView.lignesRecherche.size()} candidat(s)#{empty recrutementView.rechercheCand ? '' : ' trouvé(s)'}</span>
+            </div>
+            <ui:fragment rendered="#{recrutementView.nbPagesCand gt 1}">
+                <div class="hx-pager__btns">
+                    <p:commandLink process="@this" update=":frmRec:classementCorps :frmRec:pagerHaut" actionListener="#{recrutementView.allerPageCand(recrutementView.pageCand - 1)}"
+                                   disabled="#{recrutementView.pageCand eq 0}" styleClass="hx-pager__btn" title="Page précédente"><i class="pi pi-angle-left"></i></p:commandLink>
+                    <ui:repeat value="#{recrutementView.pagesCand}" var="pg">
+                        <ui:fragment rendered="#{pg lt 0}"><span class="hx-pager__gap">…</span></ui:fragment>
+                        <p:commandLink rendered="#{pg ge 0}" process="@this" update=":frmRec:classementCorps :frmRec:pagerHaut" actionListener="#{recrutementView.allerPageCand(pg)}"
+                                       styleClass="hx-pager__btn #{pg eq recrutementView.pageCand ? 'is-on' : ''}">#{pg + 1}</p:commandLink>
+                    </ui:repeat>
+                    <p:commandLink process="@this" update=":frmRec:classementCorps :frmRec:pagerHaut" actionListener="#{recrutementView.allerPageCand(recrutementView.pageCand + 1)}"
+                                   disabled="#{recrutementView.pageCand ge recrutementView.nbPagesCand - 1}" styleClass="hx-pager__btn" title="Page suivante"><i class="pi pi-angle-right"></i></p:commandLink>
+                </div>
+            </ui:fragment>
+        </nav>
+    </ui:fragment>
+</ui:composition>

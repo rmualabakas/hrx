@@ -5,6 +5,73 @@
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
                 xmlns:p="http://primefaces.org/ui">
+        <!-- Revue des objectifs lus par l'IA dans une fiche importée -->
+        <h:form id="frmImportObj">
+        <p:dialog id="dlgImportObj" widgetVar="dlgImportObj" header="Objectifs lus par l'IA : à vérifier avant enregistrement"
+                  modal="true" responsive="true" width="1180" closeOnEscape="true" showEffect="fade" hideEffect="fade" styleClass="hx-dialog--wide hx-objimp-dlg">
+                <h:panelGroup id="impCorps" layout="block">
+                <p:messages showDetail="true" closable="true"/>
+                <div class="hx-objimp__intro">
+                    <p><i class="pi pi-sparkles"></i> <b>#{objectifsView.brouillons.size()} objectif(s)</b> lu(s) dans « #{objectifsView.fichierImporte} ». Corrigez ce qui doit l'être, décochez ce qui ne doit pas être repris, puis
+                        #{objectifsView.peutFixer ? 'enregistrez : les objectifs seront fixés (validés).' : 'envoyez : ils seront proposés à votre N+1, qui les validera ou les refusera.'}</p>
+                    <ui:fragment rendered="#{not empty objectifsView.avertissementSalarie}"><p class="hx-objimp__warn"><i class="pi pi-exclamation-triangle"></i> #{objectifsView.avertissementSalarie}</p></ui:fragment>
+                    <ui:fragment rendered="#{not empty objectifsView.remarquesImport}"><p class="hx-objimp__note"><i class="pi pi-info-circle"></i> Remarque de l'IA : #{objectifsView.remarquesImport}</p></ui:fragment>
+                    <ui:fragment rendered="#{not empty objectifsView.missionLue}">
+                        <div class="hx-objimp__mission">
+                            <p:selectBooleanCheckbox value="#{objectifsView.reprendreMission}" itemLabel="Reprendre la mission lue#{empty objectifsView.fiche.mission ? '' : ' (remplace la mission actuelle)'}"/>
+                            <p class="hx-objimp__mission-txt">#{objectifsView.missionLue}</p>
+                        </div>
+                    </ui:fragment>
+                </div>
+                <div class="hx-objimp__bar">
+                    <p:commandLink process="@form" update=":frmImportObj:impCorps :frmImportObj:impPied" actionListener="#{objectifsView.toutRetenir}" styleClass="hx-link-sm"><i class="pi pi-check-square"></i> Tout cocher / décocher</p:commandLink>
+                </div>
+                <ol class="hx-objimp__list">
+                    <ui:repeat value="#{objectifsView.brouillons}" var="b" varStatus="st">
+                        <li class="#{b.retenu ? '' : 'is-off'}">
+                            <div class="hx-objimp__head">
+                                <p:selectBooleanCheckbox value="#{b.retenu}" itemLabel="Objectif #{st.index + 1}"><p:ajax process="@form" update=":frmImportObj:impCorps :frmImportObj:impPied"/></p:selectBooleanCheckbox>
+                                <ui:fragment rendered="#{not empty b.alerte}"><span class="hx-badge hx-badge--late">#{b.alerte}</span></ui:fragment>
+                                <p:selectOneMenu value="#{b.natureId}" styleClass="hx-select hx-objimp__nat" converter="jakarta.faces.Integer" disabled="#{not b.retenu}">
+                                    <f:selectItems value="#{objectifsView.natures}" var="n" itemLabel="#{n.groupe} - #{n.libelle}" itemValue="#{n.id}"/>
+                                </p:selectOneMenu>
+                            </div>
+                            <div class="hx-objimp__grid">
+                                <div class="hx-field hx-objimp__lib"><label>Objectif</label><p:inputTextarea value="#{b.libelle}" rows="2" autoResize="true" maxlength="600" disabled="#{not b.retenu}"/></div>
+                                <div class="hx-field"><label>Activité / axe</label><p:inputText value="#{b.activite}" maxlength="200" disabled="#{not b.retenu}"/></div>
+                                <div class="hx-field"><label>Indicateur</label><p:inputText value="#{b.indicateur}" maxlength="400" disabled="#{not b.retenu}"/></div>
+                                <div class="hx-field"><label>Cible</label><p:inputText value="#{b.cible}" maxlength="100" disabled="#{not b.retenu}"/></div>
+                                <div class="hx-field hx-objimp__moy"><label>Moyens</label><p:inputTextarea value="#{b.moyens}" rows="1" autoResize="true" maxlength="1000" disabled="#{not b.retenu}"/></div>
+                                <div class="hx-field"><label>Périodicité</label>
+                                    <p:selectOneMenu value="#{b.periodicite}" styleClass="hx-select" disabled="#{not b.retenu}">
+                                        <f:selectItems value="#{objectifsView.periodicites}" var="pe" itemLabel="#{pe.libelle}" itemValue="#{pe.code}"/>
+                                    </p:selectOneMenu></div>
+                                <div class="hx-field"><label>Période d'atteinte</label>
+                                    <div class="hx-quarters">
+                                        <p:selectBooleanButton value="#{b.t1}" onLabel="T1" offLabel="T1" styleClass="hx-day" disabled="#{not b.retenu}"/>
+                                        <p:selectBooleanButton value="#{b.t2}" onLabel="T2" offLabel="T2" styleClass="hx-day" disabled="#{not b.retenu}"/>
+                                        <p:selectBooleanButton value="#{b.t3}" onLabel="T3" offLabel="T3" styleClass="hx-day" disabled="#{not b.retenu}"/>
+                                        <p:selectBooleanButton value="#{b.t4}" onLabel="T4" offLabel="T4" styleClass="hx-day" disabled="#{not b.retenu}"/>
+                                    </div></div>
+                                <ui:fragment rendered="#{objectifsView.peutFixer}">
+                                    <div class="hx-field"><label>Pondération (%)</label><p:inputNumber value="#{b.poids}" minValue="0" maxValue="100" decimalPlaces="0" disabled="#{not b.retenu}"/></div>
+                                </ui:fragment>
+                            </div>
+                        </li>
+                    </ui:repeat>
+                </ol>
+                </h:panelGroup>
+                <f:facet name="footer">
+                    <h:panelGroup id="impPied" layout="block" styleClass="hx-objimp__actions">
+                    <span class="hx-objimp__count">#{objectifsView.nbRetenus} sur #{objectifsView.brouillons.size()} objectif(s) retenu(s)</span>
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgImportObj').hide()"/>
+                    <p:commandButton value="#{objectifsView.peutFixer ? 'Fixer ' : 'Proposer '}#{objectifsView.nbRetenus} objectif(s)" icon="pi pi-check" process="@form" update=":frmImportObj:impCorps :frmImportObj:impPied :frmFiche :globalGrowl"
+                                     actionListener="#{objectifsView.enregistrerImport}" oncomplete="if (args &amp;&amp; args.ok) PF('dlgImportObj').hide()"/>
+                    </h:panelGroup>
+                </f:facet>
+        </p:dialog>
+        </h:form>
+
         <!-- Objectif -->
         <p:dialog id="dlgObjectif" widgetVar="dlgObjectif" header="#{objectifsView.edit.id eq 0 ? (objectifsView.peutFixer ? 'Nouvel objectif' : 'Proposer un objectif') : 'Modifier l’objectif'}"
                   modal="true" responsive="true" width="760" fitViewport="true" closeOnEscape="true" showEffect="fade" hideEffect="fade" styleClass="hx-dialog-lg">
@@ -46,7 +113,7 @@
                     </div>
                     <ui:fragment rendered="#{objectifsView.peutFixer}">
                     <div class="hx-field__grid hx-field__grid--3">
-                        <div class="hx-field"><p:outputLabel for="oPoids" value="Poids dans la note (%)"/><p:inputNumber id="oPoids" value="#{objectifsView.edit.poids}" minValue="0" maxValue="100" decimalPlaces="0"/></div>
+                        <div class="hx-field"><p:outputLabel for="oPoids" value="Pondération dans la note (%)"/><p:inputNumber id="oPoids" value="#{objectifsView.edit.poids}" minValue="0" maxValue="100" decimalPlaces="0"/></div>
                     </div>
                     </ui:fragment>
                     <ui:fragment rendered="#{not objectifsView.peutFixer}">

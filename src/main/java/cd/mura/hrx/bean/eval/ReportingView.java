@@ -49,6 +49,7 @@ public class ReportingView implements Serializable {
     @EJB private UserDAO userDAO;
     @EJB private DirectionDAO directionDAO;
     @Inject private ReportingExportService exportService;
+    @EJB private cd.mura.hrx.dao.config.AppDAO appDAO;
 
     // structures
 
@@ -58,8 +59,13 @@ public class ReportingView implements Serializable {
         private final String nom, abrege;
         long effectif, initiees, soumises, evaluees, validees, aTemps, horsDelai, retard;
         long atteints, moyennement, faiblement, nonAtteints;
+        /** Évalués dont le taux de réalisation des objectifs atteint le seuil paramétré. */
+        long atteintSeuil;
         double sommeNotes; long nbNotes;
         Agregat(String nom, String abrege) { this.nom = nom; this.abrege = abrege; }
+        /** Part des évaluables ayant atteint le seuil (base : effectif évaluable). */
+        public int getPctAtteinteSeuil() { return effectif == 0 ? 0 : (int) Math.min(100, Math.round(100.0 * atteintSeuil / effectif)); }
+        public long getAtteintSeuil() { return atteintSeuil; }
         public int getTaux() { return effectif == 0 ? 0 : (int) Math.min(100, Math.round(100.0 * validees / effectif)); }
         public int getTauxIntegration() { return effectif == 0 ? 0 : (int) Math.min(100, Math.round(100.0 * initiees / effectif)); }
         public Double getNoteMoyenne() { return nbNotes == 0 ? null : Math.round(sommeNotes / nbNotes * 10) / 10.0; }
@@ -107,13 +113,22 @@ public class ReportingView implements Serializable {
     private List<Evaluation> fiches = new ArrayList<>();
     private long nbBesoins;
     private String tri = "taux";
+    /** Seuil d'atteinte des objectifs (Paramètres > Évaluations, 85 % par défaut). */
+    private int seuil = 85;
+    /** Recrues encore en période d'essai au début de la campagne : non éligibles, hors effectif. */
+    private long nbEnEssai;
 
     @PostConstruct
     public void init() {
         campagnes = campagneDAO.findAll().stream().filter(c -> !Campagne.BROUILLON.equals(c.getStatut())).toList();
         String p = FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get("campagne");
         if (p != null) try { campagneId = Integer.valueOf(p); } catch (NumberFormatException ignored) { }
-        if (campagneId == null) { Campagne o = campagneDAO.findOuverte(); campagneId = o != null ? o.getId() : campagnes.isEmpty() ? null : campagnes.get(0).getId(); }
+        if (campagneId == null) {
+            // Attention : un ternaire int/null serait déballé en int et lèverait un NPE quand il n'y a aucune campagne.
+            Campagne o = campagneDAO.findOuverte();
+            if (o != null) campagneId = o.getId();
+            else if (!campagnes.isEmpty()) campagneId = campagnes.get(0).getId();
+        }
         calculer();
     }
 
@@ -126,8 +141,13 @@ public class ReportingView implements Serializable {
         directions = new ArrayList<>(); appreciations = new ArrayList<>(); niveaux = new ArrayList<>(); souhaits = new ArrayList<>();
         formations = new ArrayList<>(); fiches = new ArrayList<>(); nbBesoins = 0;
         total = new Agregat("Total", "");
+        nbEnEssai = 0;
         campagne = campagneId == null ? null : campagneDAO.find(campagneId);
         if (campagne == null) return;
+        cd.mura.hrx.entity.config.App param = appDAO.findFirst();
+        seuil = param == null ? 85 : param.getSeuilAtteinteEffectif();
+        int moisEssai = param == null ? 6 : param.getDureeEssai();
+        java.time.LocalDate refEssai = cd.mura.hrx.service.PeriodeEssaiService.reference(campagne);
 
         // Périmètre : toute la banque pour la DCHT, sinon les directions dirigées
         Set<Integer> dirsAutorisees = null;
@@ -145,6 +165,7 @@ public class ReportingView implements Serializable {
 
         for (Users u : parId.values()) {
             if (u.getEvaluable() != 1 || !dansPerimetre(u, autorisees)) continue;
+            if (cd.mura.hrx.service.PeriodeEssaiService.enEssai(u, refEssai, moisEssai)) { nbEnEssai++; continue; }
             agregat(agg, u).effectif++; total.effectif++;
         }
         Map<String, Formation> form = new LinkedHashMap<>();
@@ -157,7 +178,7 @@ public class ReportingView implements Serializable {
             for (Agregat x : List.of(a, total)) compter(x, e);
             boolean notee = e.getNoteGlobale() != null && (Evaluation.EVALUEE.equals(e.getStatut()) || Evaluation.VALIDEE.equals(e.getStatut()));
             if (notee) app.merge(e.getAppreciation() == null ? Evaluation.appreciationPour(e.getNoteGlobale()) : e.getAppreciation(), 1L, Long::sum);
-            if (e.getSouhaitSalarie() != null && !e.getSouhaitSalarie().isBlank()) sh.merge(e.getSouhaitSalarie(), 1L, Long::sum);
+            for (String so : e.getSouhaits()) sh.merge(so, 1L, Long::sum);
             for (BesoinFormation b : e.getBesoinsFormation()) {
                 if (b.getIntitule() == null || b.getIntitule().isBlank()) continue;
                 nbBesoins++;
@@ -204,6 +225,7 @@ public class ReportingView implements Serializable {
         if (e.isEnRetard()) a.retard++;
         boolean notee = Evaluation.EVALUEE.equals(e.getStatut()) || Evaluation.VALIDEE.equals(e.getStatut());
         if (notee && e.getNoteGlobale() != null) { a.sommeNotes += e.getNoteGlobale(); a.nbNotes++; }
+        if (notee && e.getScoreObjectifs() != null && e.getScoreObjectifs() >= seuil) a.atteintSeuil++;
         if (notee && e.getNiveauAtteinte() != null) switch (e.getNiveauAtteinte()) {
             case "ATTEINTS" -> a.atteints++;
             case "MOYENNEMENT" -> a.moyennement++;
@@ -247,6 +269,8 @@ public class ReportingView implements Serializable {
     public String prioriteLabel(String p) { return switch (s(p)) { case "HAUTE" -> "Haute"; case "BASSE" -> "Basse"; default -> "Moyenne"; }; }
     public String prioriteClasse(String p) { return switch (s(p)) { case "HAUTE" -> "hx-badge--late"; case "BASSE" -> "hx-badge--draft"; default -> "hx-badge--pending"; }; }
     public long getAttendues() { if (campagne == null) return 0; long saisi = campagne.getEffectifAttendu() > 0 && !perimetreRestreint ? campagne.getEffectifAttendu() : total.effectif; return Math.max(saisi, total.initiees); }
+    /** Part des évaluables (base du taux de réalisation) dont le taux d'atteinte des objectifs est ≥ au seuil. */
+    public int getPctAtteinteSeuil() { long b = getAttendues(); return b == 0 ? 0 : (int) Math.min(100, Math.round(100.0 * total.atteintSeuil / b)); }
     public int getTauxGlobal() { long b = getAttendues(); return b == 0 ? 0 : (int) Math.min(100, Math.round(100.0 * total.validees / b)); }
 
     // exports

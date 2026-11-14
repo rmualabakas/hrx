@@ -14,15 +14,18 @@ public class CampagneDAO implements Serializable {
     @PersistenceContext(unitName = "PU")
     private EntityManager em;
 
-    public Campagne find(int id) { return em.find(Campagne.class, id); }
+    public Campagne find(int id) {
+        List<Campagne> l = em.createQuery("select c from Campagne c left join fetch c.modeleParDefaut left join fetch c.modeleEncadrants where c.id = :id", Campagne.class).setParameter("id", id).getResultList();
+        return l.isEmpty() ? null : l.get(0);
+    }
 
     public List<Campagne> findAll() {
-        return em.createQuery("select c from Campagne c left join fetch c.modeleParDefaut order by c.exercice desc, c.dateDebut desc, c.id desc", Campagne.class).getResultList();
+        return em.createQuery("select c from Campagne c left join fetch c.modeleParDefaut left join fetch c.modeleEncadrants order by c.exercice desc, c.dateDebut desc, c.id desc", Campagne.class).getResultList();
     }
 
     /** Campagne ouverte la plus récente (une seule à la fois en pratique). */
     public Campagne findOuverte() {
-        List<Campagne> l = em.createQuery("select c from Campagne c left join fetch c.modeleParDefaut where c.statut = :s order by c.dateDebut desc, c.id desc", Campagne.class)
+        List<Campagne> l = em.createQuery("select c from Campagne c left join fetch c.modeleParDefaut left join fetch c.modeleEncadrants where c.statut = :s order by c.dateDebut desc, c.id desc", Campagne.class)
                 .setParameter("s", Campagne.OUVERTE).setMaxResults(1).getResultList();
         return l.isEmpty() ? null : l.get(0);
     }

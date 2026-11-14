@@ -142,6 +142,17 @@ public class SuiviObjectifsService {
         return n;
     }
 
+    /** Synthèse par direction à la DCHT seule (les N+1 reçoivent les alertes graduées d'AlertesService). */
+    public int envoyerSyntheseDcht(int exercice) {
+        List<Ligne> lignes = etat(exercice, null);
+        Agregat total = total(lignes);
+        if (total.getRestants() == 0) return 0;
+        List<Agregat> dirs = parDirection(lignes);
+        int n = 0;
+        for (Users rh : notifications.destinatairesDcht()) { notifications.rappelObjectifsDcht(rh, dirs, total, exercice); n++; }
+        return n;
+    }
+
     /** Rappel ciblé à un N+1 pour ses collaborateurs directs. */
     public boolean relancerN1(int n1Id, int exercice) {
         Users n1 = userDAO.findAccountById(n1Id);

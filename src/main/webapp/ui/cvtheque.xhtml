@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                xmlns:pt="jakarta.faces.passthrough"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="CVthèque"/>
+    <ui:param name="pageSubtitle" value="Tous les CV reçus, rangés par dossiers et réutilisables"/>
+    <ui:define name="title">CVthèque</ui:define>
+
+    <ui:define name="content">
+        <h:form id="frmCvt" prependId="false">
+            <p:messages id="msgCvt" showDetail="true" closable="true"/>
+
+            <div class="hx-page-head">
+                <div>
+                    <h2>CVthèque</h2>
+                    <p>Rangez les CV comme dans un explorateur de fichiers. Un CV déposé deux fois n'est conservé qu'une fois ; une fois lu par l'IA, il est retrouvable par nom, intitulé, diplôme ou compétence et réutilisable pour tous les postes.</p>
+                </div>
+                <div class="hx-page-head__actions">
+                    <p:commandButton value="#{cvthequeView.archives ? 'CV actifs' : 'Archives'}" icon="pi pi-box" styleClass="hx-btn-secondary" process="@this" update="@form" actionListener="#{cvthequeView.basculerArchives}"/>
+                </div>
+            </div>
+
+            <div class="hx-cvt" data-base="#{request.contextPath}" data-archives="#{cvthequeView.archives}">
+                <!-- Arborescence -->
+                <aside class="hx-card hx-cvt__tree">
+                    <div class="hx-cvt__tree-head">
+                        <span>Dossiers</span>
+                        <p:commandButton icon="pi pi-plus" title="Nouveau dossier ici" styleClass="hx-btn-secondary hx-btn-sm hx-btn-icon" process="@this" update="dlgDossier" actionListener="#{cvthequeView.preparerDossier(false)}" oncomplete="PF('dlgDos').show()"/>
+                    </div>
+                    <ul>
+                        <li class="#{empty cvthequeView.dossierId ? 'is-active' : ''}">
+                            <p:commandLink process="@this" update="@form" actionListener="#{cvthequeView.ouvrir(null)}" pt:data-ctx="racine:">
+                                <i class="pi #{empty cvthequeView.dossierId ? 'pi-folder-open' : 'pi-folder'}"></i><span>CVthèque</span><em>#{cvthequeView.nbRacine gt 0 ? cvthequeView.nbRacine : ''}</em>
+                            </p:commandLink>
+                        </li>
+                        <ui:repeat value="#{cvthequeView.arbre}" var="n">
+                            <li class="#{cvthequeView.dossierId eq n.dossier().id ? 'is-active' : ''}" style="padding-left:#{12 + 16 * (n.profondeur() + 1)}px">
+                                <p:commandLink process="@this" update="@form" actionListener="#{cvthequeView.ouvrir(n.dossier().id)}" pt:data-ctx="dossier:#{n.dossier().id}" pt:data-nom="#{n.dossier().nom}">
+                                    <i class="pi #{n.ouvert() ? 'pi-folder-open' : 'pi-folder'}"></i><span>#{n.dossier().nom}</span><em>#{n.nb() gt 0 ? n.nb() : ''}</em>
+                                </p:commandLink>
+                            </li>
+                        </ui:repeat>
+                    </ul>
+                </aside>
+
+                <!-- Contenu du dossier -->
+                <section class="hx-card hx-cvt__main">
+                    <div class="hx-cvt__bar">
+                        <nav class="hx-cvt__fil">
+                            <p:commandLink process="@this" update="@form" actionListener="#{cvthequeView.ouvrir(null)}"><i class="pi pi-home"></i></p:commandLink>
+                            <ui:repeat value="#{cvthequeView.fil}" var="d">
+                                <i class="pi pi-angle-right"></i>
+                                <p:commandLink value="#{d.nom}" process="@this" update="@form" actionListener="#{cvthequeView.ouvrir(d.id)}"/>
+                            </ui:repeat>
+                            <ui:fragment rendered="#{not empty cvthequeView.dossierId}">
+                                <p:menuButton icon="pi pi-ellipsis-h" styleClass="hx-btn-secondary hx-btn-sm hx-btn-icon">
+                                    <p:menuitem value="Renommer le dossier" icon="pi pi-pencil" process="@this" update="dlgRenDossier" actionListener="#{cvthequeView.preparerDossier(true)}" oncomplete="PF('dlgRen').show()"/>
+                                    <p:menuitem value="Supprimer le dossier" icon="pi pi-trash" process="@this" update="@form" actionListener="#{cvthequeView.supprimerDossier}">
+                                        <p:confirm header="Supprimer le dossier" message="Seul un dossier vide peut être supprimé." icon="pi pi-trash"/>
+                                    </p:menuitem>
+                                </p:menuButton>
+                            </ui:fragment>
+                        </nav>
+                        <div class="hx-cvt__tools">
+                            <span class="hx-cvt__search"><i class="pi pi-search"></i>
+                                <p:inputText value="#{cvthequeView.recherche}" placeholder="Rechercher dans toute la CVthèque">
+                                    <p:ajax event="keyup" delay="450" process="@this" update="contenu" listener="#{cvthequeView.chercher}"/>
+                                </p:inputText>
+                            </span>
+                            <p:selectOneButton value="#{cvthequeView.affichage}" styleClass="hx-segment" unselectable="false">
+                                <f:selectItem itemLabel="Grille" itemValue="grille"/>
+                                <f:selectItem itemLabel="Liste" itemValue="liste"/>
+                                <p:ajax process="@this" update="contenu"/>
+                            </p:selectOneButton>
+                        </div>
+                    </div>
+
+                    <div class="hx-cvt__upload">
+                        <p:fileUpload listener="#{cvthequeView.recevoir}" mode="advanced" multiple="true" auto="true" dragDrop="true" sequential="true"
+                                     
+                                      accept=".pdf,.docx,.jpg,.jpeg,.png,.webp,.txt" label="Importer des CV ici" chooseIcon="pi pi-upload"
+                                      update="contenu msgCvt" styleClass="hx-rec-upload" rendered="#{not cvthequeView.archives}"
+                                      onstart="hxAttente.envoi(this, {titre: 'Import des CV', icone: 'pi-file-import', compteur: true, note: 'Rangement dans le dossier ouvert ; un CV déjà présent dans la CVthèque n\'est pas importé deux fois.'})"
+                                      oncomplete="hxAttente.suite(this)" onerror="hxAttente.suite(this)" onvalidationfailure="hxAttente.suite(this)">
+                            <p:validateFile allowTypes="/(\.|\/)(pdf|docx|jpe?g|png|webp|txt)$/i" sizeLimit="20971520"/>
+                        </p:fileUpload>
+                    </div>
+
+                    <h:panelGroup id="contenu" layout="block">
+                        <!-- barre d'actions sur la sélection -->
+                        <div class="hx-cvt__sel #{cvthequeView.nbSelection gt 0 ? 'is-on' : ''}">
+                            <p:commandLink process="@this" update="contenu" actionListener="#{cvthequeView.toutCocher}" styleClass="hx-link-sm" rendered="#{not empty cvthequeView.cvs}">
+                                <i class="pi pi-check-square"></i> #{cvthequeView.nbSelection lt cvthequeView.cvs.size() ? 'Tout sélectionner' : 'Tout désélectionner'}
+                            </p:commandLink>
+                            <ui:fragment rendered="#{cvthequeView.nbSelection gt 0}">
+                                <strong>#{cvthequeView.nbSelection} sélectionné(s)</strong>
+                                <p:commandButton value="Ajouter à un poste" icon="pi pi-briefcase" styleClass="hx-btn-sm" process="contenu" update="dlgPoste" actionListener="#{cvthequeView.preparerPoste}" oncomplete="PF('dlgPst').show()" rendered="#{not cvthequeView.archives}"/>
+                                <p:commandButton value="Lire avec l'IA" icon="pi pi-sparkles" styleClass="hx-btn-secondary hx-btn-sm" process="contenu" update="@form" actionListener="#{cvthequeView.lireSelection(false)}"/>
+                                <p:commandButton value="Déplacer" icon="pi pi-folder" styleClass="hx-btn-secondary hx-btn-sm" process="contenu" update="dlgDeplacer" oncomplete="PF('dlgDep').show()"/>
+                                <p:commandButton value="#{cvthequeView.archives ? 'Désarchiver' : 'Archiver'}" icon="pi pi-box" styleClass="hx-btn-secondary hx-btn-sm" process="contenu" update="@form" actionListener="#{cvthequeView.archiver}"/>
+                                <p:commandButton value="Supprimer" icon="pi pi-trash" styleClass="hx-btn-secondary hx-btn-sm hx-btn-sm--danger" process="contenu" update="@form" actionListener="#{cvthequeView.supprimer}">
+                                    <p:confirm header="Supprimer définitivement" message="Les CV sélectionnés, leurs fichiers et leurs analyses seront effacés définitivement. Pour simplement les retirer de la vue, archivez-les." icon="pi pi-exclamation-triangle"/>
+                                </p:commandButton>
+                            </ui:fragment>
+                        </div>
+
+                        <!-- dossiers et fichiers : icônes façon explorateur (les fichiers n'y figurent qu'en vue Grille) -->
+                        <div class="hx-cvt__icons">
+                            <ui:repeat value="#{cvthequeView.sousDossiers}" var="d">
+                                <p:commandLink styleClass="hx-cvt__item hx-cvt__item--folder" process="@this" update="@form" actionListener="#{cvthequeView.ouvrir(d.id)}" title="#{d.nom}" pt:data-ctx="dossier:#{d.id}" pt:data-nom="#{d.nom}">
+                                    <span class="hx-cvt__ico-folder" aria-hidden="true"></span>
+                                    <span class="hx-cvt__name">#{d.nom}</span>
+                                    <small class="hx-cvt__meta">#{cvthequeView.nbDans(d)} CV</small>
+                                </p:commandLink>
+                            </ui:repeat>
+                            <ui:fragment rendered="#{cvthequeView.affichage eq 'grille'}">
+                                <ui:repeat value="#{cvthequeView.cvs}" var="c">
+                                    <div class="hx-cvt__item hx-cvt__item--file #{cvthequeView.coches[c.id] ? 'is-checked' : ''}" data-ctx="cv:#{c.id}" data-nom="#{c.nomAffiche}" data-lu="#{c.lu}">
+                                        <p:selectBooleanCheckbox value="#{cvthequeView.coches[c.id]}" styleClass="hx-cvt__check"><p:ajax process="@this" update="contenu"/></p:selectBooleanCheckbox>
+                                        <p:commandLink process="@this" update="panDetail" actionListener="#{cvthequeView.voir(c)}" oncomplete="PF('sbDet').show()" styleClass="hx-cvt__item-body"
+                                                       title="#{c.nomFichier}#{empty c.titreProfil ? '' : ' - '.concat(c.titreProfil)}">
+                                            <span class="hx-cvt__ico-doc hx-cvt__ico-doc--#{c.extension}" aria-hidden="true">
+                                                <i class="hx-cvt__ico-lines"></i>
+                                                <b>#{c.extension}</b>
+                                                <ui:fragment rendered="#{c.lu}"><em class="hx-cvt__ico-badge" title="Lu par l'IA"><i class="pi pi-sparkles"></i></em></ui:fragment>
+                                                <ui:fragment rendered="#{c.enErreur}"><em class="hx-cvt__ico-badge is-err" title="#{c.erreurLecture}"><i class="pi pi-exclamation-triangle"></i></em></ui:fragment>
+                                            </span>
+                                            <span class="hx-cvt__name">#{c.nomAffiche}</span>
+                                            <small class="hx-cvt__meta">#{c.tailleLisible}<ui:fragment rendered="#{not empty cvthequeView.recherche}"> · #{cvthequeView.chemin(c.dossier)}</ui:fragment></small>
+                                        </p:commandLink>
+                                    </div>
+                                </ui:repeat>
+                            </ui:fragment>
+                        </div>
+
+                        <ui:fragment rendered="#{empty cvthequeView.cvs and empty cvthequeView.sousDossiers}">
+                            <div class="hx-empty"><i class="pi pi-folder-open"></i><strong>#{empty cvthequeView.recherche ? (cvthequeView.archives ? 'Aucun CV archivé ici' : 'Dossier vide') : 'Aucun CV ne correspond'}</strong>#{empty cvthequeView.recherche ? 'Importez des CV ou créez un sous-dossier.' : 'La recherche porte sur les noms de fichiers et les profils lus par l\'IA.'}</div>
+                        </ui:fragment>
+
+                        <!-- fichiers : liste -->
+                        <ui:fragment rendered="#{cvthequeView.affichage eq 'liste' and not empty cvthequeView.cvs}">
+                            <div class="hx-rec-table-wrap">
+                                <table class="hx-rec-table hx-cvt__list">
+                                    <thead><tr><th class="is-rang"></th><th>Nom</th><th>Candidat</th><th>Profil</th><th>Âge</th><th>Expérience</th><th>Études</th><th>Importé le</th><th>Taille</th></tr></thead>
+                                    <tbody>
+                                        <ui:repeat value="#{cvthequeView.cvs}" var="c">
+                                            <tr class="#{cvthequeView.coches[c.id] ? 'is-checked' : ''}" data-ctx="cv:#{c.id}" data-nom="#{c.nomAffiche}" data-lu="#{c.lu}">
+                                                <td class="is-rang"><p:selectBooleanCheckbox value="#{cvthequeView.coches[c.id]}"><p:ajax process="@this" update="contenu"/></p:selectBooleanCheckbox></td>
+                                                <td><p:commandLink process="@this" update="panDetail" actionListener="#{cvthequeView.voir(c)}" oncomplete="PF('sbDet').show()"><i class="pi #{cvthequeView.icone(c)} hx-cvt__ext--#{c.extension}"></i> #{c.nomFichier}</p:commandLink></td>
+                                                <td>#{c.candidatNom}</td>
+                                                <td>#{c.titreProfil}</td>
+                                                <td>#{c.age}</td>
+                                                <td>#{cvthequeView.experienceLabel(c)}</td>
+                                                <td>#{empty c.niveauEtudes ? '' : cvthequeView.niveauLabel(c.niveauEtudes)}</td>
+                                                <td><h:outputText value="#{c.dateImport}"><f:convertDateTime pattern="dd/MM/yyyy"/></h:outputText></td>
+                                                <td>#{c.tailleLisible}</td>
+                                            </tr>
+                                        </ui:repeat>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </ui:fragment>
+                    </h:panelGroup>
+                </section>
+            </div>
+
+            <!-- ============================== Menu contextuel (clic droit) ============================== -->
+            <h:inputHidden id="ctxCible" value="#{cvthequeView.ctxCible}"/>
+            <p:remoteCommand name="hxCvtCtx" process="@this ctxCible" update="@form" actionListener="#{cvthequeView.contexte}"
+                             oncomplete="if (args &amp;&amp; args.dlg) PF(args.dlg).show()"/>
+            <div class="hx-cvt__ctx-cmds" aria-hidden="true">
+                <p:commandButton id="ctxSupprCv" process="@this ctxCible" update="@form" actionListener="#{cvthequeView.ctxSupprimerCv}" tabindex="-1">
+                    <p:confirm header="Supprimer définitivement" message="Le ou les CV visés, leurs fichiers et leurs analyses seront effacés définitivement. Pour simplement les retirer de la vue, archivez-les." icon="pi pi-exclamation-triangle"/>
+                </p:commandButton>
+                <p:commandButton id="ctxSupprDos" process="@this ctxCible" update="@form" actionListener="#{cvthequeView.ctxSupprimerDossier}" tabindex="-1">
+                    <p:confirm header="Supprimer le dossier" message="Seul un dossier vide peut être supprimé." icon="pi pi-trash"/>
+                </p:commandButton>
+            </div>
+
+            <!-- ============================== Panneau de détail d'un CV ============================== -->
+            <p:sidebar widgetVar="sbDet" position="right" styleClass="hx-cvt__side" blockScroll="true">
+                <h:panelGroup id="panDetail" layout="block">
+                    <ui:fragment rendered="#{not empty cvthequeView.detail}">
+                        <div class="hx-cvt__side-head">
+                            <i class="pi #{cvthequeView.icone(cvthequeView.detail)} hx-cvt__ext hx-cvt__ext--#{cvthequeView.detail.extension}"></i>
+                            <div>
+                                <h3>#{cvthequeView.detail.nomAffiche}</h3>
+                                <p>#{cvthequeView.detail.titreProfil}</p>
+                            </div>
+                        </div>
+                        <div class="hx-cvt__side-acts">
+                            <a class="ui-button ui-widget hx-btn-sm" href="#{request.contextPath}/cv/#{cvthequeView.detail.id}" target="_blank" rel="noopener"><i class="pi pi-eye"></i> Ouvrir</a>
+                            <a class="ui-button ui-widget hx-btn-secondary hx-btn-sm" href="#{request.contextPath}/cv/#{cvthequeView.detail.id}?dl=1"><i class="pi pi-download"></i> Télécharger</a>
+                            <p:commandButton value="#{cvthequeView.detail.lu ? 'Relire avec l\'IA' : 'Lire avec l\'IA'}" icon="pi pi-sparkles" styleClass="hx-btn-secondary hx-btn-sm" process="@this" update="@form" actionListener="#{cvthequeView.relireDetail}"/>
+                        </div>
+                        <p class="hx-cvt__state #{cvthequeView.detail.enErreur ? 'is-ko' : (cvthequeView.detail.lu ? 'is-ok' : '')}">
+                            <i class="pi #{cvthequeView.detail.lu ? 'pi-sparkles' : (cvthequeView.detail.enErreur ? 'pi-exclamation-triangle' : 'pi-clock')}"></i>
+                            #{cvthequeView.detail.statutLectureLabel}#{cvthequeView.detail.enErreur ? ' : '.concat(cvthequeView.detail.erreurLecture) : ''}
+                        </p>
+
+                        <ui:fragment rendered="#{cvthequeView.detail.lu}">
+                            <dl class="hx-cvt__facts">
+                                <div><dt>Contact</dt><dd>#{cvthequeView.detail.email}<br/>#{cvthequeView.detail.telephone}</dd></div>
+                                <div><dt>Localisation</dt><dd>#{empty cvthequeView.detail.localisation ? '—' : cvthequeView.detail.localisation}</dd></div>
+                                <div><dt>Âge</dt><dd>#{empty cvthequeView.detail.age ? 'non indiqué' : cvthequeView.detail.age.toString().concat(' ans')}</dd></div>
+                                <div><dt>Expérience</dt><dd>#{cvthequeView.experienceLabel(cvthequeView.detail)}</dd></div>
+                                <div class="is-wide"><dt>Études</dt><dd>#{empty cvthequeView.detail.niveauEtudes ? 'non précisées' : cvthequeView.niveauLabel(cvthequeView.detail.niveauEtudes)}#{empty cvthequeView.detail.diplome ? '' : ' : '.concat(cvthequeView.detail.diplome)}</dd></div>
+                            </dl>
+                            <ui:fragment rendered="#{not empty cvthequeView.profilDetail}">
+                                <p class="hx-cvt__resume">#{cvthequeView.profilDetail.resume()}</p>
+                                <h4>Compétences</h4>
+                                <div class="hx-rec-chips is-small"><ui:repeat value="#{cvthequeView.profilDetail.competences()}" var="k"><span class="hx-rec-chip">#{k}</span></ui:repeat></div>
+                                <h4>Langues</h4>
+                                <div class="hx-rec-chips is-small"><ui:repeat value="#{cvthequeView.profilDetail.langues()}" var="l"><span class="hx-rec-chip">#{l.langue()}#{empty l.niveau() ? '' : ' · '.concat(l.niveau())}</span></ui:repeat></div>
+                                <h4>Parcours</h4>
+                                <ul class="hx-cvt__xp">
+                                    <ui:repeat value="#{cvthequeView.profilDetail.experiences()}" var="e">
+                                        <li><strong>#{e.poste()}</strong> · #{e.employeur()}<small>#{e.debut()} → #{e.fin() eq 'present' ? 'aujourd\'hui' : e.fin()}#{e.stage() ? ' · stage' : ''}</small></li>
+                                    </ui:repeat>
+                                </ul>
+                            </ui:fragment>
+                        </ui:fragment>
+
+                        <ui:fragment rendered="#{not empty cvthequeView.analysesDetail}">
+                            <h4>Analyses pour des postes</h4>
+                            <ul class="hx-cvt__xp">
+                                <ui:repeat value="#{cvthequeView.analysesDetail}" var="a">
+                                    <li><strong>#{a.poste.intitule}</strong> · #{a.terminee ? a.score.toString().concat(' %') : 'non analysé'}#{a.elimine ? ' (écarté)' : ''}<small>#{cvthequeView.decisionLabel(a.decision)}</small></li>
+                                </ui:repeat>
+                            </ul>
+                        </ui:fragment>
+
+                        <h4>Classement</h4>
+                        <div class="hx-form">
+                            <div class="hx-field">
+                                <p:outputLabel for="detNom" value="Nom du fichier"/>
+                                <p:inputText id="detNom" value="#{cvthequeView.nomFichierEdit}" maxlength="255"/>
+                            </div>
+                            <div class="hx-field">
+                                <p:outputLabel for="detTags" value="Étiquettes (séparées par des virgules)"/>
+                                <p:inputText id="detTags" value="#{cvthequeView.etiquettesEdit}" maxlength="300" placeholder="vivier finance, à recontacter"/>
+                            </div>
+                            <div class="hx-field">
+                                <p:outputLabel for="detNotes" value="Notes"/>
+                                <p:inputTextarea id="detNotes" value="#{cvthequeView.notesEdit}" rows="3" autoResize="true"/>
+                            </div>
+                            <p:commandButton value="Enregistrer" icon="pi pi-check" process="panDetail" update="panDetail contenu msgCvt" actionListener="#{cvthequeView.enregistrerDetail}"/>
+                        </div>
+                        <p class="hx-field__help">Dossier : #{cvthequeView.chemin(cvthequeView.detail.dossier)} · importé le <h:outputText value="#{cvthequeView.detail.dateImport}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText> · #{cvthequeView.detail.tailleLisible}</p>
+                    </ui:fragment>
+                </h:panelGroup>
+            </p:sidebar>
+
+            <!-- ============================== Dialogues ============================== -->
+            <p:dialog id="dlgDossier" widgetVar="dlgDos" header="Nouveau dossier" modal="true" width="440" responsive="true" closeOnEscape="true" styleClass="hx-dialog">
+                <div class="hx-form"><div class="hx-field">
+                    <p:outputLabel for="nomDos" value="Nom (dans #{cvthequeView.chemin(cvthequeView.parentCreationDossier)})"/>
+                    <p:inputText id="nomDos" value="#{cvthequeView.nomDossier}" maxlength="150" placeholder="Ex. Vivier - Finance"/>
+                </div></div>
+                <f:facet name="footer">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgDos').hide()"/>
+                    <p:commandButton value="Créer" icon="pi pi-check" process="dlgDossier" update="@form" actionListener="#{cvthequeView.creerDossier}" oncomplete="if (args &amp;&amp; args.ok) PF('dlgDos').hide()"/>
+                </f:facet>
+            </p:dialog>
+
+            <p:dialog id="dlgRenDossier" widgetVar="dlgRen" header="Renommer le dossier" modal="true" width="440" responsive="true" closeOnEscape="true" styleClass="hx-dialog">
+                <div class="hx-form"><div class="hx-field">
+                    <p:outputLabel for="renDos" value="Nouveau nom"/>
+                    <p:inputText id="renDos" value="#{cvthequeView.nomDossier}" maxlength="150"/>
+                </div></div>
+                <f:facet name="footer">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgRen').hide()"/>
+                    <p:commandButton value="Renommer" icon="pi pi-check" process="dlgRenDossier" update="@form" actionListener="#{cvthequeView.renommerDossier}" oncomplete="if (args &amp;&amp; args.ok) PF('dlgRen').hide()"/>
+                </f:facet>
+            </p:dialog>
+
+            <p:dialog id="dlgDeplacer" widgetVar="dlgDep" header="Déplacer vers…" modal="true" width="480" responsive="true" closeOnEscape="true" styleClass="hx-dialog">
+                <div class="hx-form"><div class="hx-field">
+                    <p:outputLabel for="depDos" value="Dossier de destination"/>
+                    <p:selectOneMenu id="depDos" value="#{cvthequeView.dossierCible}" styleClass="hx-select" filter="true" filterMatchMode="contains">
+                        <f:selectItem itemLabel="Racine de la CVthèque" itemValue="#{null}" noSelectionOption="true"/>
+                        <f:selectItems value="#{cvthequeView.dossiers}" var="d" itemLabel="#{cvthequeView.chemin(d)}" itemValue="#{d.id}"/>
+                    </p:selectOneMenu>
+                </div></div>
+                <f:facet name="footer">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgDep').hide()"/>
+                    <p:commandButton value="Déplacer" icon="pi pi-check" process="dlgDeplacer" update="@form" actionListener="#{cvthequeView.deplacer}" oncomplete="if (args &amp;&amp; args.ok) PF('dlgDep').hide()"/>
+                </f:facet>
+            </p:dialog>
+
+            <p:dialog id="dlgPoste" widgetVar="dlgPst" header="Ajouter à un poste" modal="true" width="480" responsive="true" closeOnEscape="true" styleClass="hx-dialog">
+                <div class="hx-form"><div class="hx-field">
+                    <p:outputLabel for="pstCible" value="Poste ouvert"/>
+                    <p:selectOneMenu id="pstCible" value="#{cvthequeView.posteCible}" styleClass="hx-select" filter="true" filterMatchMode="contains">
+                        <f:selectItem itemLabel="Choisir un poste" itemValue="#{null}" noSelectionOption="true"/>
+                        <f:selectItems value="#{cvthequeView.postes}" var="p" itemLabel="#{p.intitule}#{empty p.reference ? '' : ' ('.concat(p.reference).concat(')')}" itemValue="#{p.id}"/>
+                    </p:selectOneMenu>
+                </div></div>
+                <f:facet name="footer">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgPst').hide()"/>
+                    <p:commandButton value="Ajouter" icon="pi pi-check" process="dlgPoste" update="@form" actionListener="#{cvthequeView.ajouterAuPoste}" oncomplete="if (args &amp;&amp; args.ok) PF('dlgPst').hide()"/>
+                </f:facet>
+            </p:dialog>
+
+            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" responsive="true" width="460">
+                <p:commandButton value="Annuler" type="button" styleClass="ui-confirmdialog-no hx-btn-secondary" icon="pi pi-times"/>
+                <p:commandButton value="Confirmer" type="button" styleClass="ui-confirmdialog-yes" icon="pi pi-check"/>
+            </p:confirmDialog>
+        </h:form>
+        <ui:include src="/WEB-INF/includes/attente.xhtml"/>
+        <h:outputScript library="hrx" name="js/hrx-cvtheque.js" target="body"/>
+    </ui:define>
+</ui:composition>

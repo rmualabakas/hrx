@@ -44,8 +44,18 @@
                 <div class="hx-alert hx-alert--warn"><i class="pi pi-exclamation-triangle"></i><div><strong>Fiche retournée pour correction</strong><span>#{ficheView.e.motifRetour}</span></div></div>
             </ui:fragment>
 
-            <div class="hx-fiche">
-                <div class="hx-fiche__main">
+            <div class="hx-fiche hx-fiche--papier">
+                <div class="hx-fiche__main hx-papier">
+                    <!-- En-tête de la liasse (aspect papier A4) -->
+                    <header class="hx-papier__entete" aria-hidden="true">
+                        <h:graphicImage library="hrx" name="img/logo_bgfi.png" alt="" styleClass="hx-papier__logo"/>
+                        <div class="hx-papier__titre">
+                            <span>BGFIBank RDC · Direction du Capital Humain et de la Transformation</span>
+                            <strong>Fiche d'évaluation individuelle</strong>
+                            <small>#{ficheView.e.campagne.typeLabel} #{ficheView.e.campagne.exercice}</small>
+                        </div>
+                        <div class="hx-papier__ref"><span>Réf.</span><b>MAF 159</b><small>Exemplaire original</small></div>
+                    </header>
 
                     <!-- Renseignements -->
                     <div class="hx-card hx-fiche__id">
@@ -89,7 +99,7 @@
                                     <ui:fragment rendered="#{not empty act}"><div class="hx-evtab__act">Activité #{as.index + 1} : #{act}</div></ui:fragment>
                                     <ui:repeat value="#{ficheView.objectifsDe(act)}" var="o" varStatus="st">
                                         <div class="hx-evtab__row hx-row-o#{o.id} #{o.nonApplicableN1 or (o.nonApplicableSalarie and empty o.realisationN1) ? 'is-na' : ''}">
-                                            <div class="hx-evtab__obj"><b>#{st.index + 1}.</b> #{o.objectif.libelle}<small class="hx-muted"> · #{o.objectif.periodiciteEnum.libelle} · #{o.objectif.periodeLabel}<ui:fragment rendered="#{o.objectif.poids gt 0}"> · poids #{o.objectif.poids} %</ui:fragment></small></div>
+                                            <div class="hx-evtab__obj"><b>#{st.index + 1}.</b> #{o.objectif.libelle}<small class="hx-muted"> · #{o.objectif.periodiciteEnum.libelle} · #{o.objectif.periodeLabel}<ui:fragment rendered="#{o.objectif.poids gt 0}"> · pondération #{o.objectif.poids} %</ui:fragment></small></div>
                                             <div class="hx-evtab__cell">#{empty o.objectif.indicateur ? '—' : o.objectif.indicateur}<ui:fragment rendered="#{not empty o.objectif.cible}"><br/><b>Cible : #{o.objectif.cible}</b></ui:fragment></div>
                                             <div class="hx-evtab__cell hx-evtab__num">
                                                 <ui:fragment rendered="#{ficheView.saisieN1}"><p:inputNumber value="#{o.attendu}" minValue="0" maxValue="100" decimalPlaces="0" symbol=" %" symbolPosition="s" styleClass="hx-pct"/></ui:fragment>
@@ -244,13 +254,17 @@
                         <section class="hx-appr">
                             <header><strong>Commentaires et propositions du salarié (N)</strong><small>#{ficheView.e.salarie.nomComplet}</small></header>
                             <ui:fragment rendered="#{ficheView.commentaireSalarie}">
-                                <p:selectOneRadio value="#{ficheView.e.souhaitSalarie}" layout="responsive" columns="2" styleClass="hx-check" unselectable="true">
-                                    <f:selectItems value="#{ficheView.souhaits}" var="so" itemLabel="#{ficheView.souhaitLabel(so)}" itemValue="#{so}"/>
-                                </p:selectOneRadio>
+                                <h:panelGroup id="souhaitsN" layout="block">
+                                    <p:selectManyCheckbox value="#{ficheView.souhaitsChoisis}" layout="responsive" columns="2" styleClass="hx-check">
+                                        <f:selectItems value="#{ficheView.souhaits}" var="so" itemLabel="#{ficheView.souhaitLabel(so)}" itemValue="#{so}"/>
+                                        <p:ajax process="@this" update="souhaitsN"/>
+                                    </p:selectManyCheckbox>
+                                    <p class="hx-souhaits__aide #{empty ficheView.souhaitExclu ? '' : 'is-warn'}"><i class="pi #{empty ficheView.souhaitExclu ? 'pi-info-circle' : 'pi-exclamation-circle'}"></i> #{empty ficheView.souhaitExclu ? 'Plusieurs choix possibles, sauf « Bien dans son poste » avec « Souhaite changer de poste ».' : ficheView.souhaitExclu}</p>
+                                </h:panelGroup>
                                 <p:inputTextarea value="#{ficheView.e.commentaireSalarie}" rows="3" autoResize="true" maxlength="4000" styleClass="hx-appr__ta" placeholder="Votre point de vue sur l'évaluation, vos propositions, vos souhaits d'évolution…"/>
                             </ui:fragment>
                             <ui:fragment rendered="#{not ficheView.commentaireSalarie}">
-                                <ul class="hx-checks"><ui:repeat value="#{ficheView.souhaits}" var="so"><li class="#{so eq ficheView.e.souhaitSalarie ? 'is-on' : ''}"><i class="pi #{so eq ficheView.e.souhaitSalarie ? 'pi-check-square' : 'pi-stop'}"></i> #{ficheView.souhaitLabel(so)}</li></ui:repeat></ul>
+                                <ul class="hx-checks"><ui:repeat value="#{ficheView.souhaits}" var="so"><li class="#{ficheView.e.aSouhait(so) ? 'is-on' : ''}"><i class="pi #{ficheView.e.aSouhait(so) ? 'pi-check-square' : 'pi-stop'}"></i> #{ficheView.souhaitLabel(so)}</li></ui:repeat></ul>
                                 <p class="hx-appr__txt #{empty ficheView.e.commentaireSalarie ? 'hx-muted' : ''}">#{empty ficheView.e.commentaireSalarie ? 'Non renseignés.' : ficheView.e.commentaireSalarie}</p>
                             </ui:fragment>
                         </section>
@@ -281,6 +295,10 @@
                             </section>
                         </ui:fragment>
                     </div>
+                    <footer class="hx-papier__pied" aria-hidden="true">
+                        <span>MAF 159 · Exercice #{ficheView.e.campagne.exercice}</span>
+                        <span class="hx-papier__copies"><i>Original : DCHT</i><i>Copie 1 : N+1</i><i>Copie 2 : Salarié</i></span>
+                    </footer>
                 </div>
 
                 <!-- Latéral -->
@@ -342,7 +360,8 @@
                             </p:commandButton>
                             <p:commandButton value="Retourner au N+1" icon="pi pi-undo" styleClass="hx-btn-secondary" process="@this" update=":dlgRetour" oncomplete="PF('dlgRetour').show()"/>
                         </ui:fragment>
-                        <ui:fragment rendered="#{ficheView.lectureSeule}"><p class="hx-muted"><i class="pi pi-lock"></i> Lecture seule à cette étape.</p></ui:fragment>
+                        <ui:fragment rendered="#{ficheView.attenteDirecteurDcht}"><p class="hx-muted"><i class="pi pi-hourglass"></i> En attente de l'avis du directeur (#{ficheView.directeurAttendu.nomComplet}) : la validation DCHT sera possible ensuite.</p></ui:fragment>
+                        <ui:fragment rendered="#{ficheView.lectureSeule and not ficheView.attenteDirecteurDcht}"><p class="hx-muted"><i class="pi pi-lock"></i> Lecture seule à cette étape.</p></ui:fragment>
                     </div>
 
                     <div class="hx-card hx-fiche__block">

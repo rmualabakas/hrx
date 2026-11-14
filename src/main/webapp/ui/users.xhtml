@@ -24,7 +24,7 @@
                                      update="dlgLdap" oncomplete="PF('dlgLdap').show()"/>
                     <p:commandButton value="Nouveau compte" icon="pi pi-user-plus" process="@this"
                                      rendered="#{privilegeBean.hasPrivilege('USR_EDIT')}"
-                                     actionListener="#{userAdminView.nouveau}" update="dlgUser" oncomplete="PF('dlgUser').show()"/>
+                                     actionListener="#{userAdminView.nouveau}" update=":frmUser:dlgUser" oncomplete="PF('dlgUser').show()"/>
                 </div>
             </div>
 
@@ -81,7 +81,7 @@
                         </div>
                     </p:column>
                     <p:column headerText="Fonction" sortBy="#{u.fonction}">
-                        <span class="hx-cell-main">#{empty u.fonction ? '—' : u.fonction}</span>
+                        <span class="hx-cell-main">#{empty u.fonction ? '—' : u.fonction}<ui:fragment rendered="#{u.cdd}"> <span class="hx-tag" title="Contrat à durée déterminée">CDD</span></ui:fragment></span>
                         <small class="hx-cell-sub">#{u.email}</small>
                     </p:column>
                     <p:column headerText="Direction" sortBy="#{u.direction.nom}">
@@ -102,7 +102,7 @@
                     <p:column headerText="" style="width: 150px; text-align: right;">
                         <div class="hx-row-actions">
                             <p:commandLink process="@this" title="Modifier" styleClass="hx-icon-btn" rendered="#{privilegeBean.hasPrivilege('USR_EDIT')}"
-                                           actionListener="#{userAdminView.modifier(u)}" update="dlgUser" oncomplete="PF('dlgUser').show()"><i class="pi pi-pencil"></i></p:commandLink>
+                                           actionListener="#{userAdminView.modifier(u)}" update=":frmUser:dlgUser" oncomplete="PF('dlgUser').show()"><i class="pi pi-pencil"></i></p:commandLink>
                             <p:commandLink process="@this" title="Réinitialiser le mot de passe" styleClass="hx-icon-btn" rendered="#{privilegeBean.hasPrivilege('USR_RESET')}"
                                            actionListener="#{userAdminView.preparerReset(u)}" update="dlgReset" oncomplete="PF('dlgReset').show()"><i class="pi pi-key"></i></p:commandLink>
                             <p:commandLink process="@this" title="#{u.statut eq 1 ? 'Désactiver' : 'Activer'}" styleClass="hx-icon-btn" rendered="#{privilegeBean.hasPrivilege('USR_EDIT')}"
@@ -123,9 +123,11 @@
         </h:form>
 
         <!-- Fiche utilisateur -->
+        <!-- Le formulaire englobe le dialogue pour que les boutons, dans le pied (toujours visible), en fassent partie -->
+        <h:form id="frmUser">
         <p:dialog id="dlgUser" widgetVar="dlgUser" header="#{userAdminView.edit.id eq 0 ? 'Nouveau compte' : 'Modifier le compte'}"
                   modal="true" responsive="true" width="760" fitViewport="true" closeOnEscape="true" showEffect="fade" hideEffect="fade" styleClass="hx-dialog-lg">
-            <h:form id="frmUser">
+            <h:panelGroup id="userCorps" layout="block">
                 <p:messages showDetail="true" closable="true"/>
                 <div class="hx-form">
                     <h:panelGroup id="uPhoto" layout="block" styleClass="hx-userphoto" rendered="#{userAdminView.edit.id ne 0}">
@@ -140,7 +142,15 @@
                         </div>
                     </h:panelGroup>
                     <h4 class="hx-form__section">Identité</h4>
-                    <div class="hx-field__grid hx-field__grid--3">
+                    <div class="hx-field__grid hx-field__grid--civ">
+                        <div class="hx-field">
+                            <p:outputLabel for="uSexe" value="Sexe"/>
+                            <p:selectOneMenu id="uSexe" value="#{userAdminView.edit.sexe}" styleClass="hx-select">
+                                <f:selectItem itemLabel="—" itemValue="#{null}" noSelectionOption="true"/>
+                                <f:selectItem itemLabel="Masculin (M.)" itemValue="M"/>
+                                <f:selectItem itemLabel="Féminin (Mme)" itemValue="F"/>
+                            </p:selectOneMenu>
+                        </div>
                         <div class="hx-field"><p:outputLabel for="uPrenom" value="Prénom"/><p:inputText id="uPrenom" value="#{userAdminView.edit.prenom}" required="true" requiredMessage="Le prénom est obligatoire" maxlength="80"/></div>
                         <div class="hx-field"><p:outputLabel for="uNom" value="Nom"/><p:inputText id="uNom" value="#{userAdminView.edit.nom}" required="true" requiredMessage="Le nom est obligatoire" maxlength="80"/></div>
                         <div class="hx-field"><p:outputLabel for="uPostnom" value="Post-nom"/><p:inputText id="uPostnom" value="#{userAdminView.edit.postnom}" maxlength="80" placeholder="facultatif"/></div>
@@ -187,6 +197,57 @@
                         </div>
                     </div>
 
+                    <h4 class="hx-form__section">Contrat de travail</h4>
+                    <h:panelGroup id="zoneContrat" layout="block">
+                        <div class="hx-field__grid hx-field__grid--3">
+                            <div class="hx-field">
+                                <p:outputLabel for="uContrat" value="Type de contrat"/>
+                                <p:selectOneMenu id="uContrat" value="#{userAdminView.edit.typeContrat}" styleClass="hx-select">
+                                    <f:selectItem itemLabel="Non renseigné (CDI)" itemValue="#{null}" noSelectionOption="true"/>
+                                    <f:selectItem itemLabel="CDI - durée indéterminée" itemValue="CDI"/>
+                                    <f:selectItem itemLabel="CDD - durée déterminée" itemValue="CDD"/>
+                                    <p:ajax process="zoneContrat" update="zoneContrat"/>
+                                </p:selectOneMenu>
+                            </div>
+                            <div class="hx-field">
+                                <p:outputLabel for="uDebutCtr" value="Début du contrat en cours"/>
+                                <p:datePicker id="uDebutCtr" value="#{userAdminView.edit.dateDebutContrat}" pattern="dd/MM/yyyy" locale="fr" showIcon="true" styleClass="hx-date" yearNavigator="true" yearRange="1980:2035" placeholder="date d'embauche par défaut">
+                                    <p:ajax event="dateSelect" process="@this" update="uFinEssaiAide"/>
+                                </p:datePicker>
+                            </div>
+                            <h:panelGroup layout="block" styleClass="hx-field" rendered="#{userAdminView.edit.cdd}">
+                                <p:outputLabel for="uFinCtr" value="Échéance du CDD"/>
+                                <p:datePicker id="uFinCtr" value="#{userAdminView.edit.dateFinContrat}" pattern="dd/MM/yyyy" locale="fr" showIcon="true" styleClass="hx-date" yearNavigator="true" yearRange="2000:2040"/>
+                            </h:panelGroup>
+                        </div>
+                        <ui:fragment rendered="#{userAdminView.edit.cdd}">
+                            <div class="hx-field__grid hx-field__grid--3">
+                                <div class="hx-field">
+                                    <p:outputLabel for="uLimCtr" value="Date limite légale du contrat"/>
+                                    <p:datePicker id="uLimCtr" value="#{userAdminView.edit.dateLimiteContrat}" pattern="dd/MM/yyyy" locale="fr" showIcon="true" styleClass="hx-date" yearNavigator="true" yearRange="2000:2045" placeholder="facultatif"/>
+                                </div>
+                                <div class="hx-field">
+                                    <p:outputLabel for="uProrog" value="Prorogations effectuées"/>
+                                    <p:inputNumber id="uProrog" value="#{userAdminView.edit.nbProrogations}" decimalPlaces="0" minValue="0" maxValue="20"/>
+                                </div>
+                            </div>
+                        </ui:fragment>
+                        <div class="hx-field__grid hx-field__grid--3">
+                            <div class="hx-field hx-field--inline" style="align-self: end; padding-bottom: 8px;">
+                                <p:selectBooleanCheckbox id="uSansEssai" value="#{userAdminView.edit.sansPeriodeEssai}">
+                                    <p:ajax process="zoneContrat" update="zoneContrat"/>
+                                </p:selectBooleanCheckbox>
+                                <p:outputLabel for="uSansEssai" value="Sans période d'essai"/>
+                            </div>
+                            <h:panelGroup layout="block" styleClass="hx-field" rendered="#{not userAdminView.edit.sansPeriodeEssai}">
+                                <p:outputLabel for="uFinEssai" value="Fin de période d'essai"/>
+                                <p:datePicker id="uFinEssai" value="#{userAdminView.edit.dateFinEssai}" pattern="dd/MM/yyyy" locale="fr" showIcon="true" styleClass="hx-date" yearNavigator="true" yearRange="2000:2040" placeholder="selon la durée paramétrée"/>
+                                <h:outputText id="uFinEssaiAide" styleClass="hx-field__help" value="#{userAdminView.finEssaiCalculee}"/>
+                            </h:panelGroup>
+                        </div>
+                    </h:panelGroup>
+                    <p class="hx-field__help"><i class="pi pi-info-circle"></i> La fin de la période d'essai et l'échéance du CDD déclenchent l'évaluation individuelle (fiche MAF 070) auprès du N+1.</p>
+
                     <h4 class="hx-form__section">Accès</h4>
                     <div class="hx-field__grid">
                         <div class="hx-field">
@@ -205,14 +266,17 @@
                         <p class="hx-field__help"><i class="pi pi-info-circle"></i> Mot de passe initial généré à la création (comptes locaux) ; les comptes réseau utilisent leur mot de passe Windows.</p>
                     </ui:fragment>
                 </div>
-                <div class="hx-form__actions">
+            </h:panelGroup>
+            <f:facet name="footer">
+                <div class="hx-form__actions" style="margin:0">
                     <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgUser').hide()"/>
-                    <p:commandButton value="Enregistrer" icon="pi pi-check" process="@form" update="@form :table :barre :globalGrowl"
+                    <p:commandButton value="Enregistrer" icon="pi pi-check" process="@form" update="userCorps :table :barre :globalGrowl"
                                      actionListener="#{userAdminView.enregistrer}"
                                      oncomplete="if (!args.validationFailed) PF('dlgUser').hide()"/>
                 </div>
-            </h:form>
+            </f:facet>
         </p:dialog>
+        </h:form>
 
         <!-- Réinitialisation -->
         <p:dialog id="dlgReset" widgetVar="dlgReset" header="Réinitialiser le mot de passe" modal="true" responsive="true" width="460" closeOnEscape="true" showEffect="fade" hideEffect="fade">
@@ -223,6 +287,8 @@
                         <p:outputLabel for="rMdp" value="Nouveau mot de passe"/>
                         <div class="hx-field__row">
                             <p:inputText id="rMdp" value="#{userAdminView.nouveauMdp}" styleClass="hx-mono-plain" maxlength="40"/>
+                            <p:commandButton icon="pi pi-copy" title="Copier le mot de passe dans le presse-papiers" styleClass="hx-btn-secondary" type="button"
+                                             onclick="hxCopier(this.parentNode.querySelector('input'), this); return false;"/>
                             <p:commandButton icon="pi pi-refresh" title="Générer un autre mot de passe" styleClass="hx-btn-secondary" process="@this" update="rMdp" actionListener="#{userAdminView.regenerer}"/>
                         </div>
                     </div>

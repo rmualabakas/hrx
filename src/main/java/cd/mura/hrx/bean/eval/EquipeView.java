@@ -45,6 +45,7 @@ public class EquipeView implements Serializable {
     @EJB private ObjectifDAO objectifDAO;
     @EJB private cd.mura.hrx.service.EvaluationService evaluationService;
     @EJB private cd.mura.hrx.service.NotificationService notifications;
+    @EJB private cd.mura.hrx.service.PeriodeEssaiService periodeEssai;
 
     private Campagne campagne;
     private List<Users> membres = new ArrayList<>();
@@ -62,6 +63,11 @@ public class EquipeView implements Serializable {
     private static final Set<String> VUES = Set.of("cartes", "liste", "hierarchie");
     /** Constitution de la population évaluable : identifiants cochés dans le dialogue. */
     private List<Integer> selectionIds = new ArrayList<>();
+    /** Durée de la période d'essai (Paramètres > Évaluations). */
+    private int moisEssai = 6;
+    /** Collaborateurs directs arrivés en fin de période d'essai, jamais évalués : évaluation de fin d'essai attendue. */
+    private List<cd.mura.hrx.service.PeriodeEssaiService.Echeance> essaisAEvaluer = new ArrayList<>();
+    private List<cd.mura.hrx.service.PeriodeEssaiService.Echeance> essaisProchains = new ArrayList<>();
 
     @PostConstruct
     public void init() {
@@ -87,6 +93,11 @@ public class EquipeView implements Serializable {
         collecter(moi.getId(), 1, new HashSet<>());
         fiches.clear();
         exercice = campagne != null ? campagne.getExercice() : java.time.Year.now().getValue();
+        moisEssai = periodeEssai.dureeMois();
+        List<Users> directs = membres.stream().filter(this::isDirect).toList();
+        essaisAEvaluer = periodeEssai.aEvaluer(directs);
+        essaisProchains = periodeEssai.prochaines(directs);
+        essaisNonClos = evaluationService.essaisNonClos(membres.stream().map(Users::getId).toList());
         fichesObjectifs.clear();
         for (FicheObjectifs f : objectifDAO.findFiches(exercice, membres.stream().map(Users::getId).toList())) fichesObjectifs.put(f.getSalarie().getId(), f);
         if (campagne != null) {
@@ -114,7 +125,7 @@ public class EquipeView implements Serializable {
         return membres.stream().filter(u -> {
             if (!f.isEmpty() && !(s(u.getNomComplet()) + " " + s(u.getFonction()) + " " + s(u.getMatricule())).toLowerCase(Locale.ROOT).contains(f)) return false;
             return switch (filtre) {
-                case "aInitier" -> u.getEvaluable() == 1 && fiche(u) == null;
+                case "aInitier" -> u.getEvaluable() == 1 && !enEssai(u) && fiche(u) == null;
                 case "aTraiter" -> fiche(u) != null && Evaluation.SOUMISE.equals(fiche(u).getStatut());
                 case "retard" -> enRetard(u);
                 case "finalisees" -> fiche(u) != null && fiche(u).isFinalisee();
@@ -129,12 +140,15 @@ public class EquipeView implements Serializable {
 
     public String etat(Users u) {
         if (u.getEvaluable() != 1) return "Non évaluable";
+        if (essaiNonClos(u)) return "Éval. d'essai en cours";
+        if (enEssai(u)) return "Période d'essai";
         if (campagne == null) return "Hors campagne";
         Evaluation e = fiche(u);
         return e == null ? "Fiche à initier" : e.getStatutLabel();
     }
 
     public String etatClasse(Users u) {
+        if (u.getEvaluable() == 1 && enEssai(u)) return "hx-badge--essai";
         if (u.getEvaluable() != 1 || campagne == null) return "hx-badge--draft";
         Evaluation e = fiche(u);
         if (e == null) return enRetard(u) ? "hx-badge--late" : "hx-badge--draft";
@@ -147,8 +161,27 @@ public class EquipeView implements Serializable {
         };
     }
 
+    /** Recrue qui n'a pas encore l'ancienneté requise au début de la campagne : non éligible. */
+    public boolean enEssai(Users u) {
+        return essaiNonClos(u) || cd.mura.hrx.service.PeriodeEssaiService.enEssai(u, cd.mura.hrx.service.PeriodeEssaiService.reference(campagne), moisEssai);
+    }
+    /** Évaluation de fin d'essai ouverte mais pas encore validée par la DCHT : toujours non éligible. */
+    private Set<Integer> essaisNonClos = new HashSet<>();
+    public boolean essaiNonClos(Users u) { return essaisNonClos.contains(u.getId()); }
+    public String essaiInfo(Users u) {
+        if (essaiNonClos(u)) return "Évaluation de fin de période d'essai en cours : non éligible aux campagnes tant qu'elle n'est pas validée par la DCHT";
+        java.time.LocalDate f = finEssai(u);
+        return f == null ? "" : "Période d'essai jusqu'au " + f.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) + " : non éligible aux campagnes";
+    }
+    /** Date de fin de période d'essai affichée sur la carte. */
+    public String finEssaiTexte(Users u) {
+        java.time.LocalDate f = finEssai(u);
+        return f == null ? "" : f.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+    }
+    public java.time.LocalDate finEssai(Users u) { return cd.mura.hrx.service.PeriodeEssaiService.finEssai(u, moisEssai); }
+
     public boolean enRetard(Users u) {
-        if (campagne == null || !campagne.isEnRetard() || u.getEvaluable() != 1) return false;
+        if (campagne == null || !campagne.isEnRetard() || u.getEvaluable() != 1 || (enEssai(u) && fiche(u) == null)) return false;
         Evaluation e = fiche(u);
         return e == null || !e.isFinalisee();
     }
@@ -194,7 +227,9 @@ public class EquipeView implements Serializable {
     public long getNbSansObjectifs() { return membres.stream().filter(u -> u.getEvaluable() == 1 && isDirect(u) && !objectifsSignes(u)).count(); }
     public long getNbPropositions() { return membres.stream().filter(this::isDirect).mapToInt(this::nbProposes).sum(); }
     public long getNbDirects() { return membres.stream().filter(this::isDirect).count(); }
-    public long getNbEvaluables() { return membres.stream().filter(u -> u.getEvaluable() == 1).count(); }
+    public long getNbEvaluables() { return membres.stream().filter(u -> u.getEvaluable() == 1 && !enEssai(u)).count(); }
+    /** Collaborateurs directs en période d'essai à la date de la campagne. */
+    public List<Users> getEnPeriodeEssai() { return membres.stream().filter(u -> isDirect(u) && u.getEvaluable() == 1 && enEssai(u)).toList(); }
     public long getNbInitiees() { return fiches.size(); }
     public long getNbATraiter() { return fiches.values().stream().filter(e -> Evaluation.SOUMISE.equals(e.getStatut())).count(); }
     public long getNbFinalisees() { return fiches.values().stream().filter(Evaluation::isFinalisee).count(); }
@@ -206,27 +241,70 @@ public class EquipeView implements Serializable {
         return ((p.isEmpty() ? "" : p.substring(0, 1)) + (n.isEmpty() ? "" : n.substring(0, 1))).toUpperCase(Locale.ROOT);
     }
 
+    // fenêtre « collaborateur non éligible »
+    private Users alerteUser;
+    private String alerteType, alerteTitre, alerteMessage, alerteLibelle, alerteValeur, alerteDetail, alerteLienLibelle, alerteLien;
+    public Users getAlerteUser() { return alerteUser; }
+    public String getAlerteType() { return alerteType; }
+    public String getAlerteTitre() { return alerteTitre; }
+    public String getAlerteMessage() { return alerteMessage; }
+    public String getAlerteLibelle() { return alerteLibelle; }
+    public String getAlerteValeur() { return alerteValeur; }
+    public String getAlerteDetail() { return alerteDetail; }
+    public String getAlerteLienLibelle() { return alerteLienLibelle; }
+    public String getAlerteLien() { return alerteLien; }
+
+    private void alerter(Users u, String type, String titre, String message, String libelle, String valeur, String detail, String lienLibelle, String lien) {
+        alerteUser = u; alerteType = type; alerteTitre = titre; alerteMessage = message;
+        alerteLibelle = libelle; alerteValeur = valeur; alerteDetail = detail; alerteLienLibelle = lienLibelle; alerteLien = lien;
+        org.primefaces.PrimeFaces.current().ajax().update("dlgAlerte");
+        org.primefaces.PrimeFaces.current().executeScript("PF('dlgAlerte').show()");
+    }
+
     // actions
     public void initier(Users u) {
-        authorization.requireAnyPrivilege("EVAL_N1", "EVAL_DCHT");
+        // le droit d'initier découle du lien hiérarchique (relu en base par le service), pas d'un privilège de profil
+        if (!periodeEssai.estN1Direct(loginBean.getUsers(), u)) throw new SecurityException("Seul le N+1 direct peut initier la fiche de ce collaborateur");
         if (campagne == null) { error("Aucune campagne ouverte", "La DCHT doit d'abord lancer une campagne."); return; }
         if (fiche(u) != null) return;
+        if (essaiNonClos(u)) {
+            cd.mura.hrx.entity.eval.EvaluationEssai ee = periodeEssai.findBySalarie(u.getId());
+            alerter(u, "essai", "Évaluation de fin de période d'essai en cours",
+                    "Ce collaborateur a une évaluation de fin de période d'essai (ou de CDD) qui n'est pas encore clôturée. Il ne pourra être intégré à la campagne qu'une fois cette évaluation validée par la DCHT et son engagement confirmé.",
+                    "Statut de l'évaluation d'essai", ee == null ? "En cours" : ee.getStatutLabel(),
+                    ee == null || ee.getDateFinEssai() == null ? "" : "échéance du " + ee.getDateFinEssai().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                    "Ouvrir l'évaluation d'essai", ee == null ? "/ui/periodeEssai" : "/ui/periodeEssai?id=" + ee.getId());
+            return;
+        }
+        if (enEssai(u)) {
+            java.time.LocalDate f = finEssai(u);
+            alerter(u, "essai", "En période d'essai",
+                    "Un collaborateur en période d'essai ne peut pas être intégré à une campagne d'évaluation. Sa première évaluation sera celle de fin de période d'essai (fiche MAF 070), à réaliser à l'échéance.",
+                    "Fin de la période d'essai", f.format(java.time.format.DateTimeFormatter.ofPattern("EEEE d MMMM yyyy", Locale.FRENCH)),
+                    "dans " + java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), f) + " jours",
+                    "Voir les périodes d'essai", "/ui/periodeEssai");
+            return;
+        }
         FicheObjectifs fo = ficheObjectifs(u);
-        if (!aObjectifsEnCours(u)) { error("Collaborateur non éligible", u.getNomComplet() + " n'a aucun objectif validé pour l'exercice " + exercice + " : fixez et validez ses objectifs avant de l'intégrer à la campagne."); return; }
-        ModeleFiche m = modeleFicheDAO.findPourCategorie(u.getCategorie());
-        if (m == null) m = campagne.getModeleParDefaut();
-        if (m == null) { List<ModeleFiche> actifs = modeleFicheDAO.findActifs(); if (!actifs.isEmpty()) m = actifs.get(0); }
+        if (!aObjectifsEnCours(u)) {
+            alerter(u, "objectifs", "Aucun objectif validé",
+                    "Un collaborateur ne peut être évalué que sur des objectifs fixés et validés. Fixez et validez ses objectifs, puis intégrez-le à la campagne.",
+                    "Objectifs validés pour " + exercice, "0", nbProposes(u) > 0 ? nbProposes(u) + " proposition(s) en attente de votre validation" : "aucune proposition en attente",
+                    "Fixer les objectifs", "/ui/objectifs?salarie=" + u.getId() + "&exercice=" + exercice);
+            return;
+        }
+        ModeleFiche m = modeleFicheDAO.pourCampagne(campagne, u);
         Evaluation e = evaluationService.initier(campagne, u, loginBean.getUsers(), m, fo);
         auditService.created("Évaluations", "Evaluation", e.getId(), "Initiation de la fiche d'évaluation", u.getNomComplet() + " : " + campagne.getLibelle());
         try { notifications.ficheInitiee(evaluationService.charger(e.getId())); } catch (Exception ex) { }
-        info("Fiche initiée", u.getNomComplet() + " peut renseigner son auto-évaluation" + (m == null ? " (aucun modèle de compétences affecté)" : "") + ".");
+        cd.mura.hrx.utils.Dialogue.succes("Fiche initiée", u.getNomComplet() + " peut renseigner son auto-évaluation" + (m == null ? " (aucun modèle de compétences affecté)" : "") + ".");
         charger();
     }
 
     /** Collaborateurs directs, évaluables, pas encore intégrés à la campagne ouverte. */
     public List<Users> getCandidats() {
         if (campagne == null) return List.of();
-        return membres.stream().filter(u -> isDirect(u) && u.getEvaluable() == 1 && fiche(u) == null).toList();
+        return membres.stream().filter(u -> isDirect(u) && u.getEvaluable() == 1 && !enEssai(u) && fiche(u) == null).toList();
     }
     /** Éligible à la campagne : au moins un objectif validé pour l'exercice (fiche de fixation en cours ou signée). */
     public boolean aObjectifsEnCours(Users u) { FicheObjectifs f = ficheObjectifs(u); return f != null && f.getNbValides() > 0; }
@@ -234,16 +312,13 @@ public class EquipeView implements Serializable {
     public List<Users> getCandidatsBloques() { return getCandidats().stream().filter(u -> !aObjectifsEnCours(u)).toList(); }
     public void preparerSelection() { selectionIds = new ArrayList<>(getCandidatsEligibles().stream().map(Users::getId).toList()); }
     public void integrerSelection() {
-        authorization.requireAnyPrivilege("EVAL_N1", "EVAL_DCHT");
         if (campagne == null) { error("Aucune campagne ouverte", "La DCHT doit d'abord lancer une campagne."); return; }
         int n = 0; List<String> refuses = new ArrayList<>();
         for (Users u : getCandidats()) {
             if (!selectionIds.contains(u.getId())) continue;
             if (!aObjectifsEnCours(u)) { refuses.add(u.getNomComplet()); continue; }
             FicheObjectifs fo = ficheObjectifs(u);
-            ModeleFiche m = modeleFicheDAO.findPourCategorie(u.getCategorie());
-            if (m == null) m = campagne.getModeleParDefaut();
-            if (m == null) { List<ModeleFiche> actifs = modeleFicheDAO.findActifs(); if (!actifs.isEmpty()) m = actifs.get(0); }
+            ModeleFiche m = modeleFicheDAO.pourCampagne(campagne, u);
             Evaluation e = evaluationService.initier(campagne, u, loginBean.getUsers(), m, fo);
             auditService.created("Évaluations", "Evaluation", e.getId(), "Intégration à la campagne", u.getNomComplet() + " : " + campagne.getLibelle());
             try { notifications.ficheInitiee(evaluationService.charger(e.getId())); } catch (Exception ex) { }
@@ -251,7 +326,7 @@ public class EquipeView implements Serializable {
         }
         if (!refuses.isEmpty()) error("Non intégré(s) : objectifs manquants", String.join(", ", refuses) + " - fixez et validez d'abord leurs objectifs.");
         if (n == 0) { if (refuses.isEmpty()) error("Aucune sélection", "Cochez au moins un collaborateur."); return; }
-        info(n + " collaborateur" + (n > 1 ? "s intégrés" : " intégré") + " à la campagne", "Chacun reçoit un e-mail et peut remplir son auto-évaluation depuis « Mes évaluations ».");
+        cd.mura.hrx.utils.Dialogue.succes(n + " collaborateur" + (n > 1 ? "s intégrés" : " intégré") + " à la campagne", "Chacun reçoit un e-mail et peut remplir son auto-évaluation depuis « Mes évaluations ».");
         org.primefaces.PrimeFaces.current().ajax().addCallbackParam("ok", true);
         charger();
     }

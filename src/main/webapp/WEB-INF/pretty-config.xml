@@ -33,5 +33,10 @@
     <url-mapping id="equipe"><pattern value="/ui/equipe"/><view-id value="/ui/equipe.xhtml"/></url-mapping>
     <url-mapping id="suiviObjectifs"><pattern value="/ui/suiviObjectifs"/><view-id value="/ui/suiviObjectifs.xhtml"/></url-mapping>
     <url-mapping id="organigramme"><pattern value="/ui/organigramme"/><view-id value="/ui/organigramme.xhtml"/></url-mapping>
+    <url-mapping id="periodeEssai"><pattern value="/ui/periodeEssai"/><view-id value="/ui/periodeEssai.xhtml"/></url-mapping>
+    <url-mapping id="evaluationsFormations"><pattern value="/ui/evaluationsFormations"/><view-id value="/ui/evaluationsFormations.xhtml"/></url-mapping>
+    <url-mapping id="recrutement"><pattern value="/ui/recrutement"/><view-id value="/ui/recrutement.xhtml"/></url-mapping>
+    <url-mapping id="cvtheque"><pattern value="/ui/cvtheque"/><view-id value="/ui/cvtheque.xhtml"/></url-mapping>
+    <url-mapping id="questionnaire"><pattern value="/ui/questionnaire"/><view-id value="/ui/questionnaire.xhtml"/></url-mapping>
     <url-mapping id="reporting"><pattern value="/ui/reporting"/><view-id value="/ui/reporting.xhtml"/></url-mapping>
 </pretty-config>

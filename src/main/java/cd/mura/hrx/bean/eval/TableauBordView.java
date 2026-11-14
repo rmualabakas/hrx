@@ -45,6 +45,8 @@ public class TableauBordView implements Serializable {
     @EJB private EvaluationDAO evaluationDAO;
     @EJB private ObjectifDAO objectifDAO;
     @EJB private cd.mura.hrx.service.SuiviObjectifsService suiviObjectifs;
+    @EJB private cd.mura.hrx.service.AlertesService alertesService;
+    @EJB private cd.mura.hrx.service.EvalChaudService evalChaud;
     /** Fixation des objectifs de l'année en cours (DCHT). */
     private cd.mura.hrx.service.SuiviObjectifsService.Agregat objectifsAnnee;
 
@@ -86,6 +88,11 @@ public class TableauBordView implements Serializable {
     private List<LigneDirection> parDirection = new ArrayList<>();
     private List<Niveau> niveauxAtteinte = new ArrayList<>();
     private List<Tache> taches = new ArrayList<>();
+    /** Alertes graduées ouvertes pour l'utilisateur (rappels, relances, niveau critique). */
+    private List<cd.mura.hrx.entity.eval.Relance> alertes = new ArrayList<>();
+    /** DCHT : nombre d'alertes critiques ouvertes dans toute la banque. */
+    private long nbAlertesCritiques;
+    public boolean isAlerteCritique() { return alertes.stream().anyMatch(cd.mura.hrx.entity.eval.Relance::isCritique); }
 
     @PostConstruct
     public void init() {
@@ -100,6 +107,10 @@ public class TableauBordView implements Serializable {
         chargerDirection();
         if (dcht) { chargerPilotage(); objectifsAnnee = suiviObjectifs.total(suiviObjectifs.etat(Year.now().getValue(), null)); }
         construireTaches();
+        try {
+            alertes = alertesService.ouvertesPour(moi.getId());
+            if (dcht) nbAlertesCritiques = alertesService.nbCritiques();
+        } catch (Exception e) { alertes = new ArrayList<>(); }
     }
 
     // chargements
@@ -217,6 +228,29 @@ public class TableauBordView implements Serializable {
                     default -> { }
                 }
             }
+        }
+        // --- évaluations de formation (tout salarié, intégré ou non à la campagne)
+        try {
+            for (var e : evalChaud.mesQuestionnaires(moi.getId()).entrySet()) {
+                cd.mura.hrx.entity.eval.EvalChaud c = e.getKey();
+                if (Boolean.TRUE.equals(e.getValue()) || !c.isRepondable()) continue;
+                String fin = "";
+                if (c.getDateFin() != null) {
+                    long j = java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), c.getDateFin());
+                    fin = " · à rendre au plus tard le " + c.getDateFin().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                            + (j == 0 ? " (aujourd'hui)" : j == 1 ? " (demain)" : " (J-" + j + ")");
+                }
+                long j = c.getDateFin() == null ? 99 : java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), c.getDateFin());
+                taches.add(new Tache(c.isFroid() ? "pi-chart-line" : "pi-graduation-cap",
+                        (c.isFroid() ? "Évaluation à froid à remplir : " : "Évaluation de formation à remplir : ") + c.getIntitule(),
+                        (c.isFroid() ? "Efficacité de la formation sur votre poste, environ 10 minutes" : "Votre avis sur la formation suivie, environ 5 minutes") + fin,
+                        "/ui/questionnaire?id=" + c.getId(), j <= 2 ? "danger" : "primary"));
+            }
+            long avisFroid = evalChaud.avisEquipe(moi.getId()).stream().filter(r -> !r.isAvisDonne()).count();
+            if (avisFroid > 0) taches.add(new Tache("pi-comments", pluriel(avisFroid, "évaluation à froid", "évaluations à froid") + " de vos collaborateurs en attente de votre avis",
+                    "Donnez votre appréciation de l'efficacité de la formation pour chacun.", "/ui/mesEvaluations?onglet=2", "warn"));
+        } catch (RuntimeException ex) {
+            java.util.logging.Logger.getLogger(TableauBordView.class.getName()).warning("HRX tableau de bord : évaluations de formation : " + ex.getMessage());
         }
         // --- manager
         if (manager) {

@@ -68,6 +68,10 @@
                                  title="Organigramme du périmètre affiché, tous niveaux dépliés, sur une page en paysage">
                     <p:fileDownload value="#{organigrammeView.exportPdf}"/>
                 </p:commandButton>
+                <p:commandButton value="Word modifiable" icon="pi pi-file-word" ajax="false" styleClass="hx-btn-secondary" rendered="#{organigrammeView.effectif gt 0}"
+                                 title="Organigramme en Word paysage : chaque case est une zone de texte que vous pouvez corriger ou déplacer">
+                    <p:fileDownload value="#{organigrammeView.exportWord}"/>
+                </p:commandButton>
             </h:panelGroup>
 
             <h:panelGroup id="zone" layout="block">

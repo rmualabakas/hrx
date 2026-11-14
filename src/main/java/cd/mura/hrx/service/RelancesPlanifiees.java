@@ -9,7 +9,8 @@ import jakarta.ejb.Startup;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.Arrays;
+import cd.mura.hrx.entity.config.Users;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -25,6 +26,9 @@ public class RelancesPlanifiees {
 
     @EJB private AppDAO appDAO;
     @EJB private SuiviObjectifsService suiviObjectifs;
+    @EJB private PeriodeEssaiService periodeEssai;
+    @EJB private NotificationService notifications;
+    @EJB private AlertesService alertes;
 
     @Schedule(hour = "*", minute = "*/5", persistent = false)
     public void verifier() {
@@ -40,7 +44,9 @@ public class RelancesPlanifiees {
             app.setDerniereRelance(jour);   // marqué avant l'envoi : pas de double envoi en cas d'erreur partielle
             appDAO.update(app);
             int envoyes = 0;
-            if (app.isRappelsObjectifsActifs()) envoyes += suiviObjectifs.envoyerRappels(jour.getYear());
+            // Alertes graduées à chaque acteur (objectifs, auto-évaluations, évaluations N+1, avis du directeur, fins d'essai)
+            envoyes += alertes.executer(jour, app.isRappelsObjectifsActifs());
+            if (app.isRappelsObjectifsActifs()) envoyes += suiviObjectifs.envoyerSyntheseDcht(jour.getYear());
             LOG.info("HRX relances du " + jour + " : " + envoyes + " e-mail(s) envoyé(s)");
         } catch (Exception e) {
             LOG.log(Level.WARNING, "HRX : relances planifiées en échec", e);

@@ -54,6 +54,7 @@ public class UserAdminView implements Serializable {
     private String filtreStatut = "actifs"; // actifs | inactifs | tous
 
     /** Fiche en cours (création ou modification). */
+    @jakarta.ejb.EJB private cd.mura.hrx.service.PeriodeEssaiService periodeEssai;
     private Users edit = new Users();
     private Integer editProfilId;
     private Integer editDirectionId;
@@ -108,6 +109,16 @@ public class UserAdminView implements Serializable {
 
     // Fiche
 
+    /** Fin de période d'essai calculée (début du contrat + durée paramétrée), affichée quand aucune date n'est saisie. */
+    public String getFinEssaiCalculee() {
+        if (edit == null || edit.isSansPeriodeEssai()) return "";
+        Date d = edit.getDateFinEssai();
+        edit.setDateFinEssai(null);
+        java.time.LocalDate f = cd.mura.hrx.service.PeriodeEssaiService.finEssai(edit, periodeEssai.dureeMois());
+        edit.setDateFinEssai(d);
+        return f == null ? "" : "calculée : " + f.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+    }
+
     public void nouveau() {
         edit = new Users();
         editProfilId = profils.stream().filter(p -> Boolean.TRUE.equals(p.getProfilParDefaut())).map(Profil::getId).findFirst().orElse(null);
@@ -146,6 +157,17 @@ public class UserAdminView implements Serializable {
         edit.setDirection(editDirectionId == null ? null : directionDAO.find(editDirectionId));
         edit.setSuperieurHierarchique(editSuperieurId == null ? null : userDAO.getReferenceById(editSuperieurId));
         edit.setEvaluable(editEvaluable ? 1 : 0);
+        if (!Users.CDI.equals(edit.getTypeContrat()) && !Users.CDD.equals(edit.getTypeContrat())) edit.setTypeContrat(null);
+        if (edit.isCdd()) {
+            if (edit.getDateFinContrat() == null) { error("Échéance du CDD requise", "Indiquez la date de fin du CDD : elle déclenche l'évaluation de fin de contrat."); return; }
+            Date debut = edit.getDateDebutContrat() != null ? edit.getDateDebutContrat() : edit.getDateEmbauche();
+            if (debut != null && !edit.getDateFinContrat().after(debut)) { error("Dates du contrat incohérentes", "La fin du CDD doit être postérieure à son début."); return; }
+            if (edit.getDateLimiteContrat() != null && edit.getDateLimiteContrat().before(edit.getDateFinContrat())) { error("Date limite incohérente", "La date limite légale ne peut pas précéder l'échéance du CDD."); return; }
+            if (edit.getNbProrogations() < 0) edit.setNbProrogations(0);
+        } else {
+            edit.setDateFinContrat(null); edit.setDateLimiteContrat(null); edit.setNbProrogations(0);
+        }
+        if (edit.isSansPeriodeEssai()) edit.setDateFinEssai(null);
         edit.setDateMaj(new Date());
 
         String mdpInitial = null;
@@ -167,7 +189,7 @@ public class UserAdminView implements Serializable {
             auditService.log(creation ? "CREATE" : "UPDATE", "Administration", "Users", edit.getId(),
                     (creation ? "Création" : "Modification") + " du compte", edit.getLogin() + " - profil " + edit.getProfil().getNom(), true);
             if (creation) {
-                info("Compte créé", edit.getPrenom() + " " + edit.getNom() + " - mot de passe initial : " + mdpInitial + " (à changer à la première connexion ; sans effet pour un compte réseau).");
+                cd.mura.hrx.utils.Dialogue.succes("Compte créé", edit.getPrenom() + " " + edit.getNom() + " - mot de passe initial : " + mdpInitial + " (à changer à la première connexion ; sans effet pour un compte réseau).");
             } else {
                 info("Compte mis à jour", edit.getPrenom() + " " + edit.getNom());
             }
@@ -225,7 +247,7 @@ public class UserAdminView implements Serializable {
         cible.setDateMaj(new Date());
         if (userDAO.merge(cible) == 1) {
             auditService.security("PASSWORD_RESET", "Réinitialisation du mot de passe", "Compte : " + cible.getLogin());
-            info("Mot de passe réinitialisé", "Communiquez le mot de passe à " + cible.getPrenom() + " " + cible.getNom() + " par un canal sûr.");
+            cd.mura.hrx.utils.Dialogue.succes("Mot de passe réinitialisé", "Communiquez le mot de passe à " + cible.getPrenom() + " " + cible.getNom() + " par un canal sûr.");
             load();
         }
     }

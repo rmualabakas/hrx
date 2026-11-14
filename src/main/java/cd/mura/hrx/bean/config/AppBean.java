@@ -50,6 +50,15 @@ public class AppBean implements Serializable {
     public String getLdapBindPasswordSaisie() { return null; }
     public void setLdapBindPasswordSaisie(String v) { if (app1 != null && v != null && !v.isBlank()) app1.setLdapBindPassword(v); }
     public boolean isLdapBindPasswordDefini() { return app1 != null && app1.getLdapBindPassword() != null && !app1.getLdapBindPassword().isBlank(); }
+    public String getIaCleApiSaisie() { return null; }
+    public void setIaCleApiSaisie(String v) { if (app1 != null && v != null && !v.isBlank()) app1.setIaCleApi(v.trim()); }
+    public boolean isIaCleDefinie() { return app1 != null && app1.getIaCleApi() != null && !app1.getIaCleApi().isBlank(); }
+    /** Quatre derniers caractères de la clé enregistrée, pour la reconnaître sans l'afficher. */
+    public String getIaCleFin() { String c = app1 == null ? null : app1.getIaCleApi(); return c == null || c.length() < 8 ? "" : "…" + c.substring(c.length() - 4); }
+    public boolean isIaCleEnvironnement() { String e = System.getenv("ANTHROPIC_API_KEY"); return e != null && !e.isBlank(); }
+    public void effacerCleIa() { authorization.requirePrivilege("CFG_EDIT"); if (app1 != null) app1.setIaCleApi(null); iaTestResult = "Clé effacée : enregistrez pour confirmer."; iaTestOk = false; }
+    public List<String> getModelesIa() { return List.of("claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"); }
+
     public String getPasswordSmtpSaisie() { return null; }
     public void setPasswordSmtpSaisie(String v) { if (app1 != null && v != null && !v.isBlank()) app1.setPasswordSmtp(v); }
     public boolean isPasswordSmtpDefini() { return app1 != null && app1.getPasswordSmtp() != null && !app1.getPasswordSmtp().isBlank(); }
@@ -70,6 +79,9 @@ public class AppBean implements Serializable {
     private String smtpTestResult;
     private boolean smtpTestOk;
     private String smtpTestDestinataire;
+    private String iaTestResult;
+    private boolean iaTestOk;
+    @Inject private cd.mura.hrx.service.recrutement.ClaudeCvService claude;
 
     @PostConstruct
     public void init() {
@@ -223,6 +235,14 @@ public class AppBean implements Serializable {
         } catch (Exception e) {
             smtpTestResult = "Échec : " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage().split("\\n")[0]);
         }
+    }
+
+    /** Vérifie la clé et le modèle Claude saisis (même non enregistrés), sans rien générer. */
+    public void testIa() {
+        authorization.requirePrivilege("CFG_EDIT");
+        iaTestResult = null; iaTestOk = false;
+        try { iaTestResult = claude.tester(app1); iaTestOk = true; }
+        catch (Exception e) { iaTestResult = "Échec : " + e.getMessage(); }
     }
 
     /** Mémorise l'onglet actif de l'écran Paramètres (session). */

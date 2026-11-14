@@ -53,6 +53,19 @@ public class Users implements Serializable {
     @Column(name = "postnom", length = 80)
     private String postnom;
 
+    public static final String MASCULIN = "M", FEMININ = "F";
+
+    /** Sexe : M (masculin) ou F (féminin) ; null = non renseigné. Donne la civilité Monsieur / Madame. */
+    @Column(name = "sexe", length = 1)
+    private String sexe;
+
+    /** « Monsieur », « Madame » ou chaîne vide si le sexe n'est pas renseigné. */
+    public String getCivilite() { return MASCULIN.equals(sexe) ? "Monsieur" : FEMININ.equals(sexe) ? "Madame" : ""; }
+    /** Abréviation « M. » / « Mme » ou chaîne vide. */
+    public String getCiviliteCourte() { return MASCULIN.equals(sexe) ? "M." : FEMININ.equals(sexe) ? "Mme" : ""; }
+    /** Civilité suivie du nom complet (ex. « Madame Marie KABEYA »), ou le nom complet seul. */
+    public String getNomAvecCivilite() { String c = getCivilite(); return c.isEmpty() ? getNomComplet() : c + " " + getNomComplet(); }
+
     /** Nom complet d'affichage : Prénom NOM Postnom. */
     public String getNomComplet() {
         StringBuilder b = new StringBuilder();
@@ -125,6 +138,41 @@ public class Users implements Serializable {
 
     @Column(name = "date_embauche", columnDefinition = "DATE")
     private Date dateEmbauche;
+
+    // Contrat de travail (fiche MAF 070 : fin de période d'essai, fin de CDD)
+
+    public static final String CDI = "CDI", CDD = "CDD";
+
+    /** CDI ou CDD ; null = non renseigné (traité comme un CDI). */
+    @Column(name = "type_contrat", length = 10)
+    private String typeContrat;
+
+    /** Début du contrat en cours ; à défaut, la date d'embauche. */
+    @Column(name = "date_debut_contrat", columnDefinition = "DATE")
+    private Date dateDebutContrat;
+
+    /** Échéance du CDD en cours. */
+    @Column(name = "date_fin_contrat", columnDefinition = "DATE")
+    private Date dateFinContrat;
+
+    /** Date limite légale du CDD (au-delà, il ne peut plus être renouvelé). */
+    @Column(name = "date_limite_contrat", columnDefinition = "DATE")
+    private Date dateLimiteContrat;
+
+    /** Nombre de prorogations (renouvellements) du CDD déjà effectuées. */
+    @Column(name = "nb_prorogations")
+    private int nbProrogations;
+
+    /** Contrat sans période d'essai. */
+    @Column(name = "sans_periode_essai")
+    private boolean sansPeriodeEssai;
+
+    /** Fin de période d'essai fixée au contrat ; à défaut, début du contrat + durée paramétrée. */
+    @Column(name = "date_fin_essai", columnDefinition = "DATE")
+    private Date dateFinEssai;
+
+    public boolean isCdd() { return CDD.equals(typeContrat); }
+    public String getTypeContratLabel() { return CDD.equals(typeContrat) ? "CDD" : CDI.equals(typeContrat) ? "CDI" : ""; }
 
     /** Direction / entité de rattachement (taux de réalisation par direction). */
     @ManyToOne(fetch = FetchType.LAZY)

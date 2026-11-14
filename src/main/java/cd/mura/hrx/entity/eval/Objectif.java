@@ -71,7 +71,7 @@ public class Objectif implements Serializable {
 
     @Column(name = "date_echeance") private LocalDate echeance;
 
-    /** Poids en % dans la note « objectifs » (0 = pondération égale entre objectifs validés). */
+    /** Pondération en % dans la note « objectifs » (0 = pondération égale entre objectifs validés). */
     @Column(nullable = false)
     private int poids = 0;
 

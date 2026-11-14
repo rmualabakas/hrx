@@ -14,6 +14,18 @@
                     </p:selectOneMenu>
                 </div>
                 <div class="hx-fiche__bar-right">
+                    <ui:fragment rendered="#{objectifsView.peutImporter and objectifsView.iaActive}">
+                        <p:commandButton type="button" value="Importer une fiche (IA)" icon="pi pi-sparkles" styleClass="hx-btn-sm"
+                                         title="Pré-remplir les objectifs à partir d'une fiche existante (Word .docx, PDF, scan ou photo)"
+                                         onclick="var f = document.querySelector('.hx-obj-import input[type=file]'); if (f) f.click();"/>
+                        <p:fileUpload listener="#{objectifsView.importerFiche}" mode="advanced" auto="true" multiple="false" skinSimple="true"
+                                      accept=".pdf,.docx,.jpg,.jpeg,.png,.webp,.txt" label="Importer une fiche (IA)" chooseIcon="pi pi-sparkles"
+                                      process="@this" update=":globalGrowl" styleClass="hx-obj-import"
+                                      onstart="hxAttente.envoi(this, {titre: 'Lecture de la fiche d\'objectifs', icone: 'pi-sparkles', etapes: ['Envoi du document', 'Lecture par l\'IA', 'Rattachement aux rubriques de la fiche', 'Préparation de la revue'], rythme: [2, 12, 25], note: 'Un document scanné prend en général 20 à 60 secondes.'})"
+                                      oncomplete="hxAttente.suite(this)" onerror="hxAttente.suite(this)" onvalidationfailure="hxAttente.suite(this)">
+                            <p:validateFile allowTypes="/(\.|\/)(pdf|docx|jpe?g|png|webp|txt)$/i" sizeLimit="20971520"/>
+                        </p:fileUpload>
+                    </ui:fragment>
                     <p:commandButton value="Word" icon="pi pi-file-word" styleClass="hx-btn-secondary hx-btn-sm" ajax="false" disabled="#{empty objectifsView.fiche}" title="Télécharger la fiche au format Word (.docx)">
                         <p:fileDownload value="#{objectifsView.exportDocx}"/>
                     </p:commandButton>
@@ -23,9 +35,19 @@
                 </div>
             </div>
 
-            <div class="hx-fiche">
+            <div class="hx-fiche hx-fiche--papier">
                 <!-- Colonne principale -->
-                <div class="hx-fiche__main">
+                <div class="hx-fiche__main hx-papier">
+                    <!-- En-tête de la liasse (aspect papier A4) -->
+                    <header class="hx-papier__entete" aria-hidden="true">
+                        <h:graphicImage library="hrx" name="img/logo_bgfi.png" alt="" styleClass="hx-papier__logo"/>
+                        <div class="hx-papier__titre">
+                            <span>BGFIBank RDC · Direction du Capital Humain et de la Transformation</span>
+                            <strong>Fiche de fixation des objectifs</strong>
+                            <small>Exercice #{objectifsView.exercice}</small>
+                        </div>
+                        <div class="hx-papier__ref"><span>Réf.</span><b>MAF 066</b><small>Exemplaire original</small></div>
+                    </header>
                     <ui:fragment rendered="#{objectifsView.verrouEvaluation}">
                         <p class="hx-mdl__note hx-lock"><i class="pi pi-lock"></i><span>#{objectifsView.motifVerrou}</span></p>
                     </ui:fragment>
@@ -93,8 +115,8 @@
                                                          actionListener="#{objectifsView.nouveau(n.id)}" update=":dlgObjectif" oncomplete="PF('dlgObjectif').show()"/>
                                     </header>
                                     <ui:fragment rendered="#{not empty objectifsView.objectifsDe(n)}">
-                                        <div class="hx-objtab">
-                                            <div class="hx-objtab__head"><span>Objectif</span><span>Moyens</span><span>Indicateur · cible</span><span>Période</span><span>Poids</span><span></span></div>
+                                        <div class="hx-objtab #{objectifsView.lectureSeule ? 'hx-objtab--ro' : ''}">
+                                            <div class="hx-objtab__head"><span>Objectif</span><span>Moyens</span><span>Indicateur · cible</span><span>Période</span><span title="Pondération dans la note (0 à 100 %)">Pondération</span><span></span></div>
                                             <ui:repeat value="#{objectifsView.objectifsDe(n)}" var="o" varStatus="st">
                                                 <div class="hx-objtab__row #{o.propose ? 'is-proposed' : ''} #{o.statut eq 'REFUSE' ? 'is-refused' : ''}">
                                                     <div class="hx-objtab__obj">
@@ -147,7 +169,7 @@
                         </div>
                         <div class="hx-sign__col">
                             <small>Signature du N+1</small>
-                            <ui:fragment rendered="#{not empty objectifsView.fiche and objectifsView.fiche.signeeN1}"><strong><i class="pi pi-check-circle"></i> #{empty objectifsView.fiche.n1 ? 'N+1' : objectifsView.fiche.n1.nomComplet}</strong><span><h:outputText value="#{objectifsView.fiche.dateSignatureN1}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></span></ui:fragment>
+                            <ui:fragment rendered="#{not empty objectifsView.fiche and objectifsView.fiche.signeeN1}"><strong><i class="pi pi-check-circle"></i> #{empty objectifsView.fiche.signataireN1Nom ? 'N+1' : objectifsView.fiche.signataireN1Nom}</strong><ui:fragment rendered="#{objectifsView.fiche.signeeParAutreQueN1}"><small class="hx-muted">pour le N+1 #{objectifsView.fiche.n1.nomComplet}</small></ui:fragment><span><h:outputText value="#{objectifsView.fiche.dateSignatureN1}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></span></ui:fragment>
                             <ui:fragment rendered="#{empty objectifsView.fiche or not objectifsView.fiche.signeeN1}"><span class="hx-muted">En attente</span></ui:fragment>
                         </div>
                         <div class="hx-sign__actions">
@@ -161,6 +183,10 @@
                             </p:commandButton>
                         </div>
                     </div>
+                    <footer class="hx-papier__pied" aria-hidden="true">
+                        <span>MAF 066 · Exercice #{objectifsView.exercice}</span>
+                        <span class="hx-papier__copies"><i>Original : DCHT</i><i>Copie 1 : N+1</i><i>Copie 2 : Salarié</i></span>
+                    </footer>
                 </div>
 
                 <!-- Colonne latérale -->
@@ -172,7 +198,7 @@
                             <li><span>Propositions en attente</span><b>#{objectifsView.nbProposes}</b></li>
                             <li><span>Pondération</span><b class="#{objectifsView.ponderationLibre or objectifsView.poidsTotal eq 100 ? 'hx-ok' : 'hx-warn'}"><ui:fragment rendered="#{objectifsView.ponderationLibre}">égale</ui:fragment><ui:fragment rendered="#{not objectifsView.ponderationLibre}">#{objectifsView.poidsTotal} %</ui:fragment></b></li>
                         </ul>
-                        <p class="hx-field__help"><i class="pi pi-info-circle"></i> Laissez tous les poids à 0 pour une pondération égale, ou répartissez 100 % entre les objectifs validés.</p>
+                        <p class="hx-field__help"><i class="pi pi-info-circle"></i> Laissez toutes les pondérations à 0 pour une pondération égale, ou répartissez 100 % entre les objectifs validés.</p>
                     </div>
                     <div class="hx-card hx-fiche__block">
                         <h3 class="hx-fiche__h">Grille de notation</h3>

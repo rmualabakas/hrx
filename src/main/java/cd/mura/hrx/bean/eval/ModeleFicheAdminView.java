@@ -171,7 +171,7 @@ public class ModeleFicheAdminView implements Serializable {
         authorization.requirePrivilege("MDL_EDIT");
         if (!isPeutEditer()) return;
         if (nbEvaluations(m) > 0) { error("Suppression impossible", nbEvaluations(m) + " fiche(s) d'évaluation reposent sur ce modèle. Désactivez-le plutôt."); return; }
-        if (nbCampagnes(m) > 0) { error("Suppression impossible", "Ce modèle est le modèle par défaut de " + nbCampagnes(m) + " campagne(s)."); return; }
+        if (nbCampagnes(m) > 0) { error("Suppression impossible", "Ce modèle est utilisé par " + nbCampagnes(m) + " campagne(s)."); return; }
         dao.remove(m);
         auditService.log("DELETE", "Évaluations", "ModeleFiche", m.getId(), "Suppression d'un modèle de fiche", m.getLibelle(), true);
         charger();

@@ -187,6 +187,8 @@ public class MenuView implements Serializable {
         if (raw == null || raw.isBlank()) return "pi pi-circle";
         String s = raw.trim();
         if (s.startsWith("pi ")) return s;
+        // Font Awesome est chargé localement : ses classes sont utilisées telles quelles.
+        if (s.matches("^(fa|fas|far|fab|fa-solid|fa-regular|fa-brands)\\s+fa-[a-z0-9-]+.*")) return s;
         String key = s.replace("glyphicon glyphicon-", "").replace("fa fa-", "").replace("fas fa-", "").replace("fa-", "");
         return switch (key) {
             case "user", "users", "group" -> "pi pi-users";

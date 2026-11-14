@@ -48,6 +48,7 @@ public class OrganigrammeView implements Serializable {
     @EJB private DirectionDAO directionDAO;
     @EJB private OrganisationService organisation;
     @Inject private OrganigrammePdfService pdfService;
+    @Inject private cd.mura.hrx.service.OrganigrammeWordService wordService;
     @Inject private cd.mura.hrx.service.PhotoService photos;
 
     /** Ce qu'affiche une case de l'organigramme. */
@@ -202,6 +203,19 @@ public class OrganigrammeView implements Serializable {
         auditService.log("EXPORT", "Organigramme", "Direction", directionId, "Export PDF de l'organigramme", getTitreDirection(), true);
         String nom = "Organigramme_" + getTitreDirection().replaceAll("[^\\p{L}\\p{N}]+", "_") + ".pdf";
         return DefaultStreamedContent.builder().name(nom).contentType("application/pdf").stream(() -> new java.io.ByteArrayInputStream(data)).build();
+    }
+
+    /** Organigramme du périmètre affiché en Word paysage modifiable : une zone de texte par collaborateur. */
+    public StreamedContent getExportWord() {
+        List<OrganigrammePdfService.Noeud> tetes = new ArrayList<>();
+        Set<Integer> vus = new HashSet<>();
+        for (Users t : tetes()) tetes.add(noeudPdf(t, vus));
+        String titre = racine != null && racine.getData() instanceof Poste p ? p.nom() : "BGFIBank RDC";
+        int effectif = (int) getEffectif();
+        byte[] data = wordService.docx(new OrganigrammePdfService.Noeud(titre, "", "", false, true, effectif, tetes), getTitreDirection(), effectif);
+        auditService.log("EXPORT", "Organigramme", "Direction", directionId, "Export Word de l'organigramme", getTitreDirection(), true);
+        String nom = "Organigramme_" + getTitreDirection().replaceAll("[^\\p{L}\\p{N}]+", "_") + ".docx";
+        return DefaultStreamedContent.builder().name(nom).contentType("application/vnd.openxmlformats-officedocument.wordprocessingml.document").stream(() -> new java.io.ByteArrayInputStream(data)).build();
     }
 
     private OrganigrammePdfService.Noeud noeudPdf(Users u, Set<Integer> vus) {

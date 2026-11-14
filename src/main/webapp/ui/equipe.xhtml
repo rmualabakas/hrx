@@ -49,6 +49,16 @@
                         <div class="hx-alert hx-alert--info"><i class="pi pi-info-circle"></i><div><strong>Étape 1 - constituer la population évaluable</strong><span>La campagne « #{equipeView.campagne.libelle} » est ouverte par la DCHT du <h:outputText value="#{equipeView.campagne.dateDebut}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText> au <h:outputText value="#{equipeView.campagne.dateFin}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText>. Indiquez quels collaborateurs de votre périmètre sont évaluables sur la période : ils recevront leur fiche et pourront s'auto-évaluer. #{equipeView.candidats.size()} collaborateur#{equipeView.candidats.size() gt 1 ? 's restent' : ' reste'} à intégrer.</span></div></div>
                     </ui:fragment>
                 </ui:fragment>
+                <ui:fragment rendered="#{not empty equipeView.essaisAEvaluer}">
+                    <div class="hx-alert hx-alert--warn"><i class="pi pi-hourglass"></i><div><strong>Fin de période d'essai ou de CDD : #{equipeView.essaisAEvaluer.size()} évaluation#{equipeView.essaisAEvaluer.size() gt 1 ? 's' : ''} à réaliser</strong><span>
+                        <ui:repeat value="#{equipeView.essaisAEvaluer}" var="r" varStatus="st"><b>#{r.salarie.nomComplet}</b> (#{r.typeLabel} le <h:outputText value="#{r.date}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText>)#{st.last ? '' : ', '}</ui:repeat>.
+                        L'échéance est atteinte sans évaluation individuelle (fiche MAF 070) : elle est indépendante des campagnes.</span>
+                        <p:button value="Ouvrir les fins d'essai et de CDD" icon="pi pi-arrow-right" styleClass="hx-btn-sm" outcome="/ui/periodeEssai" style="margin-top:8px;align-self:flex-start"/></div></div>
+                </ui:fragment>
+                <ui:fragment rendered="#{not empty equipeView.essaisProchains}">
+                    <div class="hx-alert hx-alert--info"><i class="pi pi-calendar"></i><div><strong>Fins de période d'essai ou de CDD à venir</strong><span>
+                        <ui:repeat value="#{equipeView.essaisProchains}" var="r" varStatus="st"><b>#{r.salarie.nomComplet}</b> (#{r.typeLabel}) le <h:outputText value="#{r.date}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText>#{st.last ? '' : ', '}</ui:repeat>.</span></div></div>
+                </ui:fragment>
                 <ui:fragment rendered="#{empty equipeView.campagne}">
                     <div class="hx-camp hx-camp--none">
                         <span class="hx-camp__dot"></span>
@@ -97,7 +107,7 @@
                 <ui:fragment rendered="#{equipeView.vue eq 'cartes'}">
                 <div class="hx-grid hx-grid--cards hx-grid--team">
                     <ui:repeat value="#{equipeView.membresFiltres}" var="u">
-                        <div class="hx-card hx-team #{u.evaluable ne 1 ? 'is-off' : ''} #{equipeView.enRetard(u) ? 'is-late' : ''} #{equipeView.isDirect(u) ? '' : 'hx-team--indirect'}" style="--hx-level:#{equipeView.niveau(u) - 1}">
+                        <div class="hx-card hx-team #{u.evaluable ne 1 ? 'is-off' : ''} #{equipeView.enRetard(u) ? 'is-late' : ''} #{equipeView.isDirect(u) ? '' : 'hx-team--indirect'} #{equipeView.enEssai(u) ? 'is-essai' : ''}" style="--hx-level:#{equipeView.niveau(u) - 1}">
                             <div class="hx-team__head">
                                 <span class="hx-avatar #{empty photo.url(u) ? '' : 'has-photo'}"><ui:fragment rendered="#{not empty photo.url(u)}"><img src="#{photo.url(u)}" alt=""/></ui:fragment><ui:fragment rendered="#{empty photo.url(u)}">#{equipeView.initiales(u)}</ui:fragment></span>
                                 <div class="hx-team__who">
@@ -106,9 +116,10 @@
                                         <ui:fragment rendered="#{equipeView.recrue(u)}"><span class="hx-tag hx-tag--gold" title="Recruté durant l'exercice : objectifs à fixer à la prise de poste">recrue #{equipeView.exercice}</span></ui:fragment>
                                     </strong>
                                     <small>#{empty u.fonction ? 'Fonction non renseignée' : u.fonction}<ui:fragment rendered="#{not empty u.direction}"> · #{u.direction.abrege}</ui:fragment></small>
+                                    <ui:fragment rendered="#{equipeView.enEssai(u)}"><small class="hx-team__essai"><i class="pi pi-calendar"></i><span>Fin d'essai le <b>#{equipeView.finEssaiTexte(u)}</b></span></small></ui:fragment>
                                     <ui:fragment rendered="#{not equipeView.isDirect(u)}"><small class="hx-team__via"><i class="pi pi-arrow-up-right"></i> N+1 : #{u.superieurHierarchique.nomComplet}</small></ui:fragment>
                                 </div>
-                                <span class="hx-badge #{equipeView.etatClasse(u)}">#{equipeView.etat(u)}</span>
+                                <span class="hx-badge #{equipeView.etatClasse(u)}" title="#{equipeView.enEssai(u) ? equipeView.essaiInfo(u) : null}"><ui:fragment rendered="#{equipeView.enEssai(u)}"><i class="pi pi-hourglass"></i></ui:fragment>#{equipeView.etat(u)}</span>
                             </div>
 
                             <ol class="hx-steps" aria-label="Avancement de la fiche">
@@ -173,7 +184,7 @@
                             </thead>
                             <tbody>
                             <ui:repeat value="#{equipeView.membresFiltres}" var="u">
-                                <tr class="#{u.evaluable ne 1 ? 'is-off' : ''} #{equipeView.enRetard(u) ? 'is-late' : ''} #{equipeView.isDirect(u) ? '' : 'is-indirect'}" style="--hx-level:#{equipeView.niveau(u) - 1}">
+                                <tr class="#{u.evaluable ne 1 ? 'is-off' : ''} #{equipeView.enRetard(u) ? 'is-late' : ''} #{equipeView.isDirect(u) ? '' : 'is-indirect'} #{equipeView.enEssai(u) ? 'is-essai' : ''}" style="--hx-level:#{equipeView.niveau(u) - 1}">
                                     <td>
                                         <div class="hx-teamlist__who">
                                             <span class="hx-avatar hx-avatar--sm #{empty photo.url(u) ? '' : 'has-photo'}"><ui:fragment rendered="#{not empty photo.url(u)}"><img src="#{photo.url(u)}" alt=""/></ui:fragment><ui:fragment rendered="#{empty photo.url(u)}">#{equipeView.initiales(u)}</ui:fragment></span>
@@ -201,7 +212,7 @@
                                         </div>
                                         <small>#{equipeView.etapeLabel(u)}</small>
                                     </td>
-                                    <td><span class="hx-badge #{equipeView.etatClasse(u)}">#{equipeView.etat(u)}</span></td>
+                                    <td><span class="hx-badge #{equipeView.etatClasse(u)}" title="#{equipeView.enEssai(u) ? equipeView.essaiInfo(u) : null}"><ui:fragment rendered="#{equipeView.enEssai(u)}"><i class="pi pi-hourglass"></i></ui:fragment>#{equipeView.etat(u)}</span></td>
                                     <td class="hx-teamlist__act">
                                         <ui:fragment rendered="#{u.evaluable eq 1 and equipeView.isDirect(u)}">
                                             <p:button icon="pi pi-flag" title="#{equipeView.objectifsSignes(u) ? 'Objectifs' : 'Fixer les objectifs'}" styleClass="hx-icon-btn" outcome="/ui/objectifs">
@@ -259,6 +270,33 @@
                                      actionListener="#{equipeView.integrerSelection}" oncomplete="if (args &amp;&amp; args.ok) PF('dlgPop').hide()"/>
                 </div>
             </h:form>
+        </p:dialog>
+
+        <!-- Collaborateur non éligible -->
+        <p:dialog id="dlgAlerte" widgetVar="dlgAlerte" modal="true" responsive="true" width="480" fitViewport="true" closeOnEscape="true"
+                  showEffect="fade" hideEffect="fade" showHeader="false" styleClass="hx-alerte-dlg">
+            <ui:fragment rendered="#{not empty equipeView.alerteUser}">
+                <div class="hx-alerte hx-alerte--#{equipeView.alerteType}">
+                    <button type="button" class="hx-alerte__x" onclick="PF('dlgAlerte').hide()" aria-label="Fermer"><i class="pi pi-times"></i></button>
+                    <span class="hx-alerte__ico"><i class="pi #{equipeView.alerteType eq 'essai' ? 'pi-hourglass' : 'pi-flag'}"></i></span>
+                    <span class="hx-alerte__eyebrow">Collaborateur non éligible à la campagne</span>
+                    <h3>#{equipeView.alerteTitre}</h3>
+                    <div class="hx-alerte__who">
+                        <span class="hx-alerte__av">#{equipeView.initiales(equipeView.alerteUser)}</span>
+                        <span><strong>#{equipeView.alerteUser.nomComplet}</strong><small>#{empty equipeView.alerteUser.fonction ? 'Fonction non renseignée' : equipeView.alerteUser.fonction}</small></span>
+                    </div>
+                    <div class="hx-alerte__fait">
+                        <small>#{equipeView.alerteLibelle}</small>
+                        <strong>#{equipeView.alerteValeur}</strong>
+                        <span>#{equipeView.alerteDetail}</span>
+                    </div>
+                    <p>#{equipeView.alerteMessage}</p>
+                    <div class="hx-alerte__actions">
+                        <button type="button" class="hx-alerte__btn hx-alerte__btn--ghost" onclick="PF('dlgAlerte').hide()">Compris</button>
+                        <a class="hx-alerte__btn" href="#{request.contextPath}#{equipeView.alerteLien}">#{equipeView.alerteLienLibelle} <i class="pi pi-arrow-right"></i></a>
+                    </div>
+                </div>
+            </ui:fragment>
         </p:dialog>
     </ui:define>
 </ui:composition>

@@ -85,7 +85,8 @@ public class Evaluation implements Serializable {
     /** Case cochée par le N+1 : ATTEINTS, MOYENNEMENT, FAIBLEMENT, NON_ATTEINTS. */
     @Column(name = "niveau_atteinte", length = 20) private String niveauAtteinte;
     /** Case cochée par le salarié : BIEN_POSTE, ACCOMPAGNEMENT, CHANGER_POSTE, AUTRES. */
-    @Column(name = "souhait_salarie", length = 20) private String souhaitSalarie;
+    /** Souhaits du salarié, codes séparés par des virgules (BIEN_POSTE, ACCOMPAGNEMENT, CHANGER_POSTE, AUTRES). */
+    @Column(name = "souhait_salarie", length = 120) private String souhaitSalarie;
     /** Avis du directeur : demandes à valider, autres propositions. */
     @Column(name = "demandes_a_valider", columnDefinition = "TEXT") private String demandesAValider;
     @Column(name = "autres_propositions", columnDefinition = "TEXT") private String autresPropositions;
@@ -138,6 +139,17 @@ public class Evaluation implements Serializable {
         if (v == null) return "";
         return switch (v) { case "BIEN_POSTE" -> "Bien dans son poste / poursuivre"; case "ACCOMPAGNEMENT" -> "Besoin d'accompagnement"; case "CHANGER_POSTE" -> "Souhaite changer de poste"; case "AUTRES" -> "Autres souhaits"; default -> v; };
     }
+    /** « Bien dans son poste » et « Souhaite changer de poste » s'excluent ; les autres souhaits se cumulent. */
+    public static final java.util.Map<String, String> SOUHAITS_EXCLUSIFS = java.util.Map.of("BIEN_POSTE", "CHANGER_POSTE", "CHANGER_POSTE", "BIEN_POSTE");
+    public java.util.List<String> getSouhaits() {
+        if (souhaitSalarie == null || souhaitSalarie.isBlank()) return new java.util.ArrayList<>();
+        return new java.util.ArrayList<>(java.util.Arrays.stream(souhaitSalarie.split(",")).map(String::trim).filter(x -> !x.isEmpty()).distinct().toList());
+    }
+    public void setSouhaits(java.util.List<String> l) {
+        souhaitSalarie = l == null || l.isEmpty() ? null : String.join(",", l.stream().distinct().toList());
+    }
+    public boolean aSouhait(String code) { return getSouhaits().contains(code); }
+    public String getSouhaitsLabel() { return String.join(" ; ", getSouhaits().stream().map(Evaluation::souhaitLabel).toList()); }
     /** Niveau d'atteinte déduit du taux de réalisation, proposé au N+1. */
     public static String niveauAtteintePour(double pct) { return pct >= 85 ? "ATTEINTS" : pct >= 70 ? "MOYENNEMENT" : pct >= 51 ? "FAIBLEMENT" : "NON_ATTEINTS"; }
     public boolean isEnRetard() {

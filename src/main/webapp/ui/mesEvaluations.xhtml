@@ -35,7 +35,12 @@
             </p:tab>
             <p:tab title="Mes évaluations">
                 <h:form id="frmEvals" prependId="false">
-                    <ui:fragment rendered="#{empty mesEvaluationsView.evaluations}">
+                    <ui:fragment rendered="#{not empty mesEvaluationsView.essai}">
+                        <div class="hx-alert #{mesEvaluationsView.essai.validee ? 'hx-alert--info' : 'hx-alert--warn'}"><i class="pi pi-hourglass"></i><div><strong>Évaluation individuelle (#{mesEvaluationsView.essai.typeLabel}) · #{mesEvaluationsView.essai.statutLabel}</strong>
+                            <span>Échéance le <h:outputText value="#{mesEvaluationsView.essai.echeance}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText> · évaluateur : #{empty mesEvaluationsView.essai.evaluateur ? '—' : mesEvaluationsView.essai.evaluateur.nomComplet}<ui:fragment rendered="#{mesEvaluationsView.essai.validee}"> · décision : <b>#{mesEvaluationsView.essai.decisionLabel}</b></ui:fragment><ui:fragment rendered="#{mesEvaluationsView.essai.transmise and empty mesEvaluationsView.essai.dateSignatureSalarie}"> · <b>à signer</b></ui:fragment></span>
+                            <p:button value="Consulter" icon="pi pi-eye" styleClass="hx-btn-secondary hx-btn-sm" outcome="/ui/periodeEssai" style="margin-top:8px;align-self:flex-start"><f:param name="id" value="#{mesEvaluationsView.essai.id}"/></p:button></div></div>
+                    </ui:fragment>
+                    <ui:fragment rendered="#{empty mesEvaluationsView.evaluations and empty mesEvaluationsView.essai}">
                         <div class="hx-empty"><i class="pi pi-user-edit"></i><strong>Aucune fiche d'évaluation</strong>Vos fiches apparaîtront ici dès que la DCHT ouvrira une campagne (mi-parcours ou fin d'année) et que votre N+1 initiera votre évaluation.</div>
                     </ui:fragment>
                     <ui:fragment rendered="#{not empty mesEvaluationsView.evaluations}">
@@ -88,6 +93,57 @@
                         </div>
                     </ui:fragment>
                 </h:form>
+            </p:tab>
+            <p:tab title="Évaluations formations#{mesEvaluationsView.nbQuestionnairesEnAttente gt 0 ? ' (' += mesEvaluationsView.nbQuestionnairesEnAttente += ')' : ''}">
+                <ui:fragment rendered="#{not empty mesEvaluationsView.avisEquipe}">
+                    <h3 class="hx-section-title"><i class="pi pi-user-edit"></i> Avis à donner sur l'efficacité des formations de votre équipe<ui:fragment rendered="#{mesEvaluationsView.nbAvisAttente gt 0}"> <span class="hx-badge hx-badge--pending">#{mesEvaluationsView.nbAvisAttente} en attente</span></ui:fragment></h3>
+                    <div class="hx-camps" style="margin-bottom:var(--hx-s5)">
+                        <ui:repeat value="#{mesEvaluationsView.avisEquipe}" var="r">
+                            <article class="hx-myeval #{r.avisDonne ? 'is-done' : ''}">
+                                <div class="hx-myeval__main">
+                                    <header class="hx-myeval__head">
+                                        <span class="hx-campaign__type is-froid"><i class="pi pi-chart-line"></i></span>
+                                        <div>
+                                            <h3>#{r.participant.nomComplet}</h3>
+                                            <p>Évaluation à froid · #{r.evalChaud.intitule} · fiche envoyée le <h:outputText value="#{r.dateReponse}"><f:convertDateTime pattern="dd/MM/yyyy"/></h:outputText></p>
+                                        </div>
+                                        <span class="hx-badge #{r.avisDonne ? (r.efficace ? 'hx-badge--done' : 'hx-badge--late') : 'hx-badge--pending'}">#{r.avisDonne ? r.efficaciteLabel.concat(' · ').concat(r.avisNote).concat('/5') : 'Avis à donner'}</span>
+                                    </header>
+                                    <footer class="hx-myeval__foot">
+                                        <span class="hx-campaign__spacer"></span>
+                                        <p:button value="#{r.avisDonne ? 'Consulter la fiche' : 'Donner mon avis'}" icon="pi #{r.avisDonne ? 'pi-eye' : 'pi-pencil'}" styleClass="#{r.avisDonne ? 'hx-btn-secondary' : ''} hx-btn-sm" outcome="/ui/questionnaire"><f:param name="rep" value="#{r.id}"/></p:button>
+                                    </footer>
+                                </div>
+                            </article>
+                        </ui:repeat>
+                    </div>
+                    <ui:fragment rendered="#{not empty mesEvaluationsView.questionnaires}"><h3 class="hx-section-title"><i class="pi pi-graduation-cap"></i> Mes questionnaires</h3></ui:fragment>
+                </ui:fragment>
+                <ui:fragment rendered="#{empty mesEvaluationsView.questionnaires and empty mesEvaluationsView.avisEquipe}">
+                    <div class="hx-empty"><i class="pi pi-graduation-cap"></i><strong>Aucune évaluation de formation</strong>Après une formation, la DCHT vous adresse ici un court questionnaire à chaud, puis quelques mois plus tard une évaluation à froid de son efficacité.</div>
+                </ui:fragment>
+                <ui:fragment rendered="#{not empty mesEvaluationsView.questionnaires}">
+                    <div class="hx-camps">
+                        <ui:repeat value="#{mesEvaluationsView.questionnaires}" var="q">
+                            <article class="hx-myeval #{q.repondu ? 'is-done' : ''} #{not q.repondu and q.evalChaud.echue ? 'is-late' : ''}">
+                                <div class="hx-myeval__main">
+                                    <header class="hx-myeval__head">
+                                        <span class="hx-campaign__type #{q.evalChaud.froid ? 'is-froid' : 'is-mp'}"><i class="pi #{q.evalChaud.froid ? 'pi-chart-line' : 'pi-graduation-cap'}"></i></span>
+                                        <div>
+                                            <h3>#{q.evalChaud.intitule}</h3>
+                                            <p><strong>#{q.evalChaud.froid ? 'Évaluation à froid' : 'Évaluation à chaud'}</strong> · #{empty q.evalChaud.organisme ? 'Formation' : q.evalChaud.organisme}<ui:fragment rendered="#{not empty q.evalChaud.dateFin}"> · réponses jusqu'au <h:outputText value="#{q.evalChaud.dateFin}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText></ui:fragment></p>
+                                        </div>
+                                        <span class="hx-badge #{q.repondu ? 'hx-badge--done' : (q.evalChaud.repondable ? 'hx-badge--pending' : 'hx-badge--draft')}">#{q.repondu ? 'Répondu' : (q.evalChaud.repondable ? 'À remplir' : 'Clos')}</span>
+                                    </header>
+                                    <footer class="hx-myeval__foot">
+                                        <span class="hx-campaign__spacer"></span>
+                                        <p:button value="#{not q.repondu and q.evalChaud.repondable ? 'Répondre au questionnaire' : 'Consulter'}" icon="pi #{not q.repondu and q.evalChaud.repondable ? 'pi-pencil' : 'pi-eye'}" styleClass="#{not q.repondu and q.evalChaud.repondable ? '' : 'hx-btn-secondary'} hx-btn-sm" outcome="/ui/questionnaire"><f:param name="id" value="#{q.evalChaud.id}"/></p:button>
+                                    </footer>
+                                </div>
+                            </article>
+                        </ui:repeat>
+                    </div>
+                </ui:fragment>
             </p:tab>
         </p:tabView>
         <ui:include src="/WEB-INF/includes/fiche-objectifs-dialogs.xhtml"/>

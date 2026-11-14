@@ -25,6 +25,9 @@
 
     <ui:include src="/WEB-INF/includes/fonts.xhtml"/>
     <h:outputStylesheet name="primeicons/primeicons.css" library="primefaces"/>
+    <!-- Font Awesome Free 6, servi localement depuis le WebJar (polices relatives : lien direct, pas h:outputStylesheet) -->
+    <link rel="stylesheet" href="#{request.contextPath}/webjars/font-awesome/6.7.2/css/all.min.css"/>
+    <link rel="stylesheet" href="#{request.contextPath}/webjars/font-awesome/6.7.2/css/v4-shims.min.css"/>
     <h:outputStylesheet library="hrx" name="css/hrx-tokens.css"/>
     <h:outputStylesheet library="hrx" name="css/hrx-shell.css"/>
     <h:outputStylesheet library="hrx" name="css/hrx-admin.css"/>

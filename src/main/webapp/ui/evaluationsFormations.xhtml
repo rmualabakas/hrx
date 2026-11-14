@@ -1,0 +1,492 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                xmlns:pt="jakarta.faces.passthrough"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Évaluations des formations"/>
+    <ui:param name="pageSubtitle" value="À chaud (satisfaction) et à froid (efficacité et impact) des formations reçues"/>
+    <ui:define name="title">Évaluations des formations</ui:define>
+
+    <ui:define name="content">
+        <h:form id="frmChaud" prependId="false">
+            <p:messages id="msgChaud" showDetail="true" closable="true"/>
+
+            <!-- Liste -->
+            <ui:fragment rendered="#{evalChaudAdminView.mode eq 'liste'}">
+                <div class="hx-page-head">
+                    <div>
+                        <h2>Évaluations des formations</h2>
+                        <p>Pour chaque formation, définissez la population formée, le questionnaire et la période de réponse. Les participants reçoivent un e-mail au lancement et répondent depuis « Mes évaluations ».</p>
+                    </div>
+                    <div class="hx-page-head__actions">
+                        <p:commandButton value="#{evalChaudAdminView.froid ? 'Nouvelle évaluation à froid' : 'Nouvelle évaluation à chaud'}" icon="pi pi-plus" process="@this" update="@form" actionListener="#{evalChaudAdminView.nouvelle}"/>
+                    </div>
+                </div>
+
+                <h:panelGroup id="efEtat" styleClass="hx-ef-etat" style="display:none" pt:data-type="#{evalChaudAdminView.nature}" pt:data-statut="#{evalChaudAdminView.statutFiltre}" pt:data-vue="#{evalChaudAdminView.affichage}"/>
+                <nav class="hx-form-tabs" aria-label="Type d'évaluation">
+                    <p:commandLink process="@this" update="@form" styleClass="hx-form-tab #{evalChaudAdminView.froid ? '' : 'is-on'}" action="#{evalChaudAdminView.setNature('chaud')}">
+                        <span class="hx-form-tab__ico"><i class="pi pi-sun"></i></span>
+                        <span class="hx-form-tab__txt"><strong>À chaud <em>#{evalChaudAdminView.nbNature('chaud')}</em></strong><small>Satisfaction des participants en fin de formation · MAF 063 · anonyme</small></span>
+                        <ui:fragment rendered="#{evalChaudAdminView.nbOuvertesNature('chaud') gt 0}"><span class="hx-form-tab__live">#{evalChaudAdminView.nbOuvertesNature('chaud')} ouverte#{evalChaudAdminView.nbOuvertesNature('chaud') gt 1 ? 's' : ''}</span></ui:fragment>
+                    </p:commandLink>
+                    <p:commandLink process="@this" update="@form" styleClass="hx-form-tab #{evalChaudAdminView.froid ? 'is-on' : ''}" action="#{evalChaudAdminView.setNature('froid')}">
+                        <span class="hx-form-tab__ico is-froid"><i class="pi pi-chart-line"></i></span>
+                        <span class="hx-form-tab__txt"><strong>À froid <em>#{evalChaudAdminView.nbNature('froid')}</em></strong><small>Efficacité et impact quelques mois après · MAF 064 · avis du supérieur hiérarchique</small></span>
+                        <ui:fragment rendered="#{evalChaudAdminView.nbOuvertesNature('froid') gt 0}"><span class="hx-form-tab__live">#{evalChaudAdminView.nbOuvertesNature('froid')} ouverte#{evalChaudAdminView.nbOuvertesNature('froid') gt 1 ? 's' : ''}</span></ui:fragment>
+                    </p:commandLink>
+                </nav>
+
+                <ui:fragment rendered="#{evalChaudAdminView.nbNature(evalChaudAdminView.nature) eq 0}">
+                    <div class="hx-card"><div class="hx-empty"><i class="pi #{evalChaudAdminView.froid ? 'pi-chart-line' : 'pi-graduation-cap'}"></i>
+                        <strong>#{evalChaudAdminView.froid ? 'Aucune évaluation à froid' : 'Aucune évaluation à chaud'}</strong>
+                        #{evalChaudAdminView.froid ? 'Quelques mois après une formation, mesurez son efficacité : reprenez une évaluation à chaud (formation et participants), le questionnaire MAF 064 est proposé et chaque fiche est complétée par l’avis du supérieur hiérarchique.' : 'Créez-en une à l’issue d’une formation : intitulé, participants et questionnaire (le modèle MAF 063 est proposé).'}</div></div>
+                </ui:fragment>
+                <ui:fragment rendered="#{evalChaudAdminView.nbNature(evalChaudAdminView.nature) gt 0}">
+                <div class="hx-rec-postbar hx-chaud-bar-outils">
+                    <span class="hx-cvt__search"><i class="pi pi-search"></i>
+                        <p:inputText value="#{evalChaudAdminView.filtre}" placeholder="Rechercher une formation (intitulé, organisme, formateur, lieu)">
+                            <p:ajax event="keyup" delay="350" process="@this" update="listeChaud"/>
+                        </p:inputText>
+                    </span>
+                    <p:selectOneButton value="#{evalChaudAdminView.statutFiltre}" styleClass="hx-segment" unselectable="false">
+                        <f:selectItem itemLabel="Toutes (#{evalChaudAdminView.nbStatut('tous')})" itemValue="tous"/>
+                        <f:selectItem itemLabel="Ouvertes (#{evalChaudAdminView.nbStatut('ouvertes')})" itemValue="ouvertes"/>
+                        <f:selectItem itemLabel="Brouillons (#{evalChaudAdminView.nbStatut('brouillons')})" itemValue="brouillons"/>
+                        <f:selectItem itemLabel="Clôturées (#{evalChaudAdminView.nbStatut('cloturees')})" itemValue="cloturees"/>
+                        <p:ajax process="@this" update="listeChaud efEtat"/>
+                    </p:selectOneButton>
+                    <p:selectOneButton value="#{evalChaudAdminView.affichage}" styleClass="hx-segment hx-segment--vue" unselectable="false">
+                        <f:selectItem itemLabel="Grille" itemValue="grille"/>
+                        <f:selectItem itemLabel="Liste" itemValue="liste"/>
+                        <p:ajax process="@this" update="listeChaud efEtat"/>
+                    </p:selectOneButton>
+                </div>
+                </ui:fragment>
+                <h:panelGroup id="listeChaud" layout="block">
+                <ui:fragment rendered="#{evalChaudAdminView.nbNature(evalChaudAdminView.nature) gt 0 and empty evalChaudAdminView.listeFiltree}">
+                    <div class="hx-card"><div class="hx-empty"><i class="pi pi-filter-slash"></i><strong>Aucune évaluation ne correspond</strong>Modifiez la recherche ou le filtre de statut.</div></div>
+                </ui:fragment>
+                <div class="hx-camps hx-camps--chaud #{evalChaudAdminView.affichage eq 'grille' ? 'hx-camps--grid' : ''}">
+                    <ui:repeat value="#{evalChaudAdminView.listeFiltree}" var="c">
+                        <article class="hx-campaign #{c.ouverte ? 'is-open' : ''} #{c.brouillon ? 'is-draft' : ''} #{c.cloturee ? 'is-off' : ''} #{c.echue ? 'is-late' : ''}">
+                            <header class="hx-campaign__head">
+                                <div class="hx-campaign__title">
+                                    <span class="hx-campaign__type #{c.froid ? 'is-froid' : 'is-mp'}"><i class="pi #{c.froid ? 'pi-chart-line' : 'pi-graduation-cap'}"></i></span>
+                                    <div>
+                                        <h3>#{c.intitule}</h3>
+                                        <p>#{empty c.organisme ? 'Organisme non renseigné' : c.organisme}<ui:fragment rendered="#{not empty c.formateur}"> · #{c.formateur}</ui:fragment>
+                                            <ui:fragment rendered="#{not empty c.dateFormationDebut}"> · formation du <h:outputText value="#{c.dateFormationDebut}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText><ui:fragment rendered="#{not empty c.dateFormationFin}"> au <h:outputText value="#{c.dateFormationFin}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText></ui:fragment></ui:fragment>
+                                            <ui:fragment rendered="#{c.froid and not empty evalChaudAdminView.recul(c)}"> · #{evalChaudAdminView.recul(c)}</ui:fragment></p>
+                                    </div>
+                                </div>
+                                <span class="hx-campaign__status hx-badge #{c.ouverte ? (c.echue ? 'hx-badge--late' : 'hx-badge--done') : (c.cloturee ? 'hx-badge--info' : 'hx-badge--draft')}">#{c.statutLabel}</span>
+                            </header>
+                            <div class="hx-campaign__body">
+                                <dl class="hx-campaign__facts">
+                                    <div><dt>Ouverture</dt><dd><h:outputText value="#{c.dateDebut}" rendered="#{not empty c.dateDebut}"><f:convertDateTime type="localDate" pattern="dd MMM yyyy" locale="fr"/></h:outputText><ui:fragment rendered="#{empty c.dateDebut}">—</ui:fragment></dd></div>
+                                    <div><dt>Clôture</dt><dd class="#{c.echue ? 'hx-warn' : ''}"><h:outputText value="#{c.dateFin}" rendered="#{not empty c.dateFin}"><f:convertDateTime type="localDate" pattern="dd MMM yyyy" locale="fr"/></h:outputText><ui:fragment rendered="#{empty c.dateFin}">—</ui:fragment><ui:fragment rendered="#{c.echue}"> · dépassée</ui:fragment></dd></div>
+                                    <div><dt>Participants</dt><dd><b>#{evalChaudAdminView.nbParticipants(c)}</b></dd></div>
+                                    <div><dt>Réponses</dt><dd><b>#{evalChaudAdminView.nbReponses(c)}</b></dd></div>
+                                </dl>
+                                <div class="hx-chaud-prog">
+                                    <ol class="hx-chaud-steps" aria-label="État de progression">
+                                        <li class="#{evalChaudAdminView.classeEtape(c, 1)}"><span class="hx-chaud-steps__dot"><i class="pi #{evalChaudAdminView.etape(c) gt 1 ? 'pi-check' : 'pi-pencil'}"></i></span><span>Préparation</span></li>
+                                        <li class="#{evalChaudAdminView.classeEtape(c, 2)}"><span class="hx-chaud-steps__dot"><i class="pi #{evalChaudAdminView.etape(c) gt 2 ? 'pi-check' : 'pi-send'}"></i></span><span>Collecte des réponses</span></li>
+                                        <li class="#{evalChaudAdminView.classeEtape(c, 3)}"><span class="hx-chaud-steps__dot"><i class="pi #{evalChaudAdminView.etape(c) eq 3 ? 'pi-check' : 'pi-lock'}"></i></span><span>Clôture et dépouillement</span></li>
+                                    </ol>
+                                    <div class="hx-chaud-bars">
+                                        <div class="hx-chaud-bar">
+                                            <div class="hx-chaud-bar__lbl"><span>Réponses reçues</span><b>#{evalChaudAdminView.nbReponses(c)} / #{evalChaudAdminView.nbParticipants(c)}</b></div>
+                                            <div class="hx-chaud-bar__track"><span class="is-resp" style="width:#{evalChaudAdminView.tauxReponse(c)}%"></span></div>
+                                            <div class="hx-chaud-bar__note">#{evalChaudAdminView.nbAttente(c)} en attente</div>
+                                        </div>
+                                        <div class="hx-chaud-bar">
+                                            <div class="hx-chaud-bar__lbl"><span>Période de réponse</span><b>#{evalChaudAdminView.avancementDelai(c)} %</b></div>
+                                            <div class="hx-chaud-bar__track"><span class="#{c.echue ? 'is-late' : (c.cloturee ? 'is-done' : 'is-time')}" style="width:#{evalChaudAdminView.avancementDelai(c)}%"></span></div>
+                                            <div class="hx-chaud-bar__note #{c.echue ? 'hx-warn' : ''}">#{evalChaudAdminView.libelleDelai(c)}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <aside class="hx-campaign__side">
+                                <div class="hx-campaign__kpi"><b>#{evalChaudAdminView.tauxReponse(c)}<small>%</small></b><span>taux de réponse</span><em>#{evalChaudAdminView.nbReponses(c)} sur #{evalChaudAdminView.nbParticipants(c)}</em></div>
+                            </aside>
+                            <footer class="hx-campaign__actions">
+                                <p:commandButton value="Modifier" icon="pi pi-pencil" styleClass="hx-btn-secondary hx-btn-sm" process="@this" update="@form" actionListener="#{evalChaudAdminView.modifier(c)}" rendered="#{not c.cloturee}"/>
+                                <p:commandButton value="Supprimer" icon="pi pi-trash" styleClass="hx-btn-secondary hx-btn-sm hx-btn-sm--danger" process="@this" update="@form" actionListener="#{evalChaudAdminView.supprimer(c)}" rendered="#{c.brouillon}">
+                                    <p:confirm header="Supprimer l'évaluation" message="Supprimer « #{c.intitule} » ?" icon="pi pi-exclamation-triangle"/>
+                                </p:commandButton>
+                                <span class="hx-campaign__spacer"></span>
+                                <p:commandButton value="Résultats" icon="pi pi-chart-bar" styleClass="hx-btn-secondary hx-btn-sm" process="@this" update="@form" actionListener="#{evalChaudAdminView.resultats(c)}" rendered="#{not c.brouillon}"/>
+                                <p:commandButton value="Relancer" icon="pi pi-bell" styleClass="hx-btn-secondary hx-btn-sm" process="@this" update="@form" actionListener="#{evalChaudAdminView.relancer(c)}" rendered="#{c.repondable}">
+                                    <p:confirm header="Relancer les participants" message="Un e-mail de rappel est envoyé aux participants qui n'ont pas encore répondu." icon="pi pi-bell"/>
+                                </p:commandButton>
+                                <p:commandButton value="Lancer" icon="pi pi-play" styleClass="hx-btn-sm" process="@this" update="@form" actionListener="#{evalChaudAdminView.lancer(c)}" rendered="#{c.brouillon}">
+                                    <p:confirm header="Lancer l'évaluation #{c.froid ? 'à froid' : 'à chaud'}" message="Le questionnaire s'ouvre et chaque participant reçoit un e-mail. Le questionnaire ne sera plus modifiable dès la première réponse.#{c.froid ? ' Chaque fiche remplie est transmise au supérieur hiérarchique du collaborateur pour avis.' : ''}" icon="pi pi-play"/>
+                                </p:commandButton>
+                                <p:commandButton value="Clôturer" icon="pi pi-lock" styleClass="hx-btn-secondary hx-btn-sm" process="@this" update="@form" actionListener="#{evalChaudAdminView.cloturer(c)}" rendered="#{c.ouverte}">
+                                    <p:confirm header="Clôturer" message="Plus aucune réponse ne sera acceptée." icon="pi pi-lock"/>
+                                </p:commandButton>
+                                <p:commandButton value="Rouvrir" icon="pi pi-unlock" styleClass="hx-btn-secondary hx-btn-sm" process="@this" update="@form" actionListener="#{evalChaudAdminView.rouvrir(c)}" rendered="#{c.cloturee}"/>
+                            </footer>
+                        </article>
+                    </ui:repeat>
+                </div>
+                </h:panelGroup>
+            </ui:fragment>
+
+            <!-- Édition -->
+            <ui:fragment rendered="#{evalChaudAdminView.mode eq 'edition'}">
+                <div class="hx-page-head">
+                    <div>
+                        <h2>#{evalChaudAdminView.edit.id eq 0 ? (evalChaudAdminView.edit.froid ? 'Nouvelle évaluation à froid' : 'Nouvelle évaluation à chaud') : (evalChaudAdminView.edit.froid ? 'Modifier l’évaluation à froid' : 'Modifier l’évaluation à chaud')}</h2>
+                        <p>#{evalChaudAdminView.edit.froid ? 'La formation et ses objectifs, la population formée, la période de réponse et le questionnaire MAF 064. Chaque fiche est complétée par l’avis du supérieur hiérarchique.' : 'La formation, la population formée, la période de réponse et le questionnaire.'}</p>
+                    </div>
+                    <div class="hx-page-head__actions">
+                        <p:commandButton value="Annuler" styleClass="hx-btn-secondary" process="@this" update="@form" actionListener="#{evalChaudAdminView.annuler}"/>
+                        <p:commandButton value="Enregistrer" icon="pi pi-check" process="@form" update="@form :globalGrowl" actionListener="#{evalChaudAdminView.enregistrer}"/>
+                    </div>
+                </div>
+
+                <ui:fragment rendered="#{evalChaudAdminView.edit.froid and evalChaudAdminView.edit.id eq 0 and not empty evalChaudAdminView.sources}">
+                    <div class="hx-card hx-froid-source" style="margin-bottom:var(--hx-s5)">
+                        <div class="hx-card__body hx-form">
+                            <div class="hx-field">
+                                <p:outputLabel for="ecSrc" value="Reprendre une évaluation à chaud (formation, dates et participants)"/>
+                                <div class="hx-inline">
+                                    <p:selectOneMenu id="ecSrc" value="#{evalChaudAdminView.sourceChoisie}" converter="jakarta.faces.Integer" styleClass="hx-select" filter="true" filterMatchMode="contains">
+                                        <f:selectItem itemLabel="Choisir une formation déjà évaluée à chaud" itemValue="#{null}" noSelectionOption="true"/>
+                                        <f:selectItems value="#{evalChaudAdminView.sources}" var="x" itemValue="#{x.id}" itemLabel="#{evalChaudAdminView.libelleSource(x)}"/>
+                                    </p:selectOneMenu>
+                                    <p:commandButton value="Reprendre" icon="pi pi-download" styleClass="hx-btn-secondary" process="@this ecSrc" update="@form :globalGrowl" actionListener="#{evalChaudAdminView.reprendreSource}"/>
+                                </div>
+                                <small class="hx-field__help">Facultatif : vous pouvez aussi saisir la formation et la population librement.</small>
+                            </div>
+                        </div>
+                    </div>
+                </ui:fragment>
+
+                <div class="hx-card">
+                    <div class="hx-card__head"><div><h3>Formation</h3></div></div>
+                    <div class="hx-card__body hx-form">
+                        <div class="hx-field"><p:outputLabel for="ecInt" value="Intitulé de la formation"/><p:inputText id="ecInt" value="#{evalChaudAdminView.edit.intitule}" required="true" requiredMessage="L'intitulé est obligatoire" maxlength="200"/></div>
+                        <div class="hx-field__grid">
+                            <div class="hx-field"><p:outputLabel for="ecOrg" value="Organisme"/><p:inputText id="ecOrg" value="#{evalChaudAdminView.edit.organisme}" maxlength="150"/></div>
+                            <div class="hx-field"><p:outputLabel for="ecForm" value="Formateur"/><p:inputText id="ecForm" value="#{evalChaudAdminView.edit.formateur}" maxlength="150"/></div>
+                        </div>
+                        <div class="hx-field"><p:outputLabel for="ecLieu" value="Lieu"/><p:inputText id="ecLieu" value="#{evalChaudAdminView.edit.lieu}" maxlength="150" placeholder="facultatif"/></div>
+                        <div class="hx-field__grid">
+                            <div class="hx-field"><p:outputLabel for="ecFd" value="Formation du"/><p:datePicker id="ecFd" value="#{evalChaudAdminView.edit.dateFormationDebut}" pattern="dd/MM/yyyy" locale="fr" showIcon="true" styleClass="hx-date"/></div>
+                            <div class="hx-field"><p:outputLabel for="ecFf" value="au"/><p:datePicker id="ecFf" value="#{evalChaudAdminView.edit.dateFormationFin}" pattern="dd/MM/yyyy" locale="fr" showIcon="true" styleClass="hx-date"/></div>
+                        </div>
+                        <div class="hx-field__grid">
+                            <div class="hx-field"><p:outputLabel for="ecD" value="Ouverture du questionnaire"/><p:datePicker id="ecD" value="#{evalChaudAdminView.edit.dateDebut}" pattern="dd/MM/yyyy" locale="fr" showIcon="true" styleClass="hx-date"/></div>
+                            <div class="hx-field"><p:outputLabel for="ecF" value="Clôture du questionnaire"/><p:datePicker id="ecF" value="#{evalChaudAdminView.edit.dateFin}" pattern="dd/MM/yyyy" locale="fr" showIcon="true" styleClass="hx-date" required="true" requiredMessage="La date de clôture est obligatoire"/></div>
+                        </div>
+                        <ui:fragment rendered="#{evalChaudAdminView.edit.froid}">
+                            <div class="hx-field"><p:outputLabel for="ecObj" value="Objectifs de la formation (un par ligne, rappelés en Q.1 : le collaborateur coche ceux qu'il estime atteints)"/>
+                                <p:inputTextarea id="ecObj" value="#{evalChaudAdminView.edit.objectifs}" rows="3" autoResize="true" maxlength="3000" styleClass="hx-essai-ta" placeholder="Ex. : Maîtriser les règles de conformité KYC&#10;Savoir détecter une opération atypique"/></div>
+                        </ui:fragment>
+                        <div class="hx-field"><p:outputLabel for="ecCons" value="Message d'accueil (repris dans l'e-mail et en tête du questionnaire)"/><p:inputTextarea id="ecCons" value="#{evalChaudAdminView.edit.consignes}" rows="3" autoResize="true" maxlength="1000" styleClass="hx-essai-ta"/></div>
+                    </div>
+                </div>
+
+                <h:panelGroup id="zonePop" layout="block" styleClass="hx-card" style="margin-top:var(--hx-s5)">
+                    <div class="hx-card__head"><div><h3>Population formée</h3><small>#{evalChaudAdminView.participantIds.size()} participant#{evalChaudAdminView.participantIds.size() gt 1 ? 's' : ''}</small></div>
+                        <p:commandButton value="Tout retirer" icon="pi pi-times" styleClass="hx-btn-secondary hx-btn-sm" process="@this" update="zonePop" actionListener="#{evalChaudAdminView.viderParticipants}" rendered="#{not empty evalChaudAdminView.participantIds}"/></div>
+                    <div class="hx-card__body hx-form">
+                        <div class="hx-field__grid">
+                            <div class="hx-field">
+                                <p:outputLabel for="ecPart" value="Collaborateurs ayant suivi la formation"/>
+                                <p:selectCheckboxMenu id="ecPart" value="#{evalChaudAdminView.participantIds}" converter="jakarta.faces.Integer" filter="true" filterMatchMode="contains" multiple="true"
+                                                      emptyLabel="Rechercher et cocher des collaborateurs" updateLabel="false" label="Rechercher et cocher des collaborateurs" styleClass="hx-select" scrollHeight="320">
+                                    <f:selectItems value="#{evalChaudAdminView.collaborateurs}" var="u" itemValue="#{u.id}" itemLabel="#{evalChaudAdminView.libelleCollaborateur(u)}"/>
+                                    <p:ajax event="change" update="zonePop" process="@this"/>
+                                    <p:ajax event="toggleSelect" update="zonePop" process="@this"/>
+                                </p:selectCheckboxMenu>
+                            </div>
+                            <div class="hx-field">
+                                <p:outputLabel for="ecDir" value="Ajouter toute une direction"/>
+                                <div class="hx-inline">
+                                    <p:selectOneMenu id="ecDir" value="#{evalChaudAdminView.directionAjout}" converter="jakarta.faces.Integer" styleClass="hx-select" filter="true" filterMatchMode="contains">
+                                        <f:selectItem itemLabel="Choisir une direction" itemValue="#{null}" noSelectionOption="true"/>
+                                        <f:selectItems value="#{evalChaudAdminView.directions}" var="d" itemValue="#{d.id}" itemLabel="#{d.nom}"/>
+                                    </p:selectOneMenu>
+                                    <p:commandButton value="Ajouter" icon="pi pi-plus" styleClass="hx-btn-secondary" process="@this ecDir" update="zonePop :globalGrowl" actionListener="#{evalChaudAdminView.ajouterDirection}"/>
+                                </div>
+                            </div>
+                        </div>
+                        <ui:fragment rendered="#{empty evalChaudAdminView.participantIds}"><p class="hx-field__help">Aucun participant pour l'instant.</p></ui:fragment>
+                        <div class="hx-pchips">
+                            <ui:repeat value="#{evalChaudAdminView.participantsChoisis}" var="u">
+                                <span class="hx-pchip">#{u.nomComplet}<p:commandLink process="@this" update="zonePop" actionListener="#{evalChaudAdminView.retirerParticipant(u)}" title="Retirer" styleClass="hx-pchip__x"><i class="pi pi-times"></i></p:commandLink></span>
+                            </ui:repeat>
+                        </div>
+                    </div>
+                </h:panelGroup>
+
+                <h:panelGroup id="zoneQ" layout="block" styleClass="hx-card" style="margin-top:var(--hx-s5)">
+                    <div class="hx-card__head"><div><h3>Questionnaire</h3><small>#{evalChaudAdminView.edit.questions.size()} question#{evalChaudAdminView.edit.questions.size() gt 1 ? 's' : ''} · modèle officiel #{evalChaudAdminView.edit.froid ? 'MAF 064 DCHT 05' : 'MAF 063 DCHT 02'} proposé, adaptable avant la première réponse</small></div>
+                        <ui:fragment rendered="#{not evalChaudAdminView.questionsFigees}">
+                            <div class="hx-inline">
+                                <p:commandButton value="Modèle #{evalChaudAdminView.modele}" icon="pi pi-refresh" styleClass="hx-btn-secondary hx-btn-sm" process="@this" update="zoneQ :globalGrowl" actionListener="#{evalChaudAdminView.rechargerModele}"
+                                                 title="Remplacer les questions par celles de la fiche officielle">
+                                    <p:confirm header="Appliquer le modèle #{evalChaudAdminView.modele}" message="Les questions actuelles seront remplacées par celles de la fiche officielle." icon="pi pi-refresh"/>
+                                </p:commandButton>
+                                <p:commandButton value="Ajouter une question" icon="pi pi-plus" styleClass="hx-btn-secondary hx-btn-sm" process="zoneQ" update="zoneQ" actionListener="#{evalChaudAdminView.ajouterQuestion}"/>
+                            </div>
+                        </ui:fragment></div>
+                    <div class="hx-card__body">
+                        <ui:fragment rendered="#{evalChaudAdminView.questionsFigees}">
+                            <div class="hx-alert hx-alert--info" style="margin:0 0 12px"><i class="pi pi-lock"></i><div><strong>Questionnaire figé</strong><span>Des participants ont déjà répondu : les questions ne peuvent plus être modifiées.</span></div></div>
+                        </ui:fragment>
+                        <ol class="hx-qlist">
+                            <ui:repeat value="#{evalChaudAdminView.edit.questions}" var="q" varStatus="st">
+                                <li class="hx-qlist__item hx-qlist__item--riche">
+                                    <span class="hx-qlist__num">Q.#{st.index + 1}</span>
+                                    <p:inputText value="#{q.libelle}" maxlength="300" placeholder="Libellé de la question" styleClass="hx-qlist__lib" disabled="#{evalChaudAdminView.questionsFigees}"/>
+                                    <p:selectOneMenu value="#{q.type}" styleClass="hx-select hx-qlist__type" disabled="#{evalChaudAdminView.questionsFigees}">
+                                        <f:selectItem itemLabel="Note de 1 à 5" itemValue="NOTE"/>
+                                        <f:selectItem itemLabel="Oui / non" itemValue="OUI_NON"/>
+                                        <f:selectItem itemLabel="Réponse libre" itemValue="TEXTE"/>
+                                        <f:selectItem itemLabel="Liste de points" itemValue="LISTE"/>
+                                        <f:selectItem itemLabel="Plan d'actions" itemValue="PLAN"/>
+                                        <f:selectItem itemLabel="Choix multiples" itemValue="MULTI"/>
+                                        <f:selectItem itemLabel="Objectifs atteints" itemValue="OBJECTIFS"/>
+                                        <f:selectItem itemLabel="Niveau d'acquisition" itemValue="NIVEAUX"/>
+                                        <p:ajax process="zoneQ" update="zoneQ"/>
+                                    </p:selectOneMenu>
+                                    <span class="hx-qlist__obl"><p:selectBooleanCheckbox value="#{q.obligatoire}" itemLabel="Obligatoire" disabled="#{evalChaudAdminView.questionsFigees}"/></span>
+                                    <span class="hx-qlist__act">
+                                        <p:commandButton icon="pi pi-arrow-up" styleClass="hx-btn-secondary hx-btn-sm" process="zoneQ" update="zoneQ" actionListener="#{evalChaudAdminView.monterQuestion(st.index)}" disabled="#{st.first or evalChaudAdminView.questionsFigees}" title="Monter"/>
+                                        <p:commandButton icon="pi pi-arrow-down" styleClass="hx-btn-secondary hx-btn-sm" process="zoneQ" update="zoneQ" actionListener="#{evalChaudAdminView.descendreQuestion(st.index)}" disabled="#{st.last or evalChaudAdminView.questionsFigees}" title="Descendre"/>
+                                        <p:commandButton icon="pi pi-trash" styleClass="hx-btn-secondary hx-btn-sm hx-btn-sm--danger" process="zoneQ" update="zoneQ" actionListener="#{evalChaudAdminView.retirerQuestion(st.index)}" disabled="#{evalChaudAdminView.questionsFigees}" title="Retirer"/>
+                                    </span>
+                                    <div class="hx-qlist__opts">
+                                        <ui:fragment rendered="#{q.note}">
+                                            <span class="hx-qlist__opt hx-qlist__opt--wide" title="Facultatif : 5 libellés, un par ligne, du niveau 1 au niveau 5. Le participant choisit alors un libellé au lieu d'un chiffre.">
+                                                <small>Niveaux :</small><p:inputTextarea value="#{q.options}" rows="2" autoResize="true" maxlength="600" placeholder="Facultatif : 5 libellés, un par ligne (ex. Très faiblement … Très fortement)" disabled="#{evalChaudAdminView.questionsFigees}"/></span>
+                                            <span class="hx-qlist__opt"><small>1 =</small><p:inputText value="#{q.libelleMin}" maxlength="120" placeholder="Pas du tout satisfait" disabled="#{evalChaudAdminView.questionsFigees}"/></span>
+                                            <span class="hx-qlist__opt"><small>5 =</small><p:inputText value="#{q.libelleMax}" maxlength="120" placeholder="Très satisfait" disabled="#{evalChaudAdminView.questionsFigees}"/></span>
+                                            <span class="hx-qlist__opt" title="Pour une échelle dont l'idéal est au milieu (ex. rythme très lent → très rapide) : la question est exclue de la satisfaction moyenne et le dépouillement mesure la part de « 3 »."><p:selectBooleanCheckbox value="#{q.centree}" itemLabel="Échelle centrée (3 = idéal)" disabled="#{evalChaudAdminView.questionsFigees}"/></span>
+                                        </ui:fragment>
+                                        <ui:fragment rendered="#{q.ouiNon}">
+                                            <span class="hx-qlist__opt hx-qlist__opt--wide"><small>Si oui :</small><p:inputText value="#{q.precisionOui}" maxlength="150" placeholder="Précision demandée (facultatif), ex. « Si oui, veuillez préciser »" disabled="#{evalChaudAdminView.questionsFigees}"/></span>
+                                        </ui:fragment>
+                                        <ui:fragment rendered="#{q.liste}">
+                                            <span class="hx-qlist__opt"><small>Au plus</small><p:inputNumber value="#{q.maxLignes}" decimalPlaces="0" minValue="0" maxValue="15" inputStyle="width:60px" emptyValue="empty" disabled="#{evalChaudAdminView.questionsFigees}"/><small>points (vide = sans limite)</small></span>
+                                        </ui:fragment>
+                                        <ui:fragment rendered="#{q.multi}">
+                                            <span class="hx-qlist__opt hx-qlist__opt--wide"><small>Choix :</small><p:inputTextarea value="#{q.options}" rows="3" autoResize="true" maxlength="2000" placeholder="Un choix par ligne" disabled="#{evalChaudAdminView.questionsFigees}"/></span>
+                                            <span class="hx-qlist__opt"><p:selectBooleanCheckbox value="#{q.autre}" itemLabel="Proposer « Autre (veuillez préciser) »" disabled="#{evalChaudAdminView.questionsFigees}"/></span>
+                                        </ui:fragment>
+                                        <ui:fragment rendered="#{q.objectifs}"><small class="hx-muted"><i class="pi pi-flag"></i> Le collaborateur coche les objectifs de la formation qu'il estime atteints (objectifs saisis dans la rubrique Formation).</small></ui:fragment>
+                                        <ui:fragment rendered="#{q.niveaux}">
+                                            <span class="hx-qlist__opt hx-qlist__opt--wide"><small>Niveaux :</small><p:inputTextarea value="#{q.options}" rows="3" autoResize="true" maxlength="600" placeholder="Pas du tout acquis&#10;En cours d'acquisition&#10;Partiellement acquis&#10;Presque acquis&#10;Entièrement acquis" disabled="#{evalChaudAdminView.questionsFigees}"/></span>
+                                            <small class="hx-muted"><i class="pi pi-link"></i> Porte sur chaque point cité à la question « liste de points » qui précède.</small>
+                                        </ui:fragment>
+                                        <span class="hx-qlist__opt" title="Ex. « Si vous ne l'utilisez pas, pour quelle(s) raison(s) ? » : la question n'apparaît que si le participant répond « non » à la question oui / non qui la précède."><p:selectBooleanCheckbox value="#{q.conditionnelle}" itemLabel="Seulement si « non » à la question oui / non précédente" disabled="#{evalChaudAdminView.questionsFigees}"/></span>
+                                        <ui:fragment rendered="#{q.plan}"><small class="hx-muted"><i class="pi pi-calendar"></i> Le participant liste ses actions, chacune avec une échéance : dans l'immédiat, après 1, 3 ou 6 mois.</small></ui:fragment>
+                                        <ui:fragment rendered="#{q.texte}"><small class="hx-muted"><i class="pi pi-align-left"></i> Réponse rédigée librement.</small></ui:fragment>
+                                    </div>
+                                </li>
+                            </ui:repeat>
+                        </ol>
+                    </div>
+                </h:panelGroup>
+            </ui:fragment>
+
+            <!-- Résultats -->
+            <ui:fragment rendered="#{evalChaudAdminView.mode eq 'resultats' and not empty evalChaudAdminView.courant}">
+                <div class="hx-page-head">
+                    <div>
+                        <p:commandLink process="@this" update="@form" actionListener="#{evalChaudAdminView.annuler}" styleClass="hx-pill-retour"><i class="pi pi-arrow-left"></i> #{evalChaudAdminView.courant.froid ? 'Toutes les évaluations à froid' : 'Toutes les évaluations à chaud'}</p:commandLink>
+                        <h2>#{evalChaudAdminView.courant.intitule}</h2>
+                        <p>#{evalChaudAdminView.courant.froid ? 'Résultats de l’évaluation à froid · '.concat(evalChaudAdminView.courant.statutLabel).concat('. Chaque fiche est nominative et complétée par l’avis du supérieur hiérarchique.') : 'Résultats de l’évaluation à chaud · '.concat(evalChaudAdminView.courant.statutLabel).concat('. Les réponses sont présentées sans le nom de leur auteur.')}</p>
+                    </div>
+                    <div class="hx-page-head__actions">
+                        <p:commandButton value="Rapport Excel" icon="pi pi-file-excel" styleClass="hx-btn-secondary" ajax="false" onclick="hxRapportAttente('le rapport Excel')" title="Classeur analytique : synthèse, statistiques par question, analyse de Claude, directions, verbatims, réponses brutes anonymisées, participation. La première génération prend quelques dizaines de secondes.">
+                            <p:fileDownload value="#{evalChaudAdminView.exportExcel}"/>
+                        </p:commandButton>
+                        <p:commandButton value="Fiche vierge" icon="pi pi-file" styleClass="hx-btn-secondary" ajax="false" title="Fiche #{evalChaudAdminView.courant.froid ? 'MAF 064' : 'MAF 063'} vierge à imprimer pour une collecte sur papier">
+                            <p:fileDownload value="#{evalChaudAdminView.ficheVierge}"/>
+                        </p:commandButton>
+                        <p:commandButton value="Rapport PDF" icon="pi pi-file-pdf" ajax="false" onclick="hxRapportAttente('le rapport PDF')" title="Rapport de dépouillement : indicateurs, analyse de Claude, synthèse par question, points forts, distribution des notes, directions, verbatims. La première génération prend quelques dizaines de secondes.">
+                            <p:fileDownload value="#{evalChaudAdminView.exportPdf}"/>
+                        </p:commandButton>
+                    </div>
+                </div>
+                <section class="hx-grid hx-grid--kpi hx-kpis-compact">
+                    <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-users"></i> Participants</span><span class="hx-kpi__value">#{evalChaudAdminView.participantsCourant.size()}</span></div>
+                    <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-inbox"></i> Réponses</span><span class="hx-kpi__value">#{evalChaudAdminView.repondants.size()}</span><div class="hx-kpi__bar"><span style="width:#{evalChaudAdminView.tauxCourant}%"></span></div><span class="hx-kpi__delta">#{evalChaudAdminView.tauxCourant} % de réponse</span></div>
+                    <ui:fragment rendered="#{evalChaudAdminView.courant.froid}">
+                        <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-user-edit"></i> Avis des supérieurs</span><span class="hx-kpi__value">#{evalChaudAdminView.syntheseAvis.nbAvis}<small class="hx-rpt__unit">/#{evalChaudAdminView.syntheseAvis.nbReponses}</small></span><span class="hx-kpi__delta">#{evalChaudAdminView.nbAvisAttente} en attente</span></div>
+                        <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-check-circle"></i> Efficacité de la formation</span><span class="hx-kpi__value #{empty evalChaudAdminView.syntheseAvis.moyenne ? '' : (evalChaudAdminView.syntheseAvis.efficace ? 'hx-kpi__value--ok' : 'hx-kpi__value--ko')}"><ui:fragment rendered="#{not empty evalChaudAdminView.syntheseAvis.moyenne}">#{evalChaudAdminView.syntheseAvis.pctEfficace}<small class="hx-rpt__unit">%</small></ui:fragment><ui:fragment rendered="#{empty evalChaudAdminView.syntheseAvis.moyenne}">—</ui:fragment></span>
+                            <span class="hx-kpi__delta"><ui:fragment rendered="#{not empty evalChaudAdminView.syntheseAvis.moyenne}">avis « efficace » · moyenne #{evalChaudAdminView.syntheseAvis.moyenne}/5 · satisfaction #{evalChaudAdminView.syntheseAvis.tauxSatisfaction} %</ui:fragment><ui:fragment rendered="#{empty evalChaudAdminView.syntheseAvis.moyenne}">aucun avis pour l'instant</ui:fragment></span></div>
+                    </ui:fragment>
+                    <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-star"></i> #{evalChaudAdminView.courant.froid ? 'Impact moyen' : 'Satisfaction moyenne'}</span><span class="hx-kpi__value hx-kpi__value--gold"><ui:fragment rendered="#{not empty evalChaudAdminView.satisfaction}"><h:outputText value="#{evalChaudAdminView.satisfaction}"><f:convertNumber minFractionDigits="1" maxFractionDigits="1"/></h:outputText><small class="hx-rpt__unit">/5</small></ui:fragment><ui:fragment rendered="#{empty evalChaudAdminView.satisfaction}">—</ui:fragment></span><span class="hx-kpi__delta">moyenne des questions notées</span></div>
+                </section>
+
+                <ui:fragment rendered="#{evalChaudAdminView.courant.froid}">
+                    <div class="hx-card" style="margin-top:var(--hx-s5)">
+                        <div class="hx-card__head"><div><h3>Fiches des collaborateurs</h3><small>Avis général du supérieur hiérarchique sur l'efficacité de la formation · barème MAF 064 (4 et 5 = efficace)</small></div></div>
+                        <div class="hx-card__body hx-card__body--flush">
+                            <ui:fragment rendered="#{empty evalChaudAdminView.reponsesFroid}"><div class="hx-empty"><i class="pi pi-inbox"></i><strong>Aucune fiche remplie</strong>Les fiches apparaissent ici dès qu'un collaborateur a répondu.</div></ui:fragment>
+                            <ui:fragment rendered="#{not empty evalChaudAdminView.reponsesFroid}">
+                            <div class="hx-rpt__scroll">
+                                <table class="hx-dirtable">
+                                    <thead><tr><th>Collaborateur</th><th>Supérieur hiérarchique</th><th>Fiche envoyée</th><th>Avis</th><th>Satisfaction</th><th>Efficacité</th><th></th></tr></thead>
+                                    <tbody>
+                                    <ui:repeat value="#{evalChaudAdminView.reponsesFroid}" var="r">
+                                        <tr><td><strong>#{r.participant.nomComplet}</strong><br/><small class="hx-muted">#{empty r.participant.fonction ? '' : r.participant.fonction}</small></td>
+                                            <td>#{empty r.participant.superieurHierarchique ? '—' : r.participant.superieurHierarchique.nomComplet}</td>
+                                            <td><h:outputText value="#{r.dateReponse}"><f:convertDateTime pattern="dd/MM/yyyy"/></h:outputText></td>
+                                            <td><ui:fragment rendered="#{r.avisDonne}"><b>#{r.avisNote}/5</b> · #{r.avisLibelle}</ui:fragment><ui:fragment rendered="#{not r.avisDonne}"><span class="hx-badge hx-badge--pending">En attente</span></ui:fragment></td>
+                                            <td>#{r.avisDonne ? r.tauxSatisfaction.toString().concat(' %') : '—'}</td>
+                                            <td><ui:fragment rendered="#{r.avisDonne}"><span class="hx-badge #{r.efficace ? 'hx-badge--done' : 'hx-badge--late'}">#{r.efficaciteLabel}</span></ui:fragment></td>
+                                            <td style="text-align:right"><p:commandButton icon="pi pi-file-pdf" value="Fiche" styleClass="hx-btn-secondary hx-btn-sm" ajax="false" title="Fiche MAF 064 remplie"><p:fileDownload value="#{evalChaudAdminView.ficheCollaborateur(r)}"/></p:commandButton></td></tr>
+                                        <ui:fragment rendered="#{r.avisDonne and not empty r.avisCommentaire}"><tr class="hx-froid-com"><td colspan="7"><i class="pi pi-comment"></i> #{r.avisCommentaire}</td></tr></ui:fragment>
+                                    </ui:repeat>
+                                    </tbody>
+                                </table>
+                            </div>
+                            </ui:fragment>
+                        </div>
+                    </div>
+                </ui:fragment>
+
+                <div class="hx-card" style="margin-top:var(--hx-s5)">
+                    <div class="hx-card__head"><div><h3>Réponses par question</h3></div></div>
+                    <div class="hx-card__body">
+                        <ui:repeat value="#{evalChaudAdminView.stats}" var="s" varStatus="st">
+                            <div class="hx-qres">
+                                <div class="hx-qres__head"><span class="hx-qlist__num">Q.#{st.index + 1}</span><strong>#{s.question.libelle}</strong><small class="hx-muted">#{s.nb} réponse#{s.nb gt 1 ? 's' : ''}</small></div>
+                                <ui:fragment rendered="#{s.question.note}">
+                                    <div class="hx-qres__note">
+                                        <div class="hx-qres__score">
+                                            <ui:fragment rendered="#{not s.question.centree}"><b class="hx-qres__avg">#{empty s.moyenne ? '—' : s.moyenne}<small>/5</small></b><small class="hx-muted">moyenne</small></ui:fragment>
+                                            <ui:fragment rendered="#{s.question.centree}"><b class="hx-qres__avg">#{s.pctAdapte}<small>%</small></b><small class="hx-muted">jugent « 3 » adapté</small></ui:fragment>
+                                        </div>
+                                        <div class="hx-qres__dist">
+                                            <ui:repeat value="#{s.niveaux}" var="n">
+                                                <div class="hx-qres__row"><span>#{n[0]}</span><div class="hx-att__bar"><span class="#{s.question.centree ? (n[0] eq 3 ? 'hx-att--4' : (n[0] eq 1 or n[0] eq 5 ? 'hx-att--1' : 'hx-att--3')) : (n[0] ge 4 ? 'hx-att--4' : (n[0] eq 3 ? 'hx-att--3' : (n[0] eq 2 ? 'hx-att--2' : 'hx-att--1')))}" style="width:#{s.pct(n[1])}%"></span></div><small>#{n[1]}</small></div>
+                                            </ui:repeat>
+                                            <div class="hx-qres__bornes"><span>1 = #{s.question.niveau(1)}</span><span>5 = #{s.question.niveau(5)}</span></div>
+                                            <ui:fragment rendered="#{s.question.centree and s.nb gt 0}"><div class="hx-qres__bornes"><span>#{s.pctBas} % côté « #{s.question.borneMin} »</span><span>#{s.pctHaut} % côté « #{s.question.borneMax} »</span></div></ui:fragment>
+                                        </div>
+                                    </div>
+                                </ui:fragment>
+                                <ui:fragment rendered="#{s.question.ouiNon}">
+                                    <div class="hx-qres__row hx-qres__row--wide"><span>Oui</span><div class="hx-att__bar"><span class="hx-att--4" style="width:#{s.pctOui}%"></span></div><small>#{s.oui} · #{s.pctOui} %</small></div>
+                                    <div class="hx-qres__row hx-qres__row--wide"><span>Non</span><div class="hx-att__bar"><span class="hx-att--1" style="width:#{s.oui + s.non eq 0 ? 0 : 100 - s.pctOui}%"></span></div><small>#{s.non}</small></div>
+                                    <ui:fragment rendered="#{not empty s.textes}">
+                                        <p class="hx-qres__sous">#{empty s.question.precisionOui ? 'Précisions' : s.question.precisionOui} (#{s.textes.size()})</p>
+                                        <ul class="hx-qres__textes"><ui:repeat value="#{s.textes}" var="t"><li>#{t}</li></ui:repeat></ul>
+                                    </ui:fragment>
+                                </ui:fragment>
+                                <ui:fragment rendered="#{s.question.multi or s.question.objectifs or s.question.niveaux}">
+                                    <div class="hx-qres__dist hx-qres__dist--plan">
+                                        <ui:repeat value="#{s.choix}" var="ch">
+                                            <div class="hx-qres__row hx-qres__row--wide hx-qres__row--choix"><span title="#{ch[0]}">#{ch[0]}</span><div class="hx-att__bar"><span class="hx-att--4" style="width:#{ch[2]}%"></span></div><small>#{ch[1]} · #{ch[2]} %</small></div>
+                                        </ui:repeat>
+                                    </div>
+                                    <ui:fragment rendered="#{(s.question.multi or s.question.objectifs) and not empty s.textes}"><p class="hx-qres__sous">Autres réponses (#{s.textes.size()})</p></ui:fragment>
+                                    <ui:fragment rendered="#{s.question.niveaux and not empty s.textes}"><p class="hx-qres__sous">Détail par compétence</p></ui:fragment>
+                                </ui:fragment>
+                                <ui:fragment rendered="#{s.question.plan}">
+                                    <div class="hx-qres__dist hx-qres__dist--plan">
+                                        <ui:repeat value="#{s.horizons}" var="h">
+                                            <div class="hx-qres__row hx-qres__row--wide"><span>#{h[0]}</span><div class="hx-att__bar"><span class="hx-att--4" style="width:#{h[2]}%"></span></div><small>#{h[1]} action#{h[1] gt 1 ? 's' : ''}</small></div>
+                                        </ui:repeat>
+                                    </div>
+                                </ui:fragment>
+                                <ui:fragment rendered="#{s.question.redigee}">
+                                    <ui:fragment rendered="#{empty s.textes and not (s.question.multi or s.question.objectifs or s.question.niveaux)}"><p class="hx-muted" style="margin:6px 0 0">Aucune réponse.</p></ui:fragment>
+                                    <ui:fragment rendered="#{s.question.liste and not empty s.textes}"><p class="hx-qres__sous">#{s.textes.size()} point#{s.textes.size() gt 1 ? 's' : ''} cité#{s.textes.size() gt 1 ? 's' : ''} par #{s.nb} participant#{s.nb gt 1 ? 's' : ''}</p></ui:fragment>
+                                    <ul class="hx-qres__textes"><ui:repeat value="#{s.textes}" var="t"><li>#{t}</li></ui:repeat></ul>
+                                </ui:fragment>
+                            </div>
+                        </ui:repeat>
+                    </div>
+                </div>
+
+                <div class="hx-card" style="margin-top:var(--hx-s5)">
+                    <div class="hx-card__head"><div><h3>Participation</h3><small>#{evalChaudAdminView.courant.froid ? 'Qui a rempli sa fiche' : 'Qui a répondu (le contenu des réponses reste anonyme)'}</small></div>
+                        <p:commandButton value="Relancer les non-répondants" icon="pi pi-bell" styleClass="hx-btn-secondary hx-btn-sm" process="@this" update="@form" actionListener="#{evalChaudAdminView.relancer(evalChaudAdminView.courant)}" rendered="#{evalChaudAdminView.courant.repondable}"/></div>
+                    <div class="hx-card__body hx-card__body--flush">
+                        <div class="hx-rpt__scroll">
+                            <table class="hx-dirtable">
+                                <thead><tr><th>Participant</th><th>Direction</th><th>Réponse</th></tr></thead>
+                                <tbody>
+                                <ui:repeat value="#{evalChaudAdminView.participantsCourant}" var="u">
+                                    <tr><td><strong>#{u.nomComplet}</strong></td><td>#{empty u.direction ? '—' : u.direction.nom}</td>
+                                        <td><span class="hx-badge #{evalChaudAdminView.repondu(u) ? 'hx-badge--done' : 'hx-badge--draft'}">#{evalChaudAdminView.repondu(u) ? 'Répondu' : 'En attente'}</span></td></tr>
+                                </ui:repeat>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </ui:fragment>
+
+            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" responsive="true" width="460">
+                <p:commandButton value="Annuler" type="button" styleClass="ui-confirmdialog-no hx-btn-secondary" icon="pi pi-times"/>
+                <p:commandButton value="Confirmer" type="button" styleClass="ui-confirmdialog-yes" icon="pi pi-check"/>
+            </p:confirmDialog>
+        </h:form>
+    </ui:define>
+
+    <ui:define name="scripts">
+        <div id="hxRapportLoader" class="hx-busy" role="status" aria-live="polite" hidden="hidden">
+            <div class="hx-busy__box">
+                <span class="hx-busy__spin" aria-hidden="true"></span>
+                <strong>Préparation de <span id="hxRapportQuoi">votre rapport</span>…</strong>
+                <small>Claude analyse les résultats pour rédiger la synthèse. Cela peut prendre jusqu'à 30 secondes ; le téléchargement démarrera tout seul.</small>
+                <span class="hx-busy__t" id="hxRapportT">0 s</span>
+            </div>
+        </div>
+        <script>
+            // Loader affiché le temps que le serveur produise le fichier (PrimeFaces suit la fin du téléchargement).
+            var hxRapportTimer = null;
+            function hxRapportFin() {
+                clearInterval(hxRapportTimer); hxRapportTimer = null;
+                document.getElementById('hxRapportLoader').hidden = true;
+            }
+            function hxRapportAttente(quoi) {
+                var el = document.getElementById('hxRapportLoader'), t0 = Date.now();
+                document.getElementById('hxRapportQuoi').textContent = quoi;
+                document.getElementById('hxRapportT').textContent = '0 s';
+                el.hidden = false;
+                clearInterval(hxRapportTimer);
+                hxRapportTimer = setInterval(function () {
+                    var s = Math.round((Date.now() - t0) / 1000);
+                    document.getElementById('hxRapportT').textContent = s + ' s';
+                    if (s >= 180) hxRapportFin(); // filet de sécurité
+                }, 1000);
+                PrimeFaces.monitorDownload(function () { }, hxRapportFin);
+                return true;
+            }
+        </script>
+        <script>
+            // Reporte l'onglet, le statut et l'affichage dans l'adresse (sans recharger) pour qu'un rafraîchissement les conserve.
+            (function () {
+                function majUrl() {
+                    var e = document.querySelector('.hx-ef-etat');
+                    if (!e) return;
+                    var u = new URL(window.location.href);
+                    u.searchParams.set('type', e.dataset.type);
+                    u.searchParams.set('statut', e.dataset.statut);
+                    u.searchParams.set('vue', e.dataset.vue);
+                    if (u.href !== window.location.href) window.history.replaceState(null, '', u.href);
+                }
+                document.addEventListener('DOMContentLoaded', majUrl);
+                if (window.jQuery) jQuery(document).on('pfAjaxComplete', majUrl);
+            })();
+        </script>
+    </ui:define>
+</ui:composition>

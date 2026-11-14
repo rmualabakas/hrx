@@ -20,6 +20,15 @@
                 var tree = btn.closest('.hx-tree');
                 var open = tree.classList.toggle('is-open');
                 btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+                if (!tree.classList.contains('hx-tree--flat')) return;
+                /* arborescence aplatie : un nœud est visible si tous ses ancêtres sont ouverts */
+                var liste = tree.parentNode.querySelectorAll('.hx-tree--flat');
+                var ouverts = {};
+                liste.forEach(function (n) { ouverts[n.getAttribute('data-id')] = n.classList.contains('is-open'); });
+                liste.forEach(function (n) {
+                    var anc = (n.getAttribute('data-ancetres') || '').split(' ').filter(Boolean);
+                    n.classList.toggle('is-hidden', anc.some(function (id) { return !ouverts[id]; }));
+                });
             }
         </script>
     </ui:define>
@@ -105,67 +114,37 @@
                         </ui:fragment>
                     </div>
                     <div class="hx-pane__body">
-                        <ui:repeat value="#{moduleAdminView.menusRacine}" var="mn">
-                            <div class="hx-tree #{moduleAdminView.hasEnfants(mn) ? 'has-children' : ''} #{moduleAdminView.isOuvert(mn) ? 'is-open' : ''}">
-                                <div class="hx-item #{moduleAdminView.isMenuSelected(mn) ? 'is-selected' : ''} #{mn.statut eq 1 ? '' : 'is-off'}">
+                        <ui:repeat value="#{moduleAdminView.arbreMenus}" var="nd">
+                            <div class="hx-tree hx-tree--flat #{nd.enfants ? 'has-children' : ''} #{nd.ouvert ? 'is-open' : ''} #{nd.visible ? '' : 'is-hidden'}"
+                                 data-id="#{nd.menu().id}" data-ancetres="#{nd.ancetres()}" style="--lvl:#{nd.profondeur()}">
+                                <div class="hx-item #{moduleAdminView.isMenuSelected(nd.menu()) ? 'is-selected' : ''} #{nd.menu().statut eq 1 ? '' : 'is-off'}">
                                     <p:commandLink styleClass="hx-item__main" process="@this"
-                                                   actionListener="#{moduleAdminView.selectMenu(mn)}"
+                                                   actionListener="#{moduleAdminView.selectMenu(nd.menu())}"
                                                    update="paneMenus panePrivileges">
-                                        <i class="hx-item__icon #{mn.icone}"></i>
+                                        <i class="hx-item__icon #{nd.menu().icone}"></i>
                                         <span class="hx-item__text">
-                                            <strong>#{mn.nom}</strong>
-                                            <small><code>#{mn.url eq '#' ? 'dossier' : '/ui/'.concat(mn.url)}</code></small>
+                                            <strong>#{nd.menu().nom}</strong>
+                                            <small><code>#{nd.menu().url eq '#' ? 'dossier' : '/ui/'.concat(nd.menu().url)}</code></small>
                                         </span>
                                         <i class="pi pi-angle-right hx-item__chevron"></i>
                                     </p:commandLink>
                                     <div class="hx-item__actions">
                                         <p:commandLink process="@this" title="Modifier" styleClass="hx-icon-btn"
-                                                       actionListener="#{moduleAdminView.editMenu(mn)}" update="dlgMenu"
+                                                       actionListener="#{moduleAdminView.editMenu(nd.menu())}" update="dlgMenu"
                                                        oncomplete="PF('dlgMenu').show()"><i class="pi pi-pencil"></i></p:commandLink>
-                                        <p:commandLink process="@this" title="#{mn.statut eq 1 ? 'Désactiver' : 'Activer'}" styleClass="hx-icon-btn"
-                                                       actionListener="#{moduleAdminView.toggleMenu(mn)}" update="paneMenus">
-                                            <i class="pi #{mn.statut eq 1 ? 'pi-eye-slash' : 'pi-eye'}"></i></p:commandLink>
+                                        <p:commandLink process="@this" title="#{nd.menu().statut eq 1 ? 'Désactiver' : 'Activer'}" styleClass="hx-icon-btn"
+                                                       actionListener="#{moduleAdminView.toggleMenu(nd.menu())}" update="paneMenus">
+                                            <i class="pi #{nd.menu().statut eq 1 ? 'pi-eye-slash' : 'pi-eye'}"></i></p:commandLink>
                                         <p:commandLink process="@this" title="Supprimer" styleClass="hx-icon-btn hx-icon-btn--danger"
-                                                       actionListener="#{moduleAdminView.removeMenu(mn)}" update="paneMenus panePrivileges">
-                                            <p:confirm header="Supprimer le menu" message="Supprimer le menu « #{mn.nom} » et ses privilèges ?" icon="pi pi-exclamation-triangle"/>
+                                                       actionListener="#{moduleAdminView.removeMenu(nd.menu())}" update="paneMenus panePrivileges">
+                                            <p:confirm header="Supprimer le menu" message="Supprimer le menu « #{nd.menu().nom} » et ses privilèges ?" icon="pi pi-exclamation-triangle"/>
                                             <i class="pi pi-trash"></i></p:commandLink>
                                     </div>
-                                    <ui:fragment rendered="#{moduleAdminView.hasEnfants(mn)}">
-                                        <button type="button" class="hx-fold" title="Ouvrir / fermer" aria-expanded="#{moduleAdminView.isOuvert(mn)}"
+                                    <ui:fragment rendered="#{nd.enfants}">
+                                        <button type="button" class="hx-fold" title="Ouvrir / fermer" aria-expanded="#{nd.ouvert}"
                                                 onclick="hrxToggleFold(this)"><i class="pi pi-chevron-down"></i></button>
                                     </ui:fragment>
                                 </div>
-                                <ui:fragment rendered="#{moduleAdminView.hasEnfants(mn)}">
-                                    <div class="hx-tree__children">
-                                        <ui:repeat value="#{moduleAdminView.enfantsDe(mn)}" var="ch">
-                                            <div class="hx-item #{moduleAdminView.isMenuSelected(ch) ? 'is-selected' : ''} #{ch.statut eq 1 ? '' : 'is-off'}">
-                                    <p:commandLink styleClass="hx-item__main" process="@this"
-                                                   actionListener="#{moduleAdminView.selectMenu(ch)}"
-                                                   update="paneMenus panePrivileges">
-                                        <i class="hx-item__icon #{ch.icone}"></i>
-                                        <span class="hx-item__text">
-                                            <strong>#{ch.nom}</strong>
-                                            <small><code>#{ch.url eq '#' ? 'dossier' : '/ui/'.concat(ch.url)}</code></small>
-                                        </span>
-                                        <i class="pi pi-angle-right hx-item__chevron"></i>
-                                    </p:commandLink>
-                                    <div class="hx-item__actions">
-                                        <p:commandLink process="@this" title="Modifier" styleClass="hx-icon-btn"
-                                                       actionListener="#{moduleAdminView.editMenu(ch)}" update="dlgMenu"
-                                                       oncomplete="PF('dlgMenu').show()"><i class="pi pi-pencil"></i></p:commandLink>
-                                        <p:commandLink process="@this" title="#{ch.statut eq 1 ? 'Désactiver' : 'Activer'}" styleClass="hx-icon-btn"
-                                                       actionListener="#{moduleAdminView.toggleMenu(ch)}" update="paneMenus">
-                                            <i class="pi #{ch.statut eq 1 ? 'pi-eye-slash' : 'pi-eye'}"></i></p:commandLink>
-                                        <p:commandLink process="@this" title="Supprimer" styleClass="hx-icon-btn hx-icon-btn--danger"
-                                                       actionListener="#{moduleAdminView.removeMenu(ch)}" update="paneMenus panePrivileges">
-                                            <p:confirm header="Supprimer le menu" message="Supprimer le menu « #{ch.nom} » et ses privilèges ?" icon="pi pi-exclamation-triangle"/>
-                                            <i class="pi pi-trash"></i></p:commandLink>
-                                    </div>
-                                    
-                                </div>
-                                        </ui:repeat>
-                                    </div>
-                                </ui:fragment>
                             </div>
                         </ui:repeat>
                         <ui:fragment rendered="#{empty moduleAdminView.selectedModule}">
@@ -248,7 +227,7 @@
                     <div class="hx-field">
                         <p:outputLabel for="modIcone" value="Icône"/>
                         <div class="hx-field__row">
-                            <p:inputText id="modIcone" value="#{moduleAdminView.moduleEdit.icone}" placeholder="pi pi-star">
+                            <p:inputText id="modIcone" value="#{moduleAdminView.moduleEdit.icone}" placeholder="pi pi-star ou fa-solid fa-star" title="PrimeIcons (pi pi-…) ou Font Awesome 6 (fa-solid fa-…, fa-regular fa-…, fa-brands fa-…)">
                                 <p:ajax event="keyup" update="modIconePreview" delay="200"/>
                             </p:inputText>
                             <h:panelGroup id="modIconePreview" styleClass="hx-icon-preview"><i class="#{empty moduleAdminView.moduleEdit.icone ? 'pi pi-folder' : moduleAdminView.moduleEdit.icone}"></i></h:panelGroup>
@@ -287,7 +266,7 @@
                         <div class="hx-field">
                             <p:outputLabel for="menuIcone" value="Icône"/>
                             <div class="hx-field__row">
-                                <p:inputText id="menuIcone" value="#{moduleAdminView.menuEdit.icone}" placeholder="pi pi-calendar">
+                                <p:inputText id="menuIcone" value="#{moduleAdminView.menuEdit.icone}" placeholder="pi pi-calendar ou fa-solid fa-calendar" title="PrimeIcons (pi pi-…) ou Font Awesome 6 (fa-solid fa-…, fa-regular fa-…, fa-brands fa-…)">
                                     <p:ajax event="keyup" update="menuIconePreview" delay="200"/>
                                 </p:inputText>
                                 <h:panelGroup id="menuIconePreview" styleClass="hx-icon-preview"><i class="#{empty moduleAdminView.menuEdit.icone ? 'pi pi-circle' : moduleAdminView.menuEdit.icone}"></i></h:panelGroup>

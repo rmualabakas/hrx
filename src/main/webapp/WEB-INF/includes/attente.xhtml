@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Écran d'attente partagé (envoi de fichiers, lecture par l'IA). Piloté par hxAttente (js/hrx-attente.js). -->
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:ui="jakarta.faces.facelets">
+    <div id="hxAttente" class="hx-wait" role="dialog" aria-modal="true" aria-labelledby="hxAttTitre" aria-describedby="hxAttNote" hidden="hidden">
+        <div class="hx-wait__card" tabindex="-1">
+            <div class="hx-wait__orb" aria-hidden="true"><span></span><i id="hxAttIcone" class="pi pi-sparkles"></i></div>
+            <h3 id="hxAttTitre"></h3>
+            <p class="hx-wait__fichier" id="hxAttSous" aria-live="polite"></p>
+            <ol class="hx-wait__steps" id="hxAttEtapes"></ol>
+            <div class="hx-wait__bar" id="hxAttBar" aria-hidden="true"><span></span></div>
+            <p class="hx-wait__note" id="hxAttNote"><span id="hxAttTexte"></span> <b id="hxAttTemps">0 s</b></p>
+        </div>
+    </div>
+    <h:outputScript library="hrx" name="js/hrx-attente.js" target="body"/>
+</ui:composition>

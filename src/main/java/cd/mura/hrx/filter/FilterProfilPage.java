@@ -24,7 +24,9 @@ public class FilterProfilPage implements Filter {
     @EJB
     private MenuDAO menuDAO;
     private static final Set<String> ALWAYS_ALLOW = Set.of(
-            "ui/home", "ui/monCompte", "ui/rechercheGlobale", "ui/fiche", "ui/objectifs", "ui/suiviObjectifs", "ui/organigramme");
+            "ui/home", "ui/monCompte", "ui/rechercheGlobale", "ui/fiche", "ui/objectifs", "ui/suiviObjectifs", "ui/organigramme",
+            // fiche de fin d'essai (N+1, collaborateur) et questionnaire d'évaluation à chaud (participant) : droits vérifiés dans la page
+            "ui/periodeEssai", "ui/questionnaire");
 
     @Override public void init(FilterConfig filterConfig) { /* no-op */ }
     @Override public void destroy() { /* no-op */ }

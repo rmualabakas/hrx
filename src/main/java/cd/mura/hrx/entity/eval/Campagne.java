@@ -57,10 +57,15 @@ public class Campagne implements Serializable {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    /** Modèle appliqué quand aucun modèle ne cible la catégorie du salarié. */
+    /** Fiche des autres collaborateurs (non directeurs). */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "modele_defaut_id")
     private ModeleFiche modeleParDefaut;
+
+    /** Fiche des directeurs (dirigeants d'au moins une direction) ; à défaut, le modèle des autres collaborateurs. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "modele_encadrants_id")
+    private ModeleFiche modeleEncadrants;
 
     @Column(name = "cree_par") private int creePar;
     @Column(name = "date_creation") @Temporal(TemporalType.TIMESTAMP) private Date dateCreation = new Date();

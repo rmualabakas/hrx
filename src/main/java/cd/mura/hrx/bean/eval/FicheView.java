@@ -151,12 +151,16 @@ public class FicheView implements Serializable {
     /** Le N+1 évalue après soumission ; il peut aussi évaluer une fiche non soumise (collaborateur absent). */
     public boolean isSaisieN1() { return (n1 || dcht) && (isStatut(Evaluation.SOUMISE) || isStatut(Evaluation.INITIEE) || isStatut(Evaluation.RETOURNEE)); }
     public boolean isSaisieN2() { return (n2 || dcht) && isStatut(Evaluation.EVALUEE) && e.getDateVisaN2() == null; }
-    public boolean isSaisieDirecteur() { return (directeur || dcht) && isStatut(Evaluation.EVALUEE) && e.getDateAvisDirecteur() == null; }
+    /** Avis du directeur : le directeur de la direction ; la DCHT ne le remplace que si la direction n'a pas de directeur. */
+    public boolean isSaisieDirecteur() { return (directeur || dcht && directeurAttendu == null) && isStatut(Evaluation.EVALUEE) && e.getDateAvisDirecteur() == null; }
     /** Le directeur désigné peut réviser l'évaluation du N+1 (pourcentages, NA, commentaires, compétences) tant qu'il n'a pas rendu son avis. */
     public boolean isRevisionDirecteur() { return directeur && isStatut(Evaluation.EVALUEE) && e.getDateAvisDirecteur() == null; }
     /** Colonne « N+1 » éditable : par le N+1 pendant l'évaluation, ou par le directeur en révision. */
     public boolean isRevisionN1() { return isSaisieN1() || isRevisionDirecteur(); }
-    public boolean isValidationDcht() { return dcht && isStatut(Evaluation.EVALUEE); }
+    /** La DCHT ne clôture qu'après l'avis du directeur (sauf direction sans directeur). */
+    public boolean isValidationDcht() { return dcht && isStatut(Evaluation.EVALUEE) && (directeurAttendu == null || e.getDateAvisDirecteur() != null); }
+    /** DCHT en attente de l'avis du directeur avant de pouvoir valider. */
+    public boolean isAttenteDirecteurDcht() { return dcht && !directeur && isStatut(Evaluation.EVALUEE) && directeurAttendu != null && e.getDateAvisDirecteur() == null; }
     public boolean isLectureSeule() { return !isSaisieSalarie() && !isRevisionN1() && !isSaisieN2() && !isSaisieDirecteur() && !isCommentaireSalarie() && !isPeutRouvrirN1() && !isValidationDcht(); }
 
     // lecture
@@ -229,7 +233,7 @@ public class FicheView implements Serializable {
         e = service.soumettre(e); e = service.charger(e.getId());
         auditService.updated("Évaluations", "Evaluation", e.getId(), "Auto-évaluation soumise au N+1", e.getSalarie().getNomComplet() + " : " + e.getCampagne().getLibelle());
         try { notifications.autoEvaluationSoumise(e); } catch (Exception ex) { /* la notification ne doit jamais bloquer le circuit */ }
-        info("Auto-évaluation soumise", "Vous allez recevoir un accusé de réception par e-mail. Votre N+1 est prévenu.");
+        cd.mura.hrx.utils.Dialogue.succes("Auto-évaluation soumise", "Vous allez recevoir un accusé de réception par e-mail. Votre N+1 est prévenu.");
     }
 
     public void evaluer() {
@@ -247,7 +251,7 @@ public class FicheView implements Serializable {
             if (dir != null && chefN1 != null && dir.getId() == chefN1.getId()) chefN1 = null;
             notifications.evaluationTransmise(e, chefN1, dir);
         } catch (Exception ex) { /* notification best-effort */ }
-        info("Évaluation transmise", "Note " + e.getNoteGlobale() + "/20 : " + e.getAppreciation() + ". Le collaborateur, le N+2, le directeur et la DCHT sont notifiés par e-mail.");
+        cd.mura.hrx.utils.Dialogue.succes("Évaluation transmise", "Note " + e.getNoteGlobale() + "/20 : " + e.getAppreciation() + ". Le collaborateur, le N+2, le directeur et la DCHT sont notifiés par e-mail.");
     }
 
     public void retournerAuSalarie() {
@@ -256,14 +260,14 @@ public class FicheView implements Serializable {
         e = service.retourner(e, motif, true); e = service.charger(e.getId()); motif = null;
         auditService.updated("Évaluations", "Evaluation", e.getId(), "Fiche retournée au salarié", e.getSalarie().getNomComplet());
         try { notifications.ficheRetournee(e, true, m); } catch (Exception ex) { }
-        info("Fiche retournée", "Le collaborateur peut corriger son auto-évaluation.");
+        cd.mura.hrx.utils.Dialogue.succes("Fiche retournée", "Le collaborateur peut corriger son auto-évaluation.");
     }
 
     public void viser() {
         if (!isSaisieN2()) return;
         e = service.viser(e, loginBean.getUsers(), e.getVisaN2()); e = service.charger(e.getId());
         auditService.updated("Évaluations", "Evaluation", e.getId(), "Visa du N+2", e.getSalarie().getNomComplet());
-        info("Visa enregistré", "");
+        cd.mura.hrx.utils.Dialogue.succes("Visa enregistré", "");
     }
 
     public void donnerAvis() {
@@ -281,7 +285,7 @@ public class FicheView implements Serializable {
         if (!corrections.isEmpty())
             auditService.updated("Évaluations", "Evaluation", e.getId(), "Évaluation révisée par le directeur (" + corrections.size() + " correction" + (corrections.size() > 1 ? "s" : "") + ")",
                     e.getSalarie().getNomComplet() + " - nouvelle note " + e.getNoteGlobale() + "/20 (" + e.getAppreciation() + ")\n" + String.join("\n", corrections));
-        info("Avis enregistré", corrections.isEmpty() ? "" : corrections.size() + " correction(s) apportée(s) à l'évaluation du N+1 ; note recalculée : " + e.getNoteGlobale() + "/20.");
+        cd.mura.hrx.utils.Dialogue.succes("Avis enregistré", corrections.isEmpty() ? "" : corrections.size() + " correction(s) apportée(s) à l'évaluation du N+1 ; note recalculée : " + e.getNoteGlobale() + "/20.");
     }
 
     /** Brouillon du directeur : enregistre ses corrections sans rendre l'avis. */
@@ -300,7 +304,7 @@ public class FicheView implements Serializable {
         e = service.valider(e, e.getCommentaireDcht()); e = service.charger(e.getId());
         auditService.updated("Évaluations", "Evaluation", e.getId(), "Fiche validée par la DCHT", e.getSalarie().getNomComplet() + " : " + e.getCampagne().getLibelle());
         try { notifications.ficheValidee(e); } catch (Exception ex) { }
-        info("Fiche validée", "L'évaluation est définitive et archivée.");
+        cd.mura.hrx.utils.Dialogue.succes("Fiche validée", "L'évaluation est définitive et archivée.");
     }
 
     public void retournerAuN1() {
@@ -309,7 +313,7 @@ public class FicheView implements Serializable {
         e = service.retourner(e, motif, false); e = service.charger(e.getId()); motif = null;
         auditService.updated("Évaluations", "Evaluation", e.getId(), "Fiche retournée au N+1 par la DCHT", e.getSalarie().getNomComplet());
         try { notifications.ficheRetournee(e, false, m); } catch (Exception ex) { }
-        info("Fiche retournée au N+1", "");
+        cd.mura.hrx.utils.Dialogue.succes("Fiche retournée au N+1", "");
     }
 
     /** Le N+1 reprend la main sur une fiche déjà transmise (avant validation DCHT). */
@@ -318,12 +322,35 @@ public class FicheView implements Serializable {
         if (!isPeutRouvrirN1()) return;
         e = service.rouvrirParN1(e); e = service.charger(e.getId());
         auditService.updated("Évaluations", "Evaluation", e.getId(), "Réouverture de l'évaluation par le N+1", e.getSalarie().getNomComplet());
-        info("Évaluation rouverte", "Vous pouvez corriger puis transmettre de nouveau.");
+        cd.mura.hrx.utils.Dialogue.succes("Évaluation rouverte", "Vous pouvez corriger puis transmettre de nouveau.");
     }
     public List<String> getNiveauxAtteinte() { return List.of("ATTEINTS", "MOYENNEMENT", "FAIBLEMENT", "NON_ATTEINTS"); }
     public List<String> getSouhaits() { return List.of("BIEN_POSTE", "ACCOMPAGNEMENT", "CHANGER_POSTE", "AUTRES"); }
     public String niveauAtteinteLabel(String v) { return Evaluation.niveauAtteinteLabel(v); }
     public String souhaitLabel(String v) { return Evaluation.souhaitLabel(v); }
+    /** Message affiché quand un souhait coché vient d'en décocher un autre, incompatible. */
+    private String souhaitExclu;
+    public String getSouhaitExclu() { return souhaitExclu; }
+    public List<String> getSouhaitsChoisis() { return e == null ? new ArrayList<>() : e.getSouhaits(); }
+    /**
+     * Souhaits cochés. « Bien dans son poste » et « Souhaite changer de poste » s'excluent :
+     * la case cochée en dernier l'emporte et l'autre est décochée.
+     */
+    public void setSouhaitsChoisis(List<String> l) {
+        souhaitExclu = null;
+        if (e == null) return;
+        List<String> avant = e.getSouhaits();
+        List<String> apres = new ArrayList<>(l == null ? List.of() : l);
+        for (Map.Entry<String, String> x : Evaluation.SOUHAITS_EXCLUSIFS.entrySet()) {
+            if (apres.contains(x.getKey()) && apres.contains(x.getValue())) {
+                String garde = avant.contains(x.getKey()) ? x.getValue() : x.getKey();
+                String retire = garde.equals(x.getKey()) ? x.getValue() : x.getKey();
+                apres.remove(retire);
+                souhaitExclu = "« " + Evaluation.souhaitLabel(retire) + " » a été décoché : il n'est pas compatible avec « " + Evaluation.souhaitLabel(garde) + " ».";
+            }
+        }
+        e.setSouhaits(apres);
+    }
     public String getNiveauAtteinteSuggere() { Double p = getScoreApercu(); return p == null ? null : Evaluation.niveauAtteintePour(p); }
 
     public void retourner() { if (isValidationDcht()) retournerAuN1(); else retournerAuSalarie(); }

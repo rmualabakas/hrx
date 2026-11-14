@@ -226,10 +226,11 @@ public class FicheEvaluationExportService implements Serializable {
             Cell bs = new Cell().setBorder(new SolidBorder(frame, 2.5f)).setPadding(10);
             bs.add(new Paragraph().setTextAlignment(TextAlignment.CENTER).setMargin(0).setMarginBottom(10).add(new Text("COMMENTAIRES ET PROPOSITIONS DU SALARIE ").setFont(bold).setFontSize(9).setBackgroundColor(label)).add(new Text("(N)").setFont(bold).setFontSize(9)));
             Table tn = new Table(UnitValue.createPercentArray(new float[]{34, 66})).useAllAvailableWidth();
+            String premierN = premierSouhait(e);
             for (String[] c : CASES_N) {
-                boolean on = c[0].equals(e.getSouhaitSalarie());
+                boolean on = e.aSouhait(c[0]);
                 tn.addCell(caseCell(b, on, c[1], bold, reg));
-                tn.addCell(new Cell().setBorder(b).setPadding(5).setHeight(34).add(new Paragraph(on ? s(e.getCommentaireSalarie()) : "").setFontSize(8.5f).setMargin(0).setMultipliedLeading(1.25f)));
+                tn.addCell(new Cell().setBorder(b).setPadding(5).setHeight(34).add(new Paragraph(c[0].equals(premierN) ? s(e.getCommentaireSalarie()) : "").setFontSize(8.5f).setMargin(0).setMultipliedLeading(1.25f)));
             }
             bs.add(tn);
             if (e.getSouhaitSalarie() == null && !s(e.getCommentaireSalarie()).isBlank()) bs.add(new Paragraph(e.getCommentaireSalarie()).setFontSize(8).setMargin(0).setMarginTop(4));
@@ -441,11 +442,12 @@ public class FicheEvaluationExportService implements Serializable {
             XWPFParagraph bt = b0.getCell(0).getParagraphs().get(0); bt.setAlignment(ParagraphAlignment.CENTER); bt.setSpacingBefore(120); bt.setSpacingAfter(120);
             XWPFRun bt1 = run(bt, "COMMENTAIRES ET PROPOSITIONS DU SALARIE ", true, 9, NAVY); shade(bt1, LABEL); run(bt, "(N)", true, 9, NAVY);
             // Souhaits cochés + commentaire en regard
+            String premierW = premierSouhait(e);
             for (int i = 0; i < 4; i++) {
                 XWPFTableRow r = bloc.getRow(1 + i); r.setHeight(700);
-                boolean on = CASES_N[i][0].equals(e.getSouhaitSalarie());
+                boolean on = e.aSouhait(CASES_N[i][0]);
                 caseW(r.getCell(0), on, CASES_N[i][1]);
-                vcenter(r.getCell(1)); run(r.getCell(1).getParagraphs().get(0), on ? s(e.getCommentaireSalarie()) : "", false, 8.5, NAVY);
+                vcenter(r.getCell(1)); run(r.getCell(1).getParagraphs().get(0), CASES_N[i][0].equals(premierW) ? s(e.getCommentaireSalarie()) : "", false, 8.5, NAVY);
             }
             // Signature du salarié
             XWPFTableRow b5 = bloc.getRow(5); mergeRange(b5, 0, 1); XWPFTableCell c5 = b5.getCell(0);
@@ -569,5 +571,11 @@ public class FicheEvaluationExportService implements Serializable {
     private static void vmerge(XWPFTableCell c, boolean restart) {
         CTTcPr pr = c.getCTTc().isSetTcPr() ? c.getCTTc().getTcPr() : c.getCTTc().addNewTcPr();
         CTVMerge vm = pr.isSetVMerge() ? pr.getVMerge() : pr.addNewVMerge(); vm.setVal(restart ? STMerge.RESTART : STMerge.CONTINUE);
+    }
+
+    /** Premier souhait coché, dans l'ordre de la fiche : le commentaire du salarié est imprimé en regard. */
+    private static String premierSouhait(cd.mura.hrx.entity.eval.Evaluation e) {
+        for (String[] c : CASES_N) if (e.aSouhait(c[0])) return c[0];
+        return null;
     }
 }

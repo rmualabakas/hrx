@@ -49,6 +49,35 @@
             </section>
         </ui:fragment>
 
+        <!-- Alertes graduées : rappels avant échéance, relances après, niveau critique (non-conformité) -->
+        <ui:fragment rendered="#{not empty tableauBordView.alertes or (tableauBordView.dcht and tableauBordView.nbAlertesCritiques gt 0)}">
+            <section class="hx-card hx-alertes #{tableauBordView.alerteCritique ? 'is-crit' : ''}" aria-labelledby="alertesHeading">
+                <div class="hx-card__head">
+                    <div><h3 id="alertesHeading"><i class="pi pi-bell"></i> Mes alertes</h3>
+                        <small>Rappel avant l'échéance, puis relance tous les 3 jours : à la 3<sup>e</sup> relance, la situation devient critique et une fiche de non-conformité est établie.</small></div>
+                    <ui:fragment rendered="#{tableauBordView.dcht and tableauBordView.nbAlertesCritiques gt 0}">
+                        <span class="hx-alertes__dcht"><i class="pi pi-exclamation-triangle"></i> #{tableauBordView.nbAlertesCritiques} alerte#{tableauBordView.nbAlertesCritiques gt 1 ? 's' : ''} critique#{tableauBordView.nbAlertesCritiques gt 1 ? 's' : ''} dans la banque</span>
+                    </ui:fragment>
+                </div>
+                <ui:fragment rendered="#{not empty tableauBordView.alertes}">
+                    <ul class="hx-alertes__list">
+                        <ui:repeat value="#{tableauBordView.alertes}" var="a">
+                            <li class="is-#{a.niveau.toLowerCase()}">
+                                <span class="hx-alertes__lvl">#{a.niveauLabel}#{a.nbRelances gt 0 ? ' · relance n°' += a.nbRelances : ''}</span>
+                                <div class="hx-alertes__txt">
+                                    <strong>#{a.libelle}</strong>
+                                    <small>Échéance <h:outputText value="#{a.echeance}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText>#{a.joursRetard gt 0 ? ' · dépassée de ' += a.joursRetard += ' j' : ''}
+                                        <ui:fragment rendered="#{a.critique}"> · <b>une fiche de non-conformité sera établie à votre encontre</b></ui:fragment>
+                                        <ui:fragment rendered="#{a.niveau eq 'URGENT'}"> · critique à la prochaine relance</ui:fragment></small>
+                                </div>
+                                <a href="#{request.contextPath}#{a.lien}" class="hx-icon-btn" title="Traiter"><i class="pi pi-arrow-right"></i></a>
+                            </li>
+                        </ui:repeat>
+                    </ul>
+                </ui:fragment>
+            </section>
+        </ui:fragment>
+
         <!-- Mon espace + À faire -->
         <div class="hx-grid hx-grid--2 hx-dash__row">
             <section class="hx-card" aria-labelledby="moiHeading">

@@ -1,0 +1,410 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Périodes d'essai et CDD"/>
+    <ui:param name="pageSubtitle" value="Évaluation individuelle du personnel en CDD ou en période d'essai (MAF 070)"/>
+    <ui:define name="title">Périodes d'essai</ui:define>
+
+    <ui:define name="metadata">
+        <f:metadata>
+            <f:viewParam name="id" value="#{periodeEssaiView.id}"/>
+            <f:viewAction action="#{periodeEssaiView.charger}"/>
+        </f:metadata>
+    </ui:define>
+
+    <ui:define name="content">
+        <!-- Liste -->
+        <ui:fragment rendered="#{empty periodeEssaiView.id}">
+            <h:form id="frmEssais" prependId="false">
+                <div class="hx-page-head">
+                    <div>
+                        <h2>Fins de période d'essai et de CDD</h2>
+                        <p>Chaque fin de période d'essai (CDD ou CDI) et chaque échéance de CDD appelle une évaluation individuelle (fiche MAF 070), indépendante des campagnes. Le type de contrat et ses dates se renseignent dans la fiche du collaborateur (Utilisateurs) ; à défaut de date, la période d'essai dure #{periodeEssaiView.moisEssai} mois (Paramètres &gt; Évaluations).</p>
+                    </div>
+                </div>
+                <p:messages showDetail="true" closable="true"/>
+
+                <section class="hx-grid hx-grid--kpi hx-kpis-compact">
+                    <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-hourglass"></i> À évaluer</span><span class="hx-kpi__value #{periodeEssaiView.recruesAEvaluer.size() gt 0 ? 'hx-kpi__value--danger' : ''}">#{periodeEssaiView.recruesAEvaluer.size()}</span><span class="hx-kpi__delta">échéance atteinte, aucune évaluation</span></div>
+                    <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-calendar"></i> À venir</span><span class="hx-kpi__value">#{periodeEssaiView.prochaines.size()}</span><span class="hx-kpi__delta">essai sous 30 j · CDD sous 45 j</span></div>
+                    <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-pencil"></i> En cours</span><span class="hx-kpi__value">#{periodeEssaiView.nb('EN_COURS')}</span></div>
+                    <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-send"></i> À valider</span><span class="hx-kpi__value hx-kpi__value--gold">#{periodeEssaiView.nb('TRANSMISE')}</span></div>
+                    <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-check-circle"></i> Validées</span><span class="hx-kpi__value">#{periodeEssaiView.nb('VALIDEE')}</span></div>
+                </section>
+
+                <div class="hx-card" style="margin-top:var(--hx-s5)">
+                    <div class="hx-card__head"><div><h3>Évaluations à réaliser</h3><small>Fin de période d'essai ou échéance de CDD atteinte, sans évaluation</small></div></div>
+                    <div class="hx-card__body hx-card__body--flush">
+                        <ui:fragment rendered="#{empty periodeEssaiView.recruesAEvaluer}"><div class="hx-empty hx-empty--sm"><i class="pi pi-check-circle"></i><strong>Aucune évaluation en attente</strong></div></ui:fragment>
+                        <ui:fragment rendered="#{not empty periodeEssaiView.recruesAEvaluer}">
+                            <ui:include src="/WEB-INF/includes/essai-echeances.xhtml"><ui:param name="lignes" value="#{periodeEssaiView.recruesAEvaluer}"/><ui:param name="passe" value="#{true}"/></ui:include>
+                        </ui:fragment>
+                    </div>
+                </div>
+
+                <ui:fragment rendered="#{not empty periodeEssaiView.prochaines}">
+                    <div class="hx-card" style="margin-top:var(--hx-s5)">
+                        <div class="hx-card__head"><div><h3>Échéances à venir</h3><small>Fins d'essai dans les 30 jours (l'évaluation s'ouvre le jour de la fin d'essai) · fins de CDD dans les 45 jours (l'évaluation peut être ouverte dès maintenant)</small></div></div>
+                        <div class="hx-card__body hx-card__body--flush">
+                            <ui:include src="/WEB-INF/includes/essai-echeances.xhtml"><ui:param name="lignes" value="#{periodeEssaiView.prochaines}"/><ui:param name="passe" value="#{false}"/></ui:include>
+                        </div>
+                    </div>
+                </ui:fragment>
+
+                <ui:fragment rendered="#{not empty periodeEssaiView.enCours}">
+                    <div class="hx-card hx-essai-encours" style="margin-top:var(--hx-s5)">
+                        <div class="hx-card__head"><div><h3><i class="pi pi-hourglass"></i> En période d'essai ou en CDD <span class="hx-badge hx-badge--essai" style="margin-left:6px">#{periodeEssaiView.enCours.size()}</span></h3><small>Collaborateurs suivis, hors campagne d'évaluation : l'évaluation est ouverte par le N+1 direct à la fin de la période d'essai, ou 45 jours avant le terme d'un CDD</small></div></div>
+                        <div class="hx-card__body hx-card__body--flush">
+                            <ui:include src="/WEB-INF/includes/essai-echeances.xhtml"><ui:param name="lignes" value="#{periodeEssaiView.enCours}"/><ui:param name="passe" value="#{false}"/></ui:include>
+                        </div>
+                    </div>
+                </ui:fragment>
+
+                <div class="hx-card" style="margin-top:var(--hx-s5)">
+                    <div class="hx-card__head">
+                        <div><h3>Évaluations individuelles</h3><small>#{periodeEssaiView.dcht ? 'Toutes les évaluations' : 'Vos évaluations et celles de vos collaborateurs'}</small></div>
+                        <p:selectOneButton value="#{periodeEssaiView.filtre}" styleClass="hx-segment" unselectable="false">
+                            <f:selectItem itemLabel="Toutes" itemValue="tous"/><f:selectItem itemLabel="En cours" itemValue="EN_COURS"/>
+                            <f:selectItem itemLabel="À valider" itemValue="TRANSMISE"/><f:selectItem itemLabel="Validées" itemValue="VALIDEE"/>
+                            <p:ajax update="tblEssais"/>
+                        </p:selectOneButton>
+                    </div>
+                    <h:panelGroup id="tblEssais" layout="block" styleClass="hx-card__body hx-card__body--flush">
+                        <ui:fragment rendered="#{empty periodeEssaiView.evaluationsFiltrees}"><div class="hx-empty hx-empty--sm"><i class="pi pi-inbox"></i><strong>Aucune évaluation</strong></div></ui:fragment>
+                        <ui:fragment rendered="#{not empty periodeEssaiView.evaluationsFiltrees}">
+                            <div class="hx-rpt__scroll">
+                                <table class="hx-dirtable">
+                                    <thead><tr><th>Collaborateur</th><th>Contrat</th><th>Évaluateur</th><th>Échéance</th><th>Statut</th><th>Suite proposée</th><th></th></tr></thead>
+                                    <tbody>
+                                    <ui:repeat value="#{periodeEssaiView.evaluationsFiltrees}" var="e">
+                                        <tr>
+                                            <td><strong>#{e.salarie.nomComplet}</strong><br/><small class="hx-muted">#{empty e.salarie.direction ? '' : e.salarie.direction.nom}</small></td>
+                                            <td><small>#{e.typeLabel}</small></td>
+                                            <td>#{empty e.evaluateur ? '—' : e.evaluateur.nomComplet}</td>
+                                            <td><h:outputText value="#{e.echeance}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText></td>
+                                            <td><span class="hx-badge #{e.statutClasse}">#{e.statutLabel}</span><ui:fragment rendered="#{e.enCours and not empty e.motifRetour}"><small class="hx-warn"> · retournée</small></ui:fragment></td>
+                                            <td>#{empty e.decision ? '—' : e.decisionLabel}</td>
+                                            <td style="text-align:right"><p:button value="Ouvrir" icon="pi pi-arrow-right" styleClass="hx-btn-secondary hx-btn-sm" outcome="/ui/periodeEssai"><f:param name="id" value="#{e.id}"/></p:button></td>
+                                        </tr>
+                                    </ui:repeat>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </ui:fragment>
+                    </h:panelGroup>
+                </div>
+            </h:form>
+        </ui:fragment>
+
+        <!-- Fiche -->
+        <ui:fragment rendered="#{not empty periodeEssaiView.id}">
+            <h:form id="frmEssai" prependId="false">
+                <div class="hx-page-head">
+                    <div>
+                        <p:link outcome="/ui/periodeEssai" styleClass="hx-link-sm"><i class="pi pi-arrow-left"></i> Toutes les fins d'essai et de CDD</p:link>
+                        <h2>Fiche d'évaluation individuelle</h2>
+                        <ui:fragment rendered="#{not empty periodeEssaiView.courant}"><p>#{periodeEssaiView.courant.salarie.nomAvecCivilite} · #{periodeEssaiView.courant.typeLabel} · <span class="hx-muted">MAF 070 DRH 02</span></p></ui:fragment>
+                    </div>
+                    <div class="hx-page-head__actions">
+                        <ui:fragment rendered="#{not empty periodeEssaiView.courant}"><span class="hx-badge #{periodeEssaiView.courant.statutClasse}">#{periodeEssaiView.courant.statutLabel}</span></ui:fragment>
+                        <ui:fragment rendered="#{not empty periodeEssaiView.courant}">
+                            <p:commandButton value="Word" icon="pi pi-file-word" styleClass="hx-btn-secondary hx-btn-sm" ajax="false" title="Télécharger la fiche MAF 070 au format Word (.docx)">
+                                <p:fileDownload value="#{periodeEssaiView.exportDocx}"/>
+                            </p:commandButton>
+                            <p:commandButton value="PDF" icon="pi pi-file-pdf" styleClass="hx-btn-secondary hx-btn-sm" ajax="false" title="Télécharger la fiche MAF 070 au format PDF">
+                                <p:fileDownload value="#{periodeEssaiView.exportPdf}"/>
+                            </p:commandButton>
+                        </ui:fragment>
+                    </div>
+                </div>
+                <p:messages id="msgEssai" showDetail="true" closable="true"/>
+
+                <ui:fragment rendered="#{not empty periodeEssaiView.courant}">
+                    <ui:fragment rendered="#{periodeEssaiView.courant.enCours and not empty periodeEssaiView.courant.motifRetour}">
+                        <div class="hx-alert hx-alert--warn"><i class="pi pi-exclamation-triangle"></i><div><strong>Retournée par la DCHT</strong><span>#{periodeEssaiView.courant.motifRetour}</span></div></div>
+                    </ui:fragment>
+
+                    <ol class="hx-essai-circuit" aria-label="Circuit de l'évaluation">
+                        <li class="#{periodeEssaiView.courant.enCours ? 'is-now' : 'is-done'}"><i class="pi #{periodeEssaiView.courant.enCours ? 'pi-pencil' : 'pi-check'}"></i><div><b>Évaluation du N+1</b><small>#{empty periodeEssaiView.courant.evaluateur ? '—' : periodeEssaiView.courant.evaluateur.nomComplet}</small></div></li>
+                        <li class="is-opt #{not empty periodeEssaiView.courant.dateVisaN2 ? 'is-done' : (periodeEssaiView.courant.transmise ? 'is-now' : '')}"><i class="pi #{not empty periodeEssaiView.courant.dateVisaN2 ? 'pi-check' : 'pi-eye'}"></i><div><b>Visa du N+2 <em>facultatif</em></b><small>#{empty periodeEssaiView.n2Attendu ? 'Pas de N+2' : periodeEssaiView.n2Attendu.nomComplet}</small></div></li>
+                        <li class="#{not empty periodeEssaiView.courant.dateAvisDirecteur ? 'is-done' : (periodeEssaiView.courant.transmise ? 'is-now' : '')}"><i class="pi #{not empty periodeEssaiView.courant.dateAvisDirecteur ? 'pi-check' : 'pi-comment'}"></i><div><b>Avis du directeur</b><small>#{empty periodeEssaiView.directeurAttendu ? 'Saisi par la DCHT (pas de directeur désigné)' : periodeEssaiView.directeurAttendu.nomComplet}</small></div></li>
+                        <li class="#{periodeEssaiView.courant.validee ? 'is-done' : (periodeEssaiView.courant.transmise and not empty periodeEssaiView.courant.dateAvisDirecteur ? 'is-now' : '')}"><i class="pi #{periodeEssaiView.courant.validee ? 'pi-check' : 'pi-verified'}"></i><div><b>Validation DCHT</b><small>#{periodeEssaiView.courant.validee ? 'Validée' : 'Décision finale'}</small></div></li>
+                    </ol>
+
+                    <div class="hx-card">
+                        <div class="hx-card__body">
+                            <dl class="hx-campaign__facts hx-essai__facts">
+                                <div><dt>Nom et prénom du salarié</dt><dd><b>#{periodeEssaiView.courant.salarie.nomComplet}</b><ui:fragment rendered="#{not empty periodeEssaiView.courant.salarie.matricule}"> · #{periodeEssaiView.courant.salarie.matricule}</ui:fragment></dd></div>
+                                <div><dt>Date d'embauche</dt><dd><h:outputText value="#{periodeEssaiView.courant.dateEmbauche}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText></dd></div>
+                                <div><dt>Poste occupé</dt><dd>#{empty periodeEssaiView.courant.salarie.fonction ? '—' : periodeEssaiView.courant.salarie.fonction}</dd></div>
+                                <div><dt>Direction / département / service / agence</dt><dd>#{empty periodeEssaiView.courant.salarie.direction ? '—' : periodeEssaiView.courant.salarie.direction.nom}</dd></div>
+                                <div><dt>Supérieur hiérarchique</dt><dd>#{empty periodeEssaiView.courant.evaluateur ? '—' : periodeEssaiView.courant.evaluateur.nomComplet}</dd></div>
+                                <div><dt>Campagne</dt><dd>
+                                    <ui:fragment rendered="#{not periodeEssaiView.peutEditer}">#{empty periodeEssaiView.courant.campagne ? 'Hors campagne' : periodeEssaiView.courant.campagne.libelle}</ui:fragment>
+                                    <p:selectOneMenu value="#{periodeEssaiView.campagneId}" styleClass="hx-select" converter="jakarta.faces.Integer" rendered="#{periodeEssaiView.peutEditer}">
+                                        <f:selectItem itemLabel="Hors campagne" itemValue="#{null}" noSelectionOption="true"/>
+                                        <f:selectItems value="#{periodeEssaiView.campagnes}" var="c" itemLabel="#{c.libelle}" itemValue="#{c.id}"/>
+                                    </p:selectOneMenu></dd></div>
+                            </dl>
+                            <div class="hx-essai-contrat">
+                                <span class="hx-essai-contrat__lbl">Type de contrat</span>
+                                <span class="hx-essai-case #{periodeEssaiView.courant.typeEvaluation eq 'FIN_ESSAI_CDD' ? 'is-on' : ''}"><i class="pi #{periodeEssaiView.courant.typeEvaluation eq 'FIN_ESSAI_CDD' ? 'pi-check-square' : 'pi-stop'}"></i> CDD fin période d'essai</span>
+                                <span class="hx-essai-case #{periodeEssaiView.courant.typeEvaluation eq 'FIN_CDD' ? 'is-on' : ''}"><i class="pi #{periodeEssaiView.courant.typeEvaluation eq 'FIN_CDD' ? 'pi-check-square' : 'pi-stop'}"></i> CDD fin de contrat</span>
+                                <span class="hx-essai-case #{empty periodeEssaiView.courant.typeEvaluation or periodeEssaiView.courant.typeEvaluation eq 'FIN_ESSAI_CDI' ? 'is-on' : ''}"><i class="pi #{empty periodeEssaiView.courant.typeEvaluation or periodeEssaiView.courant.typeEvaluation eq 'FIN_ESSAI_CDI' ? 'pi-check-square' : 'pi-stop'}"></i> CDI fin période d'essai</span>
+                            </div>
+                            <dl class="hx-campaign__facts hx-essai__facts" style="margin-top:var(--hx-s4)">
+                                <div><dt>Date de début présent contrat</dt><dd><h:outputText value="#{periodeEssaiView.courant.dateDebutContrat}" rendered="#{not empty periodeEssaiView.courant.dateDebutContrat}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText><ui:fragment rendered="#{empty periodeEssaiView.courant.dateDebutContrat}">—</ui:fragment></dd></div>
+                                <div><dt>Date de fin présent contrat</dt><dd><h:outputText value="#{periodeEssaiView.courant.dateFinContrat}" rendered="#{not empty periodeEssaiView.courant.dateFinContrat}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText><ui:fragment rendered="#{empty periodeEssaiView.courant.dateFinContrat}">#{periodeEssaiView.courant.finCdd ? '—' : 'Durée indéterminée'}</ui:fragment></dd></div>
+                                <div><dt>Fin de période d'essai</dt><dd><h:outputText value="#{periodeEssaiView.courant.dateFinEssai}" rendered="#{not empty periodeEssaiView.courant.dateFinEssai}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText><ui:fragment rendered="#{empty periodeEssaiView.courant.dateFinEssai}">—</ui:fragment></dd></div>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <!-- I. Rappel des objectifs -->
+                    <div class="hx-card" style="margin-top:var(--hx-s5)">
+                        <div class="hx-card__head"><div><h3>I. Rappel des objectifs</h3><small>Objectifs validés de la fiche d'objectifs · T1 à T4 = trimestres · O = objectif · R = réalisé</small></div></div>
+                        <div class="hx-card__body hx-card__body--flush">
+                            <ui:fragment rendered="#{empty periodeEssaiView.courant.criteresObjectifs}"><div class="hx-empty"><i class="pi pi-flag"></i><strong>Aucun objectif validé</strong>Aucun objectif validé n'a été fixé à ce collaborateur sur la période. Fixez-les dans « Objectifs » : ils apparaîtront ici automatiquement tant que l'évaluation n'est pas transmise.</div></ui:fragment>
+                            <ui:fragment rendered="#{not empty periodeEssaiView.courant.criteresObjectifs}">
+                            <div class="hx-rpt__scroll">
+                                <table class="hx-dirtable hx-essai-obj">
+                                    <thead>
+                                        <tr><th rowspan="2">Objectifs</th><th rowspan="2">Indicateurs</th><th colspan="2">T1</th><th colspan="2">T2</th><th colspan="2">T3</th><th colspan="2">T4</th><th rowspan="2">Commentaire</th></tr>
+                                        <tr class="hx-essai-obj__or"><th>O</th><th>R</th><th>O</th><th>R</th><th>O</th><th>R</th><th>O</th><th>R</th></tr>
+                                    </thead>
+                                    <tbody>
+                                    <ui:repeat value="#{periodeEssaiView.courant.criteresObjectifs}" var="k">
+                                        <ui:fragment rendered="#{periodeEssaiView.courant.debutFamille(k) and not empty k.activite}"><tr class="hx-essai-grp"><td colspan="11">#{k.activite}</td></tr></ui:fragment>
+                                        <tr>
+                                            <td><strong>#{k.libelle}</strong></td>
+                                            <td><small>#{empty k.indicateur ? '—' : k.indicateur}</small></td>
+                                            <td class="hx-essai-o">#{empty k.o1 ? '' : k.o1}</td>
+                                            <td class="hx-essai-r"><p:inputText value="#{k.r1}" maxlength="60" styleClass="hx-essai-rin" rendered="#{periodeEssaiView.peutEditer and not empty k.o1}"/><ui:fragment rendered="#{not periodeEssaiView.peutEditer or empty k.o1}">#{k.r1}</ui:fragment></td>
+                                            <td class="hx-essai-o">#{empty k.o2 ? '' : k.o2}</td>
+                                            <td class="hx-essai-r"><p:inputText value="#{k.r2}" maxlength="60" styleClass="hx-essai-rin" rendered="#{periodeEssaiView.peutEditer and not empty k.o2}"/><ui:fragment rendered="#{not periodeEssaiView.peutEditer or empty k.o2}">#{k.r2}</ui:fragment></td>
+                                            <td class="hx-essai-o">#{empty k.o3 ? '' : k.o3}</td>
+                                            <td class="hx-essai-r"><p:inputText value="#{k.r3}" maxlength="60" styleClass="hx-essai-rin" rendered="#{periodeEssaiView.peutEditer and not empty k.o3}"/><ui:fragment rendered="#{not periodeEssaiView.peutEditer or empty k.o3}">#{k.r3}</ui:fragment></td>
+                                            <td class="hx-essai-o">#{empty k.o4 ? '' : k.o4}</td>
+                                            <td class="hx-essai-r"><p:inputText value="#{k.r4}" maxlength="60" styleClass="hx-essai-rin" rendered="#{periodeEssaiView.peutEditer and not empty k.o4}"/><ui:fragment rendered="#{not periodeEssaiView.peutEditer or empty k.o4}">#{k.r4}</ui:fragment></td>
+                                            <td class="hx-essai-com">
+                                                <p:inputTextarea value="#{k.commentaire}" maxlength="500" rows="2" autoResize="true" styleClass="hx-essai-comin" placeholder="Commentaire" rendered="#{periodeEssaiView.peutEditer}"/>
+                                                <ui:fragment rendered="#{not periodeEssaiView.peutEditer}">#{k.commentaire}</ui:fragment>
+                                            </td>
+                                        </tr>
+                                    </ui:repeat>
+                                    </tbody>
+                                </table>
+                            </div>
+                            </ui:fragment>
+                        </div>
+                    </div>
+
+                    <!-- II. Intégration -->
+                    <div class="hx-card" style="margin-top:var(--hx-s5)">
+                        <div class="hx-card__head"><div><h3>II. Intégration du salarié dans l'environnement professionnel</h3><small>#{periodeEssaiView.courant.maf070 ? 'TB = très bien · B = bien · P = passable · I = insuffisant · PC = pas concerné' : 'A = acquis · EA = en cours d\'acquisition · NA = non acquis · NM = non mesuré'}</small></div><small>#{periodeEssaiView.courant.nbNotesCompetences} / #{periodeEssaiView.courant.criteresCompetences.size()} noté#{periodeEssaiView.courant.nbNotesCompetences gt 1 ? 's' : ''}</small></div>
+                        <div class="hx-card__body hx-card__body--flush">
+                            <div class="hx-rpt__scroll">
+                                <table class="hx-dirtable hx-essai-grille">
+                                    <thead><tr><th>Compétences</th><th>Notation</th><th>Axes d'amélioration</th></tr></thead>
+                                    <tbody>
+                                    <ui:repeat value="#{periodeEssaiView.courant.criteresCompetences}" var="k">
+                                        <ui:fragment rendered="#{periodeEssaiView.courant.debutFamille(k)}"><tr class="hx-essai-grp"><td colspan="3">#{periodeEssaiView.familleLabel(k.famille)}</td></tr></ui:fragment>
+                                        <ui:fragment rendered="#{periodeEssaiView.courant.debutGroupe(k)}"><tr class="hx-essai-sgrp"><td colspan="3">#{k.description}</td></tr></ui:fragment>
+                                        <tr>
+                                            <td class="#{empty k.description ? '' : 'hx-essai-ind'}">#{k.libelle}<ui:fragment rendered="#{not periodeEssaiView.courant.maf070 and not empty k.description}"><br/><small class="hx-muted">#{k.description}</small></ui:fragment></td>
+                                            <td style="white-space:nowrap">
+                                                <p:selectOneButton value="#{k.niveau}" styleClass="hx-segment hx-segment--lvl" unselectable="true" rendered="#{periodeEssaiView.peutEditer}">
+                                                    <f:selectItems value="#{periodeEssaiView.niveaux}" var="n" itemLabel="#{n}" itemValue="#{n}" itemDescription="#{periodeEssaiView.niveauLabel(n)}"/>
+                                                </p:selectOneButton>
+                                                <ui:fragment rendered="#{not periodeEssaiView.peutEditer}"><span class="hx-lvl hx-lvl--#{empty k.niveau ? 'none' : k.niveau}" title="#{periodeEssaiView.niveauLabel(k.niveau)}">#{empty k.niveau ? '—' : k.niveau}</span></ui:fragment>
+                                            </td>
+                                            <td class="hx-essai-com">
+                                                <p:inputTextarea value="#{k.commentaire}" maxlength="500" rows="2" autoResize="true" styleClass="hx-essai-comin" placeholder="Axes d'amélioration" rendered="#{periodeEssaiView.peutEditer}"/>
+                                                <ui:fragment rendered="#{not periodeEssaiView.peutEditer}">#{k.commentaire}</ui:fragment>
+                                            </td>
+                                        </tr>
+                                    </ui:repeat>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="hx-card" style="margin-top:var(--hx-s5)">
+                        <div class="hx-card__head"><div><h3>Appréciation globale</h3></div></div>
+                        <div class="hx-card__body hx-form">
+                            <div class="hx-field">
+                                <p:inputTextarea styleClass="hx-essai-ta hx-essai-ta--lg" value="#{periodeEssaiView.courant.commentaireEvaluateur}" rows="4" autoResize="true" maxlength="3000" readonly="#{not periodeEssaiView.peutEditer}" placeholder="#{periodeEssaiView.peutEditer ? 'Synthèse de l\'intégration du collaborateur : acquis, points de vigilance, progression' : ''}"/>
+                            </div>
+                            <ui:fragment rendered="#{not empty periodeEssaiView.courant.pointsForts or not empty periodeEssaiView.courant.axesAmelioration}">
+                                <div class="hx-field__grid">
+                                    <div class="hx-field"><label>Points forts</label><p style="margin:0">#{empty periodeEssaiView.courant.pointsForts ? '—' : periodeEssaiView.courant.pointsForts}</p></div>
+                                    <div class="hx-field"><label>Axes d'amélioration</label><p style="margin:0">#{empty periodeEssaiView.courant.axesAmelioration ? '—' : periodeEssaiView.courant.axesAmelioration}</p></div>
+                                </div>
+                            </ui:fragment>
+                            <div class="hx-field">
+                                <p:outputLabel for="eComSal" value="Commentaire du collaborateur"/>
+                                <p:inputTextarea styleClass="hx-essai-ta" id="eComSal" value="#{periodeEssaiView.courant.commentaireSalarie}" rows="3" autoResize="true" maxlength="3000" readonly="#{not periodeEssaiView.peutCommenter}"
+                                                 placeholder="#{periodeEssaiView.peutCommenter ? 'Votre ressenti sur votre intégration et votre poste (facultatif)' : (periodeEssaiView.courant.enCours ? 'Le collaborateur commente et signe une fois l\'évaluation transmise.' : '')}"/>
+                            </div>
+                            <div class="hx-sign">
+                                <div class="hx-sign__col">
+                                    <small>Signature du collaborateur</small>
+                                    <ui:fragment rendered="#{not empty periodeEssaiView.courant.dateSignatureSalarie}"><strong><i class="pi pi-check-circle"></i> #{periodeEssaiView.courant.salarie.nomComplet}</strong><span><h:outputText value="#{periodeEssaiView.courant.dateSignatureSalarie}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></span></ui:fragment>
+                                    <ui:fragment rendered="#{empty periodeEssaiView.courant.dateSignatureSalarie}"><span class="hx-muted">#{periodeEssaiView.courant.enCours ? 'Après transmission par le N+1' : 'En attente'}</span></ui:fragment>
+                                </div>
+                                <div class="hx-sign__col">
+                                    <small>Signature du supérieur hiérarchique direct</small>
+                                    <ui:fragment rendered="#{not empty periodeEssaiView.courant.dateTransmission}"><strong><i class="pi pi-check-circle"></i> #{empty periodeEssaiView.courant.evaluateur ? 'N+1' : periodeEssaiView.courant.evaluateur.nomComplet}</strong><span><h:outputText value="#{periodeEssaiView.courant.dateTransmission}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></span></ui:fragment>
+                                    <ui:fragment rendered="#{empty periodeEssaiView.courant.dateTransmission}"><span class="hx-muted">À la transmission</span></ui:fragment>
+                                </div>
+                                <div class="hx-sign__actions">
+                                    <p:commandButton value="Signer l'évaluation" icon="pi pi-pencil" process="@form" update="@form :globalGrowl" actionListener="#{periodeEssaiView.signer}" rendered="#{periodeEssaiView.peutCommenter}">
+                                        <p:confirm header="Signer l'évaluation" message="Vous attestez avoir pris connaissance de votre évaluation. Votre commentaire ne sera plus modifiable." icon="pi pi-pencil"/>
+                                    </p:commandButton>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- III. Suite à donner -->
+                    <div class="hx-card" style="margin-top:var(--hx-s5)">
+                        <div class="hx-card__head"><div><h3>III. Suite à donner au contrat de travail</h3><small>#{periodeEssaiView.courant.finCdd ? 'Contrat à durée déterminée' : 'Période d\'essai (CDD ou CDI)'}</small></div></div>
+                        <div class="hx-card__body hx-form">
+                            <dl class="hx-campaign__facts hx-essai__facts">
+                                <div><dt>Date de début du contrat</dt><dd><h:outputText value="#{periodeEssaiView.courant.dateDebutContrat}" rendered="#{not empty periodeEssaiView.courant.dateDebutContrat}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText><ui:fragment rendered="#{empty periodeEssaiView.courant.dateDebutContrat}">—</ui:fragment></dd></div>
+                                <ui:fragment rendered="#{periodeEssaiView.courant.finCdd}">
+                                    <div><dt>Échéance du présent contrat</dt><dd><h:outputText value="#{periodeEssaiView.courant.dateFinContrat}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText></dd></div>
+                                    <div><dt>Date limite légale du contrat</dt><dd><h:outputText value="#{periodeEssaiView.courant.dateLimiteContrat}" rendered="#{not empty periodeEssaiView.courant.dateLimiteContrat}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText><ui:fragment rendered="#{empty periodeEssaiView.courant.dateLimiteContrat}">Non renseignée</ui:fragment></dd></div>
+                                    <div><dt>Nombre de prorogations effectuées</dt><dd>#{empty periodeEssaiView.courant.nbProrogations ? 0 : periodeEssaiView.courant.nbProrogations}</dd></div>
+                                </ui:fragment>
+                                <ui:fragment rendered="#{not periodeEssaiView.courant.finCdd}">
+                                    <div><dt>Date de fin de période d'essai</dt><dd><h:outputText value="#{periodeEssaiView.courant.dateFinEssai}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText></dd></div>
+                                </ui:fragment>
+                            </dl>
+                            <div class="hx-field__grid">
+                                <div class="hx-field"><p:outputLabel for="eDec" value="Décision"/>
+                                    <p:selectOneRadio id="eDec" value="#{periodeEssaiView.courant.decision}" layout="pageDirection" disabled="#{not periodeEssaiView.peutEditer}">
+                                        <f:selectItems value="#{periodeEssaiView.courant.decisionsPossibles}" var="d" itemLabel="#{periodeEssaiView.decisionLabel(d)}" itemValue="#{d}"/>
+                                        <p:ajax update="zoneDecision" process="@this"/>
+                                    </p:selectOneRadio>
+                                    <ui:fragment rendered="#{not empty periodeEssaiView.courant.decision and not periodeEssaiView.courant.decisionsPossibles.contains(periodeEssaiView.courant.decision)}"><small class="hx-muted">Proposition enregistrée : #{periodeEssaiView.courant.decisionLabel}</small></ui:fragment>
+                                </div>
+                                <h:panelGroup id="zoneDecision" layout="block" styleClass="hx-field">
+                                    <ui:fragment rendered="#{periodeEssaiView.courant.decision eq 'RENOUVELER'}">
+                                        <p:outputLabel for="eNouv" value="Nouvelle échéance proposée"/>
+                                        <p:datePicker id="eNouv" value="#{periodeEssaiView.courant.nouvelleEcheance}" pattern="dd/MM/yyyy" locale="fr" showIcon="true" styleClass="hx-date" disabled="#{not periodeEssaiView.peutEditer}"/>
+                                    </ui:fragment>
+                                    <ui:fragment rendered="#{periodeEssaiView.courant.decision eq 'PROLONGER'}">
+                                        <p:outputLabel for="eProl" value="Durée de la prolongation (mois)"/>
+                                        <p:inputNumber id="eProl" value="#{periodeEssaiView.courant.prolongationMois}" decimalPlaces="0" minValue="1" maxValue="12" disabled="#{not periodeEssaiView.peutEditer}"/>
+                                    </ui:fragment>
+                                    <p:outputLabel for="eDate" value="Date de l'entretien" style="margin-top:12px"/>
+                                    <p:datePicker id="eDate" value="#{periodeEssaiView.courant.dateEntretien}" pattern="dd/MM/yyyy" locale="fr" showIcon="true" styleClass="hx-date" disabled="#{not periodeEssaiView.peutEditer}"/>
+                                </h:panelGroup>
+                            </div>
+                            <div class="hx-field"><p:outputLabel for="eMotif" value="#{periodeEssaiView.courant.finCdd ? 'Motif' : 'Motif (requis en cas de fin de contrat)'}"/>
+                                <p:inputTextarea styleClass="hx-essai-ta" id="eMotif" value="#{periodeEssaiView.courant.motifDecision}" rows="2" autoResize="true" maxlength="2000" readonly="#{not periodeEssaiView.peutEditer}"/></div>
+                            <div class="hx-sign hx-sign--2">
+                                <div class="hx-sign__col">
+                                    <small>Date et signature du supérieur hiérarchique</small>
+                                    <ui:fragment rendered="#{not empty periodeEssaiView.courant.dateTransmission}"><strong><i class="pi pi-check-circle"></i> #{empty periodeEssaiView.courant.evaluateur ? 'N+1' : periodeEssaiView.courant.evaluateur.nomComplet}</strong><span><h:outputText value="#{periodeEssaiView.courant.dateTransmission}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></span></ui:fragment>
+                                    <ui:fragment rendered="#{empty periodeEssaiView.courant.dateTransmission}"><span class="hx-muted">À la transmission</span></ui:fragment>
+                                </div>
+                                <div class="hx-sign__col">
+                                    <small>Date et signature du directeur</small>
+                                    <ui:fragment rendered="#{not empty periodeEssaiView.courant.dateAvisDirecteur}"><strong><i class="pi pi-check-circle"></i> #{empty periodeEssaiView.courant.directeur ? 'Directeur' : periodeEssaiView.courant.directeur.nomComplet}</strong><span><h:outputText value="#{periodeEssaiView.courant.dateAvisDirecteur}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></span></ui:fragment>
+                                    <ui:fragment rendered="#{empty periodeEssaiView.courant.dateAvisDirecteur}"><span class="hx-muted">À l'avis du directeur</span></ui:fragment>
+                                </div>
+                            </div>
+                            <ui:fragment rendered="#{periodeEssaiView.peutEditer}">
+                                <div class="hx-form__actions">
+                                    <p:commandButton value="Enregistrer" icon="pi pi-save" styleClass="hx-btn-secondary" process="@form" update="@form :globalGrowl" actionListener="#{periodeEssaiView.enregistrer}"/>
+                                    <p:commandButton value="#{periodeEssaiView.avecDirecteur ? 'Transmettre au directeur' : 'Transmettre à la DCHT'}" icon="pi pi-send" process="@form" update="@form :globalGrowl" actionListener="#{periodeEssaiView.transmettre}">
+                                        <p:confirm header="Transmettre l'évaluation" message="Le collaborateur pourra la signer. #{periodeEssaiView.avecDirecteur ? 'Le directeur donnera son avis (le N+2 peut apposer un visa facultatif), puis la DCHT validera. ' : ''}Une fois transmise, l'évaluation n'est plus modifiable, sauf retour de la DCHT." icon="pi pi-send"/>
+                                    </p:commandButton>
+                                </div>
+                            </ui:fragment>
+                        </div>
+                    </div>
+
+                    <ui:fragment rendered="#{not periodeEssaiView.courant.enCours}">
+                        <div class="hx-card" style="margin-top:var(--hx-s5)">
+                            <div class="hx-card__head"><div><h3>Visa du N+2 <span class="hx-badge hx-badge--info" style="margin-left:6px">facultatif</span></h3>
+                                <small>#{empty periodeEssaiView.courant.n2 ? (empty periodeEssaiView.n2Attendu ? '' : periodeEssaiView.n2Attendu.nomComplet) : periodeEssaiView.courant.n2.nomComplet}<ui:fragment rendered="#{not empty periodeEssaiView.courant.dateVisaN2}"> · <h:outputText value="#{periodeEssaiView.courant.dateVisaN2}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></ui:fragment></small></div></div>
+                            <div class="hx-card__body hx-form">
+                                <ui:fragment rendered="#{periodeEssaiView.saisieN2}">
+                                    <div class="hx-field"><p:inputTextarea styleClass="hx-essai-ta" value="#{periodeEssaiView.courant.visaN2}" rows="2" autoResize="true" maxlength="2000" placeholder="Observations du N+2 (facultatif)"/></div>
+                                    <div class="hx-form__actions"><p:commandButton value="Apposer mon visa" icon="pi pi-check" process="@form" update="@form :globalGrowl" actionListener="#{periodeEssaiView.viser}"/></div>
+                                </ui:fragment>
+                                <ui:fragment rendered="#{not periodeEssaiView.saisieN2}"><p class="#{empty periodeEssaiView.courant.dateVisaN2 ? 'hx-muted' : ''}" style="margin:0">#{empty periodeEssaiView.courant.dateVisaN2 ? 'Pas de visa : cette étape est facultative et ne bloque pas la suite.' : (empty periodeEssaiView.courant.visaN2 ? 'Visé sans observation.' : periodeEssaiView.courant.visaN2)}</p></ui:fragment>
+                            </div>
+                        </div>
+
+                        <div class="hx-card" style="margin-top:var(--hx-s5)">
+                            <div class="hx-card__head"><div><h3>Avis du directeur</h3>
+                                <small>#{empty periodeEssaiView.courant.directeur ? (empty periodeEssaiView.directeurAttendu ? 'Pas de directeur désigné : la DCHT saisit l\'avis' : periodeEssaiView.directeurAttendu.nomComplet) : periodeEssaiView.courant.directeur.nomComplet}<ui:fragment rendered="#{not empty periodeEssaiView.courant.dateAvisDirecteur}"> · <h:outputText value="#{periodeEssaiView.courant.dateAvisDirecteur}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></ui:fragment></small></div></div>
+                            <div class="hx-card__body hx-form">
+                                <ui:fragment rendered="#{periodeEssaiView.saisieDirecteur}">
+                                    <div class="hx-field"><p:inputTextarea styleClass="hx-essai-ta" value="#{periodeEssaiView.courant.avisDirecteur}" rows="3" autoResize="true" maxlength="3000" placeholder="Votre avis sur la proposition du N+1 : confirmation, prolongation ou non-confirmation"/></div>
+                                    <div class="hx-form__actions"><p:commandButton value="Donner mon avis" icon="pi pi-send" process="@form" update="@form :globalGrowl" actionListener="#{periodeEssaiView.donnerAvis}">
+                                        <p:confirm header="Donner votre avis" message="Votre avis sera joint à l'évaluation et la DCHT sera prévenue pour validation." icon="pi pi-send"/>
+                                    </p:commandButton></div>
+                                </ui:fragment>
+                                <ui:fragment rendered="#{not periodeEssaiView.saisieDirecteur}"><p class="#{empty periodeEssaiView.courant.dateAvisDirecteur ? 'hx-muted' : ''}" style="margin:0">#{empty periodeEssaiView.courant.dateAvisDirecteur ? 'En attente : requis avant la validation par la DCHT.' : periodeEssaiView.courant.avisDirecteur}</p></ui:fragment>
+                            </div>
+                        </div>
+                    </ui:fragment>
+
+                    <ui:fragment rendered="#{periodeEssaiView.peutValider or periodeEssaiView.courant.validee or (periodeEssaiView.dcht and not periodeEssaiView.courant.validee)}">
+                        <div class="hx-card" style="margin-top:var(--hx-s5)">
+                            <div class="hx-card__head"><div><h3>Décision de la DCHT</h3><ui:fragment rendered="#{periodeEssaiView.courant.validee}"><small>Validée le <h:outputText value="#{periodeEssaiView.courant.dateValidation}"><f:convertDateTime pattern="dd/MM/yyyy"/></h:outputText></small></ui:fragment></div></div>
+                            <div class="hx-card__body hx-form">
+                                <div class="hx-field">
+                                    <p:inputTextarea styleClass="hx-essai-ta" value="#{periodeEssaiView.courant.commentaireDcht}" rows="3" autoResize="true" maxlength="3000" readonly="#{not periodeEssaiView.peutValider}" placeholder="#{periodeEssaiView.peutValider ? 'Commentaire de la DCHT (facultatif)' : ''}"/>
+                                </div>
+                                <div class="hx-form__actions">
+                                    <p:commandButton value="Supprimer" icon="pi pi-trash" styleClass="hx-btn-secondary hx-btn-sm--danger" process="@this" actionListener="#{periodeEssaiView.supprimer}" update="@form :globalGrowl"
+                                                     rendered="#{periodeEssaiView.dcht and not periodeEssaiView.courant.validee}">
+                                        <p:confirm header="Supprimer l'évaluation" message="L'évaluation et ses appréciations seront supprimées. Le collaborateur réapparaîtra parmi les recrues à évaluer." icon="pi pi-exclamation-triangle"/>
+                                    </p:commandButton>
+                                    <span class="hx-campaign__spacer"></span>
+                                    <ui:fragment rendered="#{periodeEssaiView.peutValider}">
+                                        <p:commandButton value="Retourner au N+1" icon="pi pi-replay" styleClass="hx-btn-secondary" type="button" onclick="PF('dlgRetourEssai').show()"/>
+                                        <p:commandButton value="Valider" icon="pi pi-verified" process="@form" update="@form :globalGrowl" actionListener="#{periodeEssaiView.valider}"
+                                                         disabled="#{empty periodeEssaiView.courant.dateAvisDirecteur}" title="#{empty periodeEssaiView.courant.dateAvisDirecteur ? 'L\'avis du directeur est attendu avant la validation' : ''}">
+                                            <p:confirm header="Valider l'évaluation" message="Le collaborateur et son N+1 seront prévenus de la décision." icon="pi pi-verified"/>
+                                        </p:commandButton>
+                                    </ui:fragment>
+                                </div>
+                            </div>
+                        </div>
+                    </ui:fragment>
+                </ui:fragment>
+
+                <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" responsive="true" width="460">
+                    <p:commandButton value="Annuler" type="button" styleClass="ui-confirmdialog-no hx-btn-secondary" icon="pi pi-times"/>
+                    <p:commandButton value="Confirmer" type="button" styleClass="ui-confirmdialog-yes" icon="pi pi-check"/>
+                </p:confirmDialog>
+            </h:form>
+
+            <p:dialog widgetVar="dlgRetourEssai" header="Retourner l'évaluation au N+1" modal="true" responsive="true" width="520" closeOnEscape="true">
+                <h:form id="frmRetourEssai">
+                    <div class="hx-form">
+                        <div class="hx-field"><p:outputLabel for="motifEssai" value="Motif du retour"/>
+                            <p:inputTextarea styleClass="hx-essai-ta hx-essai-ta--lg" id="motifEssai" value="#{periodeEssaiView.motifRetour}" rows="4" autoResize="true" maxlength="2000" required="true" requiredMessage="Le motif est obligatoire"/></div>
+                    </div>
+                    <div class="hx-form__actions">
+                        <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgRetourEssai').hide()"/>
+                        <p:commandButton value="Retourner" icon="pi pi-replay" process="@form" update="@form :frmEssai :globalGrowl" actionListener="#{periodeEssaiView.retourner}" oncomplete="if (args &amp;&amp; args.ok) PF('dlgRetourEssai').hide()"/>
+                    </div>
+                </h:form>
+            </p:dialog>
+        </ui:fragment>
+    </ui:define>
+</ui:composition>

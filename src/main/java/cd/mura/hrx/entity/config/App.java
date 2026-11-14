@@ -105,7 +105,39 @@ public class App {
     @Column(name = "derniere_relance")
     private java.time.LocalDate derniereRelance;
 
+    /** Durée de la période d'essai, en mois : une recrue n'est pas éligible aux campagnes avant ce délai. */
+    @Column(name = "duree_essai_mois")
+    private Integer dureeEssaiMois = 6;
+
+    /** Seuil (en %) à partir duquel les objectifs sont considérés comme atteints dans le reporting. */
+    @Column(name = "seuil_atteinte")
+    private Integer seuilAtteinte = 85;
+
+    /** {@code null} (ligne existante) = 6 mois. */
+    public int getDureeEssai() { return dureeEssaiMois == null || dureeEssaiMois < 1 ? 6 : dureeEssaiMois; }
+    /** {@code null} (ligne existante) = 85 %. */
+    public int getSeuilAtteinteEffectif() { return seuilAtteinte == null || seuilAtteinte < 1 ? 85 : seuilAtteinte; }
+
     public boolean isRappelsObjectifsActifs() { return rappelsObjectifs == null || rappelsObjectifs; }
+
+    // IA (présélection des CV) : API Claude d'Anthropic
+    @Column(name = "ia_active")
+    private Boolean iaActive = Boolean.FALSE;
+
+    /** Clé d'API Anthropic. Jamais réaffichée ; à défaut, la variable d'environnement ANTHROPIC_API_KEY est utilisée. */
+    @Column(name = "ia_cle_api", length = 500)
+    private String iaCleApi;
+
+    @Column(name = "ia_modele", length = 60)
+    private String iaModele = "claude-opus-5-5";
+
+    /** Profondeur de réflexion : low, medium, high. */
+    @Column(name = "ia_effort", length = 10)
+    private String iaEffort = "medium";
+
+    /** Nombre de CV analysés en parallèle. */
+    @Column(name = "ia_parallele")
+    private Integer iaParallele = 3;
 
     // Relances automatiques (job quotidien)
     /** Interrupteur global du job quotidien d'emails (relances évaluateurs, échéances de campagne). */

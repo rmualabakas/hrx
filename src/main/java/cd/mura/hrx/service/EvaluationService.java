@@ -28,6 +28,15 @@ public class EvaluationService {
         if (salarie == null || salarie.getId() <= 0) {
             throw new IllegalArgumentException("Collaborateur requis");
         }
+        // contrôles relus en base : seul le N+1 direct initie, et jamais pendant une évaluation d'essai non clôturée
+        Users s = em.find(Users.class, salarie.getId());
+        if (evaluateur == null || s == null || s.getSuperieurHierarchique() == null
+                || s.getSuperieurHierarchique().getId() != evaluateur.getId() || s.getId() == evaluateur.getId()) {
+            throw new SecurityException("Seul le N+1 direct du collaborateur peut initier sa fiche d'évaluation");
+        }
+        if (essaiNonClos(s.getId())) {
+            throw new IllegalStateException("L'évaluation de fin de période d'essai de ce collaborateur n'est pas encore validée par la DCHT");
+        }
         Evaluation e = new Evaluation();
         e.setCampagne(em.getReference(Campagne.class, campagne.getId()));
         e.setSalarie(em.getReference(Users.class, salarie.getId()));
@@ -143,12 +152,18 @@ public class EvaluationService {
     public Evaluation avisDirecteur(Evaluation e, Users directeur, String avis) {
         requireState(e, Evaluation.EVALUEE);
         if (e.getDateAvisDirecteur() != null) throw new IllegalStateException("L'avis du directeur est déjà enregistré");
+        int dir = directeurDe(e);
+        if (dir > 0 && (directeur == null || directeur.getId() != dir))
+            throw new SecurityException("Seul le directeur de la direction du collaborateur peut donner cet avis");
         e.setDirecteur(em.getReference(Users.class, directeur.getId())); e.setAvisDirecteur(avis); e.setDateAvisDirecteur(new Date());
         return mergeEvaluation(e);
     }
 
     public Evaluation valider(Evaluation e, String commentaireDcht) {
         requireState(e, Evaluation.EVALUEE);
+        Evaluation enBase = em.find(Evaluation.class, e.getId());
+        if (directeurDe(e) > 0 && (enBase == null || enBase.getDateAvisDirecteur() == null))
+            throw new IllegalStateException("La fiche ne peut être validée qu'après l'avis du directeur");
         e.setStatut(Evaluation.VALIDEE); e.setDateValidation(new Date()); e.setCommentaireDcht(commentaireDcht);
         return mergeEvaluation(e);
     }
@@ -190,5 +205,31 @@ public class EvaluationService {
             if (state.equals(evaluation.getStatut())) return;
         }
         throw new IllegalStateException("Transition impossible depuis le statut " + evaluation.getStatut());
+    }
+
+    /** Évaluation de fin d'essai / de CDD ouverte et pas encore validée par la DCHT. */
+    public boolean essaiNonClos(int salarieId) {
+        return em.createQuery("select count(e) from EvaluationEssai e where e.salarie.id = :s and e.statut <> :v", Long.class)
+                .setParameter("s", salarieId).setParameter("v", cd.mura.hrx.entity.eval.EvaluationEssai.VALIDEE).getSingleResult() > 0;
+    }
+
+    /** Parmi ces collaborateurs, ceux dont l'évaluation d'essai n'est pas clôturée. */
+    public java.util.Set<Integer> essaisNonClos(java.util.Collection<Integer> ids) {
+        if (ids == null || ids.isEmpty()) return new java.util.HashSet<>();
+        return new java.util.HashSet<>(em.createQuery("select distinct e.salarie.id from EvaluationEssai e where e.salarie.id in :ids and e.statut <> :v", Integer.class)
+                .setParameter("ids", ids).setParameter("v", cd.mura.hrx.entity.eval.EvaluationEssai.VALIDEE).getResultList());
+    }
+
+    /** Un directeur est attendu et n'a pas encore donné son avis : la DCHT ne peut pas valider. */
+    public boolean avisDirecteurEnAttente(Evaluation e) {
+        if (e == null || directeurDe(e) <= 0) return false;
+        Evaluation x = em.find(Evaluation.class, e.getId());
+        return x == null || x.getDateAvisDirecteur() == null;
+    }
+
+    /** Id du directeur de la direction du salarié (relu en base), 0 si aucun. */
+    private int directeurDe(Evaluation e) {
+        Users s = e == null || e.getSalarie() == null ? null : em.find(Users.class, e.getSalarie().getId());
+        return s == null || s.getDirection() == null ? 0 : s.getDirection().getDirigePar();
     }
 }

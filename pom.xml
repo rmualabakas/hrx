@@ -20,6 +20,23 @@
         <primefaces.version>15.0.8</primefaces.version>
     </properties>
 
+    <!-- Versions alignées sur le SDK Anthropic (Jackson, Kotlin) pour éviter les conflits transitifs -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>2.19.4</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency><groupId>org.jetbrains.kotlin</groupId><artifactId>kotlin-stdlib</artifactId><version>1.9.0</version></dependency>
+            <dependency><groupId>org.jetbrains.kotlin</groupId><artifactId>kotlin-stdlib-common</artifactId><version>1.9.0</version></dependency>
+            <dependency><groupId>org.jetbrains.kotlin</groupId><artifactId>kotlin-stdlib-jdk7</artifactId><version>1.9.0</version></dependency>
+            <dependency><groupId>org.jetbrains.kotlin</groupId><artifactId>kotlin-stdlib-jdk8</artifactId><version>1.9.0</version></dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <!-- ===================== Jakarta EE 10 (fourni par WildFly) ===================== -->
         <dependency>
@@ -68,6 +85,12 @@
             <groupId>org.ocpsoft.rewrite</groupId>
             <artifactId>rewrite-config-prettyfaces</artifactId>
             <version>10.0.2.Final</version>
+        </dependency>
+        <!-- Font Awesome Free servi localement (WebJar : /webjars/font-awesome/6.7.2/...) -->
+        <dependency>
+            <groupId>org.webjars</groupId>
+            <artifactId>font-awesome</artifactId>
+            <version>6.7.2</version>
         </dependency>
         <dependency>
             <groupId>software.xdev</groupId>
@@ -124,6 +147,13 @@
             <groupId>com.sun.mail</groupId>
             <artifactId>jakarta.mail</artifactId>
             <version>2.0.2</version>
+        </dependency>
+
+        <!-- ===================== IA : présélection des CV (SDK officiel Anthropic / Claude) ===================== -->
+        <dependency>
+            <groupId>com.anthropic</groupId>
+            <artifactId>anthropic-java</artifactId>
+            <version>3.8.0</version>
         </dependency>
 
         <!-- ===================== Reporting : Excel (POI) et PDF (iText, PDFBox) ===================== -->
@@ -196,7 +226,7 @@
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
-            <version>4.10.0</version>
+            <version>4.12.0</version>
         </dependency>
 
         <!-- ===================== Tests ===================== -->

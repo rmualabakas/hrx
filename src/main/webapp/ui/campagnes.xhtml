@@ -45,7 +45,7 @@
                                 <dl class="hx-campaign__facts">
                                     <div><dt>Début</dt><dd><h:outputText value="#{c.dateDebut}" rendered="#{not empty c.dateDebut}"><f:convertDateTime type="localDate" pattern="dd MMM yyyy" locale="fr"/></h:outputText><ui:fragment rendered="#{empty c.dateDebut}">—</ui:fragment></dd></div>
                                     <div><dt>Échéance</dt><dd class="#{c.enRetard ? 'hx-warn' : ''}"><h:outputText value="#{c.dateFin}" rendered="#{not empty c.dateFin}"><f:convertDateTime type="localDate" pattern="dd MMM yyyy" locale="fr"/></h:outputText><ui:fragment rendered="#{empty c.dateFin}">—</ui:fragment><ui:fragment rendered="#{c.enRetard}"> · dépassée</ui:fragment></dd></div>
-                                    <div><dt>Modèle de fiche</dt><dd>#{empty c.modeleParDefaut ? 'Selon la catégorie' : c.modeleParDefaut.libelle}</dd></div>
+                                    <div><dt>Fiches</dt><dd><ul class="hx-campaign__fiches"><ui:repeat value="#{campagneAdminView.fichesDe(c)}" var="f"><li><small>#{f[0]}</small> #{f[1]}</li></ui:repeat></ul></dd></div>
                                     <div><dt>Attendues</dt><dd><b>#{c.effectifAttendu}</b> évaluation#{c.effectifAttendu gt 1 ? 's' : ''}<ui:fragment rendered="#{campagneAdminView.depassement(c) gt 0}"><small class="hx-warn" style="display:block;margin-top:4px"><i class="pi pi-exclamation-circle"></i> #{campagneAdminView.stat(c, 0)} fiches ont été ouvertes alors que #{c.effectifAttendu} étai#{c.effectifAttendu gt 1 ? 'ent' : 't'} prévue#{c.effectifAttendu gt 1 ? 's' : ''}.</small>
                                         <p:commandLink value="Passer à #{campagneAdminView.stat(c, 0)}" process="@this" update="@form :globalGrowl" actionListener="#{campagneAdminView.ajusterAttendu(c)}" styleClass="hx-link-sm" rendered="#{privilegeBean.hasPrivilege('CAMP_CREATE') or loginBean.users.profil.id eq 1}"/></ui:fragment></dd></div>
                                 </dl>
@@ -82,8 +82,9 @@
                             </aside>
 
                             <footer class="hx-campaign__actions">
+                                <p:commandButton value="Modifier" icon="pi pi-pencil" styleClass="hx-btn-secondary hx-btn-sm" process="@this" actionListener="#{campagneAdminView.modifier(c)}" update=":dlgCamp" oncomplete="PF('dlgCamp').show()"
+                                                 rendered="#{privilegeBean.hasPrivilege('CAMP_CREATE') and campagneAdminView.modifiable(c)}"/>
                                 <ui:fragment rendered="#{privilegeBean.hasPrivilege('CAMP_CREATE') and c.statut eq 'BROUILLON'}">
-                                    <p:commandButton value="Modifier" icon="pi pi-pencil" styleClass="hx-btn-secondary hx-btn-sm" process="@this" actionListener="#{campagneAdminView.modifier(c)}" update=":dlgCamp" oncomplete="PF('dlgCamp').show()"/>
                                     <p:commandButton value="Supprimer" icon="pi pi-trash" styleClass="hx-btn-secondary hx-btn-sm hx-btn-sm--danger" process="@this" actionListener="#{campagneAdminView.supprimer(c)}" update="liste :globalGrowl"><p:confirm header="Supprimer la campagne" message="Supprimer « #{c.libelle} » ?" icon="pi pi-exclamation-triangle"/></p:commandButton>
                                 </ui:fragment>
                                 <span class="hx-campaign__spacer"></span>
@@ -112,14 +113,15 @@
         <p:dialog id="dlgCamp" widgetVar="dlgCamp" header="#{campagneAdminView.edit.id eq 0 ? 'Nouvelle campagne' : 'Modifier la campagne'}" modal="true" responsive="true" width="640" fitViewport="true" closeOnEscape="true" showEffect="fade" hideEffect="fade">
             <h:form id="frmCampEdit">
                 <p:messages showDetail="true" closable="true"/>
+                <ui:fragment rendered="#{campagneAdminView.edit.id gt 0 and campagneAdminView.edit.statut ne 'BROUILLON'}">
+                    <p class="hx-camp-note"><i class="pi pi-info-circle"></i> Campagne #{campagneAdminView.edit.ouverte ? 'ouverte' : 'clôturée'} : les changements s'appliquent dès l'enregistrement. Les fiches déjà ouvertes gardent leur modèle ; les nouvelles fiches suivent les fiches choisies ci-dessous.#{campagneAdminView.cadreFige ? ' Le type et l’exercice sont figés car des fiches existent.' : ''}</p>
+                </ui:fragment>
                 <div class="hx-form">
-                    <div class="hx-field__grid hx-field__grid--3">
+                    <div class="hx-field__grid">
                         <div class="hx-field"><p:outputLabel for="cType" value="Type"/>
-                            <p:selectOneMenu id="cType" value="#{campagneAdminView.edit.type}" styleClass="hx-select"><f:selectItem itemLabel="Mi-parcours (6 mois)" itemValue="MI_PARCOURS"/><f:selectItem itemLabel="Fin d'année (12 mois)" itemValue="FIN_ANNEE"/></p:selectOneMenu></div>
+                            <p:selectOneMenu id="cType" value="#{campagneAdminView.edit.type}" styleClass="hx-select" disabled="#{campagneAdminView.cadreFige}"><f:selectItem itemLabel="Mi-parcours (6 mois)" itemValue="MI_PARCOURS"/><f:selectItem itemLabel="Fin d'année (12 mois)" itemValue="FIN_ANNEE"/></p:selectOneMenu></div>
                         <div class="hx-field"><p:outputLabel for="cEx" value="Exercice"/>
-                            <p:selectOneMenu id="cEx" value="#{campagneAdminView.edit.exercice}" styleClass="hx-select"><f:selectItems value="#{campagneAdminView.exercices}" var="y" itemLabel="#{y}" itemValue="#{y}"/></p:selectOneMenu></div>
-                        <div class="hx-field"><p:outputLabel for="cMod" value="Modèle de fiche par défaut"/>
-                            <p:selectOneMenu id="cMod" value="#{campagneAdminView.editModeleId}" styleClass="hx-select" converter="jakarta.faces.Integer"><f:selectItem itemLabel="Selon la catégorie" itemValue="#{null}" noSelectionOption="true"/><f:selectItems value="#{campagneAdminView.modeles}" var="m" itemLabel="#{m.libelle}" itemValue="#{m.id}"/></p:selectOneMenu></div>
+                            <p:selectOneMenu id="cEx" value="#{campagneAdminView.edit.exercice}" styleClass="hx-select" disabled="#{campagneAdminView.cadreFige}"><f:selectItems value="#{campagneAdminView.exercices}" var="y" itemLabel="#{y}" itemValue="#{y}"/></p:selectOneMenu></div>
                     </div>
                     <div class="hx-field__grid hx-field__grid--ind">
                         <div class="hx-field"><p:outputLabel for="cLib" value="Libellé"/><p:inputText id="cLib" value="#{campagneAdminView.edit.libelle}" required="true" requiredMessage="Le libellé est obligatoire" maxlength="150"/></div>
@@ -133,6 +135,20 @@
                         <div class="hx-field"><p:outputLabel for="cDeb" value="Début de la campagne"/><p:datePicker id="cDeb" value="#{campagneAdminView.edit.dateDebut}" pattern="dd/MM/yyyy" locale="fr" showIcon="true" styleClass="hx-date"/></div>
                         <div class="hx-field"><p:outputLabel for="cFin" value="Échéance de remise des fiches"/><p:datePicker id="cFin" value="#{campagneAdminView.edit.dateFin}" pattern="dd/MM/yyyy" locale="fr" showIcon="true" styleClass="hx-date"/></div>
                     </div>
+                    <fieldset class="hx-fiches-cat">
+                        <legend>Fiches d'évaluation utilisées</legend>
+                        <p class="hx-field__help">Les directeurs (collaborateurs désignés comme dirigeant d'au moins une direction) reçoivent la première fiche ; tous les autres collaborateurs, y compris les N+1, reçoivent la seconde.</p>
+                        <div class="hx-field__grid">
+                            <div class="hx-field">
+                                <p:outputLabel for="cModEnc" styleClass="hx-fiches-cat__lbl"><i class="pi pi-sitemap"></i> Directeurs</p:outputLabel>
+                                <p:selectOneMenu id="cModEnc" value="#{campagneAdminView.editModeleEncadrantsId}" styleClass="hx-select" converter="jakarta.faces.Integer"><f:selectItem itemLabel="Même fiche que les autres" itemValue="#{null}" noSelectionOption="true"/><f:selectItems value="#{campagneAdminView.modeles}" var="m" itemLabel="#{m.libelle}" itemValue="#{m.id}"/></p:selectOneMenu>
+                            </div>
+                            <div class="hx-field">
+                                <p:outputLabel for="cMod" styleClass="hx-fiches-cat__lbl"><i class="pi pi-users"></i> Autres collaborateurs</p:outputLabel>
+                                <p:selectOneMenu id="cMod" value="#{campagneAdminView.editModeleId}" styleClass="hx-select" converter="jakarta.faces.Integer"><f:selectItem itemLabel="Modèle global de la catégorie" itemValue="#{null}" noSelectionOption="true"/><f:selectItems value="#{campagneAdminView.modeles}" var="m" itemLabel="#{m.libelle}" itemValue="#{m.id}"/></p:selectOneMenu>
+                            </div>
+                        </div>
+                    </fieldset>
                     <div class="hx-field hx-field--inline">
                         <p:selectBooleanCheckbox id="cComp" value="#{campagneAdminView.edit.evaluerCompetences}"/>
                         <p:outputLabel for="cComp" value="Évaluer aussi les compétences et l'adhésion aux valeurs du Groupe (sections II et III - fin d'année)"/>

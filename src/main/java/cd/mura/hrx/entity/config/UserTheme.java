@@ -4,7 +4,7 @@ import java.util.Locale;
 
 /** Thèmes visuels disponibles pour l'espace personnel */
 public enum UserTheme {
-    BGFI_ELEGANCE("Élégance BGFI", "hrx-theme-bgfi-elegance"),
+    BGFI_ELEGANCE("Élégance ", "hrx-theme-bgfi-elegance"),
     MIDNIGHT_EXECUTIVE("Midnight Executive", "hrx-theme-midnight-executive"),
     AURORA_GLASS("Aurora Glass", "hrx-theme-aurora-glass"),
     EMERALD_BOARDROOM("Emerald Boardroom", "hrx-theme-emerald-boardroom"),

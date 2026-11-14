@@ -15,7 +15,7 @@
     <title>Connexion - #{appBean.app1.nomApp}</title>
     <meta name="theme-color" content="#07294a"/>
     <meta name="robots" content="noindex, nofollow"/>
-    <meta name="description" content="HRX - plateforme collaborative RH BGFIBank RDC : objectifs, performance, évaluations"/>
+    <meta name="description" content="HRX - plateforme RH BGFIBank RDC : recrutement, période d'essai, objectifs, évaluations et formation"/>
     <link rel="icon" type="image/x-icon" href="#{resource['hrx:img/favicon-bgfi.ico']}"/>
     <link rel="icon" type="image/png" sizes="32x32" href="#{resource['hrx:img/favicon-bgfi-32.png']}"/>
     <link rel="icon" type="image/png" sizes="16x16" href="#{resource['hrx:img/favicon-bgfi-16.png']}"/>
@@ -29,7 +29,7 @@
 <h:body styleClass="hx-auth-body">
     <a class="hx-skip" href="#frmLogin:username">Aller au formulaire de connexion</a>
 
-    <main class="hx-auth">
+    <main class="hx-auth hx-auth--fit">
 
         <!-- Panneau de marque : propos, illustration, point du cycle -->
         <aside class="hx-auth__aside" aria-label="Présentation de la plateforme">
@@ -42,9 +42,15 @@
             </div>
 
             <div class="hx-auth__copy">
-                <span class="hx-auth__eyebrow">Performance &amp; développement</span>
-                <h2>Des objectifs partagés,<br/>une performance reconnue.</h2>
-                <p class="hx-auth__lead">Collaborateurs, managers et DCHT réunis autour du même cycle : objectifs, mi-parcours, bilan.</p>
+                <span class="hx-auth__eyebrow">Capital humain</span>
+                <h2>Recruter, intégrer,<br/>faire grandir les talents.</h2>
+                <p class="hx-auth__lead">Tout le parcours du collaborateur sur une seule plateforme, de la candidature à l'évaluation annuelle.</p>
+                <ul class="hx-auth__modules" aria-label="Modules de la plateforme">
+                    <li><i class="pi pi-search" aria-hidden="true"></i>Recrutement</li>
+                    <li><i class="pi pi-flag" aria-hidden="true"></i>Période d'essai</li>
+                    <li><i class="pi pi-chart-line" aria-hidden="true"></i>Objectifs &amp; évaluations</li>
+                    <li><i class="pi pi-book" aria-hidden="true"></i>Évaluation des formations</li>
+                </ul>
             </div>
 
             <div class="hx-auth__art">
@@ -75,7 +81,7 @@
             <div class="hx-auth__panel">
                 <div class="hx-auth__heading">
                     <h1 id="loginHeading">Connexion</h1>
-                    <p>Accédez à votre espace objectifs et évaluations.</p>
+                    <p>Accédez à votre espace RH.</p>
                 </div>
 
                 <h:form id="frmLogin" styleClass="hx-auth__form" prependId="true">

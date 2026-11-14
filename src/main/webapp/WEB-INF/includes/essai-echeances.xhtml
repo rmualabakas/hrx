@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Échéances (fin de période d'essai ou de CDD) appelant une évaluation MAF 070. Paramètres : lignes, passe (échéance atteinte). -->
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:p="http://primefaces.org/ui"
+                xmlns:ui="jakarta.faces.facelets">
+    <div class="hx-rpt__scroll">
+        <table class="hx-dirtable">
+            <thead><tr><th>Collaborateur</th><th>Évaluation</th><th>Direction</th><th>Début du contrat</th><th>Échéance</th><th>N+1</th><th></th></tr></thead>
+            <tbody>
+            <ui:repeat value="#{lignes}" var="r">
+                <tr>
+                    <td><strong>#{r.salarie.nomComplet}</strong><br/><small class="hx-muted">#{empty r.salarie.fonction ? '' : r.salarie.fonction}#{empty r.salarie.matricule ? '' : ' · '.concat(r.salarie.matricule)}</small></td>
+                    <td><span class="hx-badge #{r.finCdd ? 'hx-badge--pending' : 'hx-badge--info'}">#{r.typeLabel}</span></td>
+                    <td>#{empty r.salarie.direction ? '—' : (empty r.salarie.direction.abrege ? r.salarie.direction.nom : r.salarie.direction.abrege)}</td>
+                    <td><h:outputText value="#{periodeEssaiView.debutContrat(r.salarie)}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText></td>
+                    <td><h:outputText value="#{r.date}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText>
+                        <ui:fragment rendered="#{passe}"><small class="#{r.joursDepuis gt 15 ? 'hx-warn' : 'hx-muted'}"> · #{r.joursDepuis eq 0 ? 'aujourd’hui' : 'il y a ' += r.joursDepuis += ' j'}</small></ui:fragment>
+                        <ui:fragment rendered="#{not passe}"><small class="hx-muted"> · dans #{r.joursAvant} j</small></ui:fragment></td>
+                    <td>#{empty r.salarie.superieurHierarchique ? '—' : r.salarie.superieurHierarchique.nomComplet}</td>
+                    <td style="text-align:right">
+                        <p:commandButton value="Ouvrir l'évaluation" icon="pi pi-plus" styleClass="#{passe ? '' : 'hx-btn-secondary '}hx-btn-sm" process="@this" update="@form :globalGrowl"
+                                         actionListener="#{periodeEssaiView.ouvrir(r.salarie, r.type)}" rendered="#{periodeEssaiView.peutOuvrir(r)}"/>
+                        <ui:fragment rendered="#{not periodeEssaiView.peutOuvrir(r) and periodeEssaiView.peutOuvrir(r.salarie)}">
+                            <span class="hx-badge hx-badge--draft" title="L'évaluation s'ouvre à l'échéance"><i class="pi pi-lock" style="font-size:11px"></i> ouvrable le <h:outputText value="#{periodeEssaiView.ouvrableLe(r)}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText></span>
+                        </ui:fragment>
+                        <ui:fragment rendered="#{not periodeEssaiView.peutOuvrir(r.salarie)}">
+                            <small class="hx-muted" title="Seul le N+1 direct ouvre l'évaluation">par son N+1</small>
+                        </ui:fragment>
+                    </td>
+                </tr>
+            </ui:repeat>
+            </tbody>
+        </table>
+    </div>
+</ui:composition>

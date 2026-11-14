@@ -329,3 +329,28 @@ body .ui-dialog.hx-loading .ui-dialog-content { padding: 0 !important; backgroun
     .hx-auth__phase-dot::after, .hx-loading__spinner { animation-duration: 0s; animation-iteration-count: 1; }
     .hx-auth__submit.ui-button, .hx-skip { transition: none; }
 }
+
+/* Modules de la plateforme */
+.hx-auth__modules { list-style: none; margin: var(--hx-s4) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.hx-auth__modules li {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 6px 12px; border-radius: 999px;
+    font-size: var(--hx-fs-sm); font-weight: 550; color: var(--hx-primary-strong);
+    background: rgba(255, 255, 255, .72); border: 1px solid var(--hx-border);
+}
+.hx-auth__modules .pi { font-size: 12px; color: var(--hx-gold); }
+
+/* Connexion : tout tient dans la hauteur de l'écran, l'illustration s'adapte à la place restante */
+@media (min-width: 961px) {
+    .hx-auth--fit { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+    .hx-auth--fit .hx-auth__aside { box-sizing: border-box; height: calc(100vh - 32px); height: calc(100dvh - 32px); min-height: 0; gap: clamp(10px, 2vh, 24px); padding-block: clamp(20px, 3.4vh, 44px); }
+    .hx-auth--fit .hx-auth__copy h2 { font-size: clamp(26px, min(2.7vw, 4.4vh), 42px); }
+    .hx-auth--fit .hx-auth__lead { font-size: clamp(14px, 1.9vh, 17px); }
+    .hx-auth--fit .hx-auth__art { flex: 1 1 0; min-height: 0; }
+    .hx-auth--fit .hx-scene { width: auto; height: 100%; max-width: 100%; max-height: 100%; }
+    .hx-auth--fit .hx-auth__main { height: 100%; box-sizing: border-box; overflow-y: auto; }
+}
+/* très faible hauteur : on masque l'illustration plutôt que de déborder */
+@media (min-width: 961px) and (max-height: 600px) {
+    .hx-auth--fit .hx-auth__art { display: none; }
+}

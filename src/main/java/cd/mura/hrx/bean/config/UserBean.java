@@ -269,7 +269,7 @@ public class UserBean implements Serializable {
         usersSelected.setDateMaj(new Date());
 
         if (userDAO.merge(usersSelected) == 1) {
-            info("Mot de passe réinitialisé",
+            cd.mura.hrx.utils.Dialogue.succes("Mot de passe réinitialisé",
                     "Le mot de passe de l'utilisateur a été mis à jour.");
             auditService.security("PASSWORD_RESET", "Réinitialisation mot de passe",
                     "Utilisateur cible : " + userLabel(usersSelected));

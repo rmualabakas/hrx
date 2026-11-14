@@ -149,7 +149,7 @@
                                     <p:commandButton icon="pi pi-send" title="Relancer (#{l.cibleRelanceRole})" styleClass="hx-icon-btn hx-icon-btn--send" process="@this" rendered="#{suiviEvaluationsView.peutRelancer and l.relancable}"
                                                      actionListener="#{suiviEvaluationsView.preparerRelance(l)}" update=":dlgRelance" oncomplete="PF('dlgRelance').show()"/>
                                     <p:commandButton icon="pi pi-verified" title="Valider la fiche (DCHT)" styleClass="hx-icon-btn hx-icon-btn--primary" process="@this" update="tbl zone :globalGrowl"
-                                                     rendered="#{suiviEvaluationsView.peutValider and l.statut eq 'EVALUEE'}" actionListener="#{suiviEvaluationsView.valider(l)}">
+                                                     rendered="#{suiviEvaluationsView.validable(l)}" actionListener="#{suiviEvaluationsView.valider(l)}">
                                         <p:confirm header="Valider l'évaluation" message="Valider définitivement la fiche de #{l.salarie.nomComplet} ?#{l.anomalie ? ' Attention : des anomalies sont signalées sur cette ligne.' : ''}" icon="pi pi-verified"/>
                                     </p:commandButton>
                                 </div>

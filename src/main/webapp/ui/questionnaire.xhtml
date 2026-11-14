@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Évaluation de formation"/>
+    <ui:param name="pageSubtitle" value="Votre avis sur la formation"/>
+    <ui:define name="title">Évaluation de formation</ui:define>
+
+    <ui:define name="metadata">
+        <f:metadata>
+            <f:viewParam name="id" value="#{questionnaireView.id}"/>
+            <f:viewParam name="rep" value="#{questionnaireView.rep}"/>
+            <f:viewAction action="#{questionnaireView.charger}"/>
+        </f:metadata>
+    </ui:define>
+
+    <ui:define name="content">
+        <h:form id="frmQuest" prependId="false">
+            <div class="hx-page-head">
+                <div>
+                    <p:link outcome="/ui/mesEvaluations" styleClass="hx-link-sm"><f:param name="onglet" value="2"/><i class="pi pi-arrow-left"></i> Mes évaluations de formation</p:link>
+                    <h2>#{empty questionnaireView.questionnaire ? 'Évaluation de formation' : questionnaireView.questionnaire.intitule}</h2>
+                    <ui:fragment rendered="#{not empty questionnaireView.questionnaire}">
+                        <p>#{empty questionnaireView.questionnaire.organisme ? '' : questionnaireView.questionnaire.organisme}<ui:fragment rendered="#{not empty questionnaireView.questionnaire.formateur}"> · #{questionnaireView.questionnaire.formateur}</ui:fragment>
+                            <ui:fragment rendered="#{not empty questionnaireView.questionnaire.dateFin}"> · réponses jusqu'au <h:outputText value="#{questionnaireView.questionnaire.dateFin}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText></ui:fragment></p>
+                    </ui:fragment>
+                </div>
+            </div>
+            <p:messages id="msgQuest" showDetail="true" closable="true"/>
+
+            <ui:fragment rendered="#{empty questionnaireView.questionnaire}">
+                <div class="hx-card"><div class="hx-empty"><i class="pi pi-lock"></i><strong>Questionnaire inaccessible</strong>Ce questionnaire n'existe pas ou ne vous est pas adressé.</div></div>
+            </ui:fragment>
+
+            <ui:fragment rendered="#{not empty questionnaireView.reponse and questionnaireView.participant}">
+                <div class="hx-alert hx-alert--info"><i class="pi pi-check-circle"></i><div><strong>Merci, vous avez répondu le <h:outputText value="#{questionnaireView.reponse.dateReponse}"><f:convertDateTime pattern="dd/MM/yyyy 'à' HH:mm"/></h:outputText></strong>
+                    <span>#{questionnaireView.froid ? (questionnaireView.reponse.avisDonne ? 'Votre supérieur hiérarchique a donné son avis : la fiche est complète.' : 'Vos réponses sont rappelées ci-dessous. Votre supérieur hiérarchique doit encore donner son avis.') : 'Vos réponses sont rappelées ci-dessous. Elles sont exploitées sans votre nom.'}</span></div></div>
+            </ui:fragment>
+            <ui:fragment rendered="#{questionnaireView.evaluateur}">
+                <div class="hx-alert #{questionnaireView.avisSaisie ? 'hx-alert--warn' : 'hx-alert--info'}"><i class="pi #{questionnaireView.avisSaisie ? 'pi-user-edit' : 'pi-check-circle'}"></i><div>
+                    <strong>#{questionnaireView.avisSaisie ? 'Votre avis est attendu' : 'Avis donné'}</strong>
+                    <span>#{questionnaireView.avisSaisie ? 'Prenez connaissance des réponses de '.concat(questionnaireView.collaborateur.nomComplet).concat(', échangez avec lui, puis donnez votre avis général en bas de la fiche.') : 'La fiche de '.concat(questionnaireView.collaborateur.nomComplet).concat(' est complète.')}</span></div></div>
+            </ui:fragment>
+            <ui:fragment rendered="#{not empty questionnaireView.questionnaire and empty questionnaireView.reponse and not questionnaireView.questionnaire.repondable}">
+                <div class="hx-alert hx-alert--warn"><i class="pi pi-clock"></i><div><strong>Le questionnaire n'est pas ouvert aux réponses</strong><span>#{questionnaireView.questionnaire.cloturee or questionnaireView.questionnaire.echue ? 'La période de réponse est terminée.' : 'Il n’est pas encore ouvert.'}</span></div></div>
+            </ui:fragment>
+
+            <ui:fragment rendered="#{not empty questionnaireView.questionnaire and (questionnaireView.saisie or not empty questionnaireView.reponse)}">
+                <div class="hx-card hx-chaud-fiche">
+                    <div class="hx-chaud-fiche__head">
+                        <div>
+                            <span class="hx-chaud-fiche__kicker">Direction du Capital Humain et de la Transformation</span>
+                            <h3>#{questionnaireView.froid ? 'Fiche d’évaluation à froid' : 'Fiche d’évaluation à chaud'}</h3>
+                        </div>
+                        <ui:fragment rendered="#{not empty questionnaireView.reponse}">
+                            <p:commandButton value="Ma fiche (PDF)" icon="pi pi-file-pdf" styleClass="hx-btn-secondary hx-btn-sm" ajax="false" title="Télécharger la fiche remplie (#{questionnaireView.froid ? 'MAF 064' : 'MAF 063'})">
+                                <p:fileDownload value="#{questionnaireView.fichePdf}"/>
+                            </p:commandButton>
+                        </ui:fragment>
+                    </div>
+                    <ui:fragment rendered="#{not empty questionnaireView.questionnaire.consignes}">
+                        <div class="hx-chaud-fiche__intro"><span class="hx-chaud-fiche__wave">👋</span><p>#{questionnaireView.questionnaire.consignes}</p></div>
+                    </ui:fragment>
+                    <dl class="hx-chaud-fiche__infos">
+                        <div><dt>Intitulé de la formation</dt><dd>#{questionnaireView.questionnaire.intitule}</dd></div>
+                        <div><dt>Date de la formation</dt><dd>
+                            <h:outputText value="#{questionnaireView.questionnaire.dateFormationDebut}" rendered="#{not empty questionnaireView.questionnaire.dateFormationDebut}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText>
+                            <ui:fragment rendered="#{not empty questionnaireView.questionnaire.dateFormationFin and questionnaireView.questionnaire.dateFormationFin ne questionnaireView.questionnaire.dateFormationDebut}"> au <h:outputText value="#{questionnaireView.questionnaire.dateFormationFin}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText></ui:fragment>
+                            <ui:fragment rendered="#{empty questionnaireView.questionnaire.dateFormationDebut}">—</ui:fragment></dd></div>
+                        <div><dt>Organisme de formation</dt><dd>#{empty questionnaireView.questionnaire.organisme ? '—' : questionnaireView.questionnaire.organisme}</dd></div>
+                        <div><dt>Formateur</dt><dd>#{empty questionnaireView.questionnaire.formateur ? '—' : questionnaireView.questionnaire.formateur}</dd></div>
+                        <div><dt>#{questionnaireView.froid ? 'Collaborateur stagiaire' : 'Nom du stagiaire'}</dt><dd>#{questionnaireView.collaborateur.nomComplet}</dd></div>
+                        <ui:fragment rendered="#{questionnaireView.froid}">
+                            <div><dt>Fonction du collaborateur</dt><dd>#{empty questionnaireView.collaborateur.fonction ? '—' : questionnaireView.collaborateur.fonction}</dd></div>
+                            <div><dt>Supérieur hiérarchique</dt><dd>#{empty questionnaireView.superieur ? '—' : questionnaireView.superieur.nomComplet}</dd></div>
+                            <div><dt>Fonction du supérieur</dt><dd>#{empty questionnaireView.superieur or empty questionnaireView.superieur.fonction ? '—' : questionnaireView.superieur.fonction}</dd></div>
+                        </ui:fragment>
+                        <div><dt>#{questionnaireView.froid ? 'Date de l’évaluation post formation' : 'Date du rapport'}</dt><dd>
+                            <h:outputText value="#{questionnaireView.reponse.dateReponse}" rendered="#{not empty questionnaireView.reponse}"><f:convertDateTime pattern="dd/MM/yyyy"/></h:outputText>
+                            <h:outputText value="#{questionnaireView.aujourdhui}" rendered="#{empty questionnaireView.reponse}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText></dd></div>
+                    </dl>
+                </div>
+
+                <h:panelGroup id="progQuest" layout="block" styleClass="hx-chaud-prog-quest" rendered="#{questionnaireView.saisie}">
+                    <span>#{questionnaireView.nbRepondues} / #{questionnaireView.questionnaire.questions.size()} questions renseignées</span>
+                    <div class="hx-chaud-bar__track"><span class="is-resp" style="width:#{questionnaireView.pctRepondues}%"></span></div>
+                    <small>#{questionnaireView.froid ? 'Durée : environ 10 minutes' : 'Durée : environ 4 minutes'}</small>
+                </h:panelGroup>
+
+                <div class="hx-card">
+                    <div class="hx-card__body">
+                        <ol class="hx-quest hx-quest--maf #{questionnaireView.saisie ? '' : 'hx-quest--lecture'}">
+                            <ui:repeat value="#{questionnaireView.questionnaire.questions}" var="q" varStatus="st">
+                                <li class="hx-quest__item #{q.conditionnelle ? 'hx-quest__item--cond' : ''}">
+                                    <h:panelGroup id="zCond" layout="block" styleClass="hx-quest__corps #{q.conditionnelle ? 'hx-quest__cond' : ''}">
+                                    <ui:fragment rendered="#{q.conditionnelle and not questionnaireView.visible(q)}">
+                                        <div class="hx-quest__lib hx-quest__lib--off"><span class="hx-quest__num">Q.#{st.index + 1}</span><span>#{q.libelle}</span><small class="hx-muted"> · sans objet (réponse « oui » à la question précédente)</small></div>
+                                    </ui:fragment>
+                                    <ui:fragment rendered="#{questionnaireView.visible(q)}">
+                                    <div class="hx-quest__lib"><span class="hx-quest__num">Q.#{st.index + 1}</span><strong>#{q.libelle}</strong><ui:fragment rendered="#{q.obligatoire and questionnaireView.saisie}"><span class="hx-quest__req" title="Obligatoire">*</span></ui:fragment></div>
+
+                                    <ui:fragment rendered="#{q.libellee}">
+                                        <p:selectOneButton value="#{questionnaireView.notes[q.id]}" converter="jakarta.faces.Integer" styleClass="hx-segment hx-quest__scale hx-quest__scale--libelles" unselectable="true" disabled="#{not questionnaireView.saisie}">
+                                            <f:selectItems value="#{questionnaireView.cinq}" var="k" itemValue="#{k}" itemLabel="#{q.niveau(k)}"/>
+                                            <p:ajax process="@this" update="@([id$=progQuest])" global="false"/>
+                                        </p:selectOneButton>
+                                    </ui:fragment>
+                                    <ui:fragment rendered="#{q.note and not q.libellee}">
+                                        <div class="hx-quest__echelle">
+                                            <span class="hx-quest__borne">#{q.borneMin}</span>
+                                            <p:selectOneButton value="#{questionnaireView.notes[q.id]}" converter="jakarta.faces.Integer" styleClass="hx-segment hx-quest__scale" unselectable="true" disabled="#{not questionnaireView.saisie}">
+                                                <f:selectItem itemValue="1" itemLabel="1" itemDescription="#{q.borneMin}"/>
+                                                <f:selectItem itemValue="2" itemLabel="2"/>
+                                                <f:selectItem itemValue="3" itemLabel="3" itemDescription="#{q.centree ? 'Adapté' : ''}"/>
+                                                <f:selectItem itemValue="4" itemLabel="4"/>
+                                                <f:selectItem itemValue="5" itemLabel="5" itemDescription="#{q.borneMax}"/>
+                                                <p:ajax process="@this" update="@([id$=progQuest])" global="false"/>
+                                            </p:selectOneButton>
+                                            <span class="hx-quest__borne">#{q.borneMax}</span>
+                                        </div>
+                                        <ui:fragment rendered="#{q.centree}"><small class="hx-quest__legend">3 = rythme adapté</small></ui:fragment>
+                                    </ui:fragment>
+
+                                    <ui:fragment rendered="#{q.ouiNon}">
+                                        <p:selectOneButton value="#{questionnaireView.notes[q.id]}" converter="jakarta.faces.Integer" styleClass="hx-segment" unselectable="true" disabled="#{not questionnaireView.saisie}">
+                                            <f:selectItem itemValue="1" itemLabel="Oui"/>
+                                            <f:selectItem itemValue="0" itemLabel="Non"/>
+                                            <p:ajax process="@this" update="precision @([id$=progQuest]) @(.hx-quest__cond)" global="false"/>
+                                        </p:selectOneButton>
+                                        <h:panelGroup id="precision" layout="block">
+                                            <ui:fragment rendered="#{questionnaireView.precisionVisible(q)}">
+                                                <div class="hx-quest__precision">
+                                                    <label>#{q.precisionOui}</label>
+                                                    <p:inputTextarea value="#{questionnaireView.textes[q.id]}" rows="2" autoResize="true" maxlength="1000" styleClass="hx-essai-ta" readonly="#{not questionnaireView.saisie}"/>
+                                                </div>
+                                            </ui:fragment>
+                                        </h:panelGroup>
+                                    </ui:fragment>
+
+                                    <ui:fragment rendered="#{q.texte}">
+                                        <p:inputTextarea value="#{questionnaireView.textes[q.id]}" rows="3" autoResize="true" maxlength="2000" styleClass="hx-essai-ta" style="width:100%" readonly="#{not questionnaireView.saisie}">
+                                            <p:ajax event="blur" process="@this" update="@([id$=progQuest])" global="false"/>
+                                        </p:inputTextarea>
+                                    </ui:fragment>
+
+                                    <ui:fragment rendered="#{q.liste}">
+                                        <h:panelGroup id="zListe" layout="block" styleClass="hx-quest__lignes zq-#{q.id}">
+                                            <ui:repeat value="#{questionnaireView.lignesDe(q)}" var="l" varStatus="ls">
+                                                <div class="hx-quest__ligne">
+                                                    <span class="hx-quest__puce">–</span>
+                                                    <p:inputText value="#{l.texte}" maxlength="300" placeholder="#{ls.first ? (questionnaireView.froid ? (q.libelle.toLowerCase().contains('difficult') ? 'Difficulté ' : 'Compétence ').concat(ls.index + 1) : 'Ex. : maîtriser les tableaux croisés dynamiques') : (questionnaireView.froid ? (q.libelle.toLowerCase().contains('difficult') ? 'Difficulté ' : 'Compétence ').concat(ls.index + 1) : '')}" readonly="#{not questionnaireView.saisie}">
+                                                        <p:ajax event="blur" process="@this" update="@([id$=progQuest]) @(.hx-quest__niv)" global="false"/>
+                                                    </p:inputText>
+                                                    <p:commandButton icon="pi pi-times" styleClass="hx-btn-secondary hx-btn-sm" process="@(.zq-#{q.id})" update="@(.zq-#{q.id}) @(.hx-quest__niv)" actionListener="#{questionnaireView.retirerLigne(q, ls.index)}" rendered="#{questionnaireView.saisie and questionnaireView.lignesDe(q).size() gt 1}" title="Retirer"/>
+                                                </div>
+                                            </ui:repeat>
+                                            <ui:fragment rendered="#{questionnaireView.peutAjouter(q)}">
+                                                <p:commandLink process="zListe" update="zListe" actionListener="#{questionnaireView.ajouterLigne(q)}" styleClass="hx-link-sm"><i class="pi pi-plus"></i> Ajouter #{q.libelle.toLowerCase().contains('difficult') ? 'une difficulté' : (questionnaireView.froid ? 'une compétence' : 'un point')}</p:commandLink>
+                                            </ui:fragment>
+                                            <ui:fragment rendered="#{questionnaireView.saisie and not empty q.maxLignes}"><small class="hx-muted"> · #{q.maxLignes} au maximum</small></ui:fragment>
+                                            <ui:fragment rendered="#{not questionnaireView.saisie and empty questionnaireView.lignesDe(q)}"><span class="hx-muted">—</span></ui:fragment>
+                                        </h:panelGroup>
+                                    </ui:fragment>
+
+                                    <ui:fragment rendered="#{q.plan}">
+                                        <h:panelGroup id="zPlan" layout="block" styleClass="hx-quest__plan zq-#{q.id}">
+                                            <p class="hx-quest__legend" style="margin:0 0 6px">Au terme de la formation, je serai capable de / je vais :</p>
+                                            <ui:repeat value="#{questionnaireView.lignesDe(q)}" var="l" varStatus="ls">
+                                                <div class="hx-quest__ligne">
+                                                    <span class="hx-quest__puce">#{ls.index + 1}.</span>
+                                                    <p:inputText value="#{l.texte}" maxlength="300" placeholder="#{ls.first ? 'Action à mettre en place' : ''}" readonly="#{not questionnaireView.saisie}">
+                                                        <p:ajax event="blur" process="@this" update="@([id$=progQuest])" global="false"/>
+                                                    </p:inputText>
+                                                    <p:selectOneMenu value="#{l.horizon}" styleClass="hx-select hx-quest__horizon" disabled="#{not questionnaireView.saisie}">
+                                                        <f:selectItems value="#{questionnaireView.horizons}" var="h" itemValue="#{h[0]}" itemLabel="#{h[1]}"/>
+                                                    </p:selectOneMenu>
+                                                    <p:commandButton icon="pi pi-times" styleClass="hx-btn-secondary hx-btn-sm" process="@(.zq-#{q.id})" update="@(.zq-#{q.id})" actionListener="#{questionnaireView.retirerLigne(q, ls.index)}" rendered="#{questionnaireView.saisie and questionnaireView.lignesDe(q).size() gt 1}" title="Retirer"/>
+                                                </div>
+                                            </ui:repeat>
+                                            <ui:fragment rendered="#{questionnaireView.saisie}">
+                                                <p:commandLink process="zPlan" update="zPlan" actionListener="#{questionnaireView.ajouterLigne(q)}" styleClass="hx-link-sm"><i class="pi pi-plus"></i> Ajouter une action</p:commandLink>
+                                            </ui:fragment>
+                                            <ui:fragment rendered="#{not questionnaireView.saisie and empty questionnaireView.lignesDe(q)}"><span class="hx-muted">—</span></ui:fragment>
+                                        </h:panelGroup>
+                                    </ui:fragment>
+
+                                    <ui:fragment rendered="#{q.multi or q.objectifs}">
+                                        <ui:fragment rendered="#{q.objectifs and empty questionnaireView.questionnaire.objectifsListe}"><p class="hx-muted" style="margin:0">Aucun objectif n'a été renseigné pour cette formation.</p></ui:fragment>
+                                        <h:panelGroup id="zMulti" layout="block" styleClass="hx-quest__choix zm-#{q.id}">
+                                            <p:selectManyCheckbox value="#{questionnaireView.choixSel[q.id]}" collectionType="java.util.ArrayList" layout="pageDirection" styleClass="hx-quest__cases" disabled="#{not questionnaireView.saisie}">
+                                                <f:selectItems value="#{questionnaireView.choixDe(q)}" var="o" itemValue="#{o[0]}" itemLabel="#{o[1]}"/>
+                                                <p:ajax process="@this" update="@(.zm-#{q.id}) @([id$=progQuest])" global="false"/>
+                                            </p:selectManyCheckbox>
+                                            <ui:fragment rendered="#{questionnaireView.autreVisible(q)}">
+                                                <div class="hx-quest__precision">
+                                                    <label>Autre, veuillez préciser</label>
+                                                    <p:inputText value="#{questionnaireView.autres[q.id]}" maxlength="300" readonly="#{not questionnaireView.saisie}" style="width:100%">
+                                                        <p:ajax event="blur" process="@this" global="false"/>
+                                                    </p:inputText>
+                                                </div>
+                                            </ui:fragment>
+                                        </h:panelGroup>
+                                    </ui:fragment>
+
+                                    <ui:fragment rendered="#{q.niveaux}">
+                                        <h:panelGroup id="zNiv" layout="block" styleClass="hx-quest__niv">
+                                            <ui:fragment rendered="#{empty questionnaireView.niveauxDe(q)}">
+                                                <p class="hx-muted" style="margin:0">#{questionnaireView.saisie ? 'Citez d’abord vos compétences à la question '.concat(questionnaireView.sourceNum(q)).concat(' : elles apparaîtront ici.') : '—'}</p>
+                                            </ui:fragment>
+                                            <ui:repeat value="#{questionnaireView.niveauxDe(q)}" var="nv" varStatus="ns">
+                                                <div class="hx-quest__nivrow">
+                                                    <span class="hx-quest__nivpt"><small>Compétence #{ns.index + 1}</small><strong>#{nv.point}</strong></span>
+                                                    <p:selectOneButton value="#{nv.niveau}" converter="jakarta.faces.Integer" styleClass="hx-segment hx-quest__scale hx-quest__scale--libelles" unselectable="true" disabled="#{not questionnaireView.saisie}">
+                                                        <f:selectItems value="#{questionnaireView.cinq}" var="k" itemValue="#{k}" itemLabel="#{q.niveau(k)}"/>
+                                                        <p:ajax process="@this" update="@([id$=progQuest])" global="false"/>
+                                                    </p:selectOneButton>
+                                                </div>
+                                            </ui:repeat>
+                                        </h:panelGroup>
+                                    </ui:fragment>
+                                    </ui:fragment>
+                                    </h:panelGroup>
+                                </li>
+                            </ui:repeat>
+                        </ol>
+                        <ui:fragment rendered="#{questionnaireView.saisie}">
+                            <div class="hx-form__actions">
+                                <p:commandButton value="Envoyer et signer mes réponses" icon="pi pi-send" process="@form" update="@form :globalGrowl" actionListener="#{questionnaireView.envoyer}">
+                                    <p:confirm header="Envoyer vos réponses" message="L'envoi vaut signature du stagiaire. Vous ne pourrez plus modifier vos réponses.#{questionnaireView.froid ? ' Votre fiche sera transmise à votre supérieur hiérarchique pour son avis.' : ''}" icon="pi pi-send"/>
+                                </p:commandButton>
+                            </div>
+                        </ui:fragment>
+                        <p class="hx-chaud-fiche__merci">#{questionnaireView.froid ? 'Merci d’avoir pris le temps de répondre à ce questionnaire.' : 'Merci d’avoir pris le temps de compléter cette enquête de satisfaction. Vos réponses nous aideront à offrir des formations futures d’exception.'}</p>
+                    </div>
+                </div>
+
+                <ui:fragment rendered="#{questionnaireView.froid and not empty questionnaireView.reponse}">
+                    <div class="hx-card hx-froid-avis">
+                        <div class="hx-card__head"><div><h3>Avis général de l'évaluateur</h3><small>Sur l'efficacité de la formation, à l'issue de l'entretien avec le collaborateur</small></div>
+                            <ui:fragment rendered="#{questionnaireView.reponse.avisDonne}"><span class="hx-badge #{questionnaireView.reponse.efficace ? 'hx-badge--done' : 'hx-badge--late'}">#{questionnaireView.reponse.efficaciteLabel} · #{questionnaireView.reponse.tauxSatisfaction} %</span></ui:fragment></div>
+                        <div class="hx-card__body">
+                            <ui:fragment rendered="#{not questionnaireView.reponse.avisDonne and not questionnaireView.evaluateur}">
+                                <p class="hx-muted" style="margin:0">En attente de l'avis de #{empty questionnaireView.superieur ? 'votre supérieur hiérarchique' : questionnaireView.superieur.nomComplet}.</p>
+                            </ui:fragment>
+                            <ui:fragment rendered="#{questionnaireView.reponse.avisDonne or questionnaireView.evaluateur}">
+                                <p:selectOneButton value="#{questionnaireView.avisNote}" converter="jakarta.faces.Integer" styleClass="hx-segment hx-quest__scale hx-quest__scale--libelles hx-froid-avis__note" unselectable="true" disabled="#{not questionnaireView.avisSaisie}">
+                                    <f:selectItems value="#{questionnaireView.bareme}" var="b" itemValue="#{b[0]}" itemLabel="#{b[1]} (#{b[0]})"/>
+                                </p:selectOneButton>
+                                <div class="hx-quest__precision">
+                                    <label>Commentaire général de l'évaluateur (application des compétences acquises, amélioration des performances globales, moyens mis à disposition du collaborateur…)</label>
+                                    <p:inputTextarea value="#{questionnaireView.avisCommentaire}" rows="4" autoResize="true" maxlength="3000" styleClass="hx-essai-ta hx-essai-ta--lg" style="width:100%" readonly="#{not questionnaireView.avisSaisie}"/>
+                                </div>
+                            </ui:fragment>
+                            <table class="hx-dirtable hx-froid-bareme">
+                                <thead><tr><th>Note sur 5</th><th>Libellé</th><th>Taux de satisfaction</th><th>Niveau d'efficacité</th></tr></thead>
+                                <tbody><ui:repeat value="#{questionnaireView.bareme}" var="b"><tr class="#{questionnaireView.avisNote eq b[0] ? 'is-on' : ''}"><td>#{b[0]}</td><td>#{b[1]}</td><td>#{b[2]}</td><td>#{b[3]}</td></tr></ui:repeat></tbody>
+                            </table>
+                            <div class="hx-sign hx-sign--2">
+                                <div class="hx-sign__col"><small>Signature du collaborateur stagiaire</small><strong>#{questionnaireView.collaborateur.nomComplet}</strong><span>Fiche envoyée le <h:outputText value="#{questionnaireView.reponse.dateReponse}"><f:convertDateTime pattern="dd/MM/yyyy"/></h:outputText></span></div>
+                                <div class="hx-sign__col"><small>Signature du supérieur hiérarchique</small><strong>#{empty questionnaireView.reponse.evaluateur ? (empty questionnaireView.superieur ? '—' : questionnaireView.superieur.nomComplet) : questionnaireView.reponse.evaluateur.nomComplet}</strong>
+                                    <span><ui:fragment rendered="#{questionnaireView.reponse.avisDonne}">Avis signé le <h:outputText value="#{questionnaireView.reponse.dateAvis}"><f:convertDateTime pattern="dd/MM/yyyy"/></h:outputText></ui:fragment><ui:fragment rendered="#{not questionnaireView.reponse.avisDonne}">En attente</ui:fragment></span></div>
+                            </div>
+                            <ui:fragment rendered="#{questionnaireView.avisSaisie}">
+                                <div class="hx-form__actions">
+                                    <p:commandButton value="Enregistrer et signer mon avis" icon="pi pi-check" process="@form" update="@form :globalGrowl" actionListener="#{questionnaireView.donnerAvis}">
+                                        <p:confirm header="Signer votre avis" message="Votre avis vaut signature du supérieur hiérarchique. Il ne pourra plus être modifié." icon="pi pi-check"/>
+                                    </p:commandButton>
+                                </div>
+                            </ui:fragment>
+                        </div>
+                    </div>
+                </ui:fragment>
+            </ui:fragment>
+
+            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" responsive="true" width="460">
+                <p:commandButton value="Annuler" type="button" styleClass="ui-confirmdialog-no hx-btn-secondary" icon="pi pi-times"/>
+                <p:commandButton value="Confirmer" type="button" styleClass="ui-confirmdialog-yes" icon="pi pi-check"/>
+            </p:confirmDialog>
+        </h:form>
+    </ui:define>
+</ui:composition>

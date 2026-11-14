@@ -41,6 +41,11 @@ public class FicheObjectifs implements Serializable {
     @JoinColumn(name = "n1_id")
     private Users n1;
 
+    /** Personne qui a réellement signé côté hiérarchie (N+1, supérieur au-dessus ou DCHT), qui n'est pas forcément le N+1 rattaché. */
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "signataire_n1_id")
+    private Users signataireN1;
+
     @Column(nullable = false)
     private int exercice;
 
@@ -74,6 +79,13 @@ public class FicheObjectifs implements Serializable {
     public int getTrimestreDebut() { return dateEffet == null ? 1 : (dateEffet.getMonthValue() - 1) / 3 + 1; }
     public boolean isSigneeSalarie() { return dateSignatureSalarie != null; }
     public boolean isSigneeN1() { return dateSignatureN1 != null; }
+    /** Nom affiché pour la signature hiérarchique : le signataire réel, à défaut (fiches signées avant le suivi) le N+1 rattaché. */
+    public String getSignataireN1Nom() {
+        Users u = signataireN1 != null ? signataireN1 : n1;
+        return u == null ? "" : u.getNomComplet();
+    }
+    /** La signature hiérarchique a été donnée par quelqu'un d'autre que le N+1 rattaché. */
+    public boolean isSigneeParAutreQueN1() { return signataireN1 != null && (n1 == null || n1.getId() != signataireN1.getId()); }
     public long getNbValides() { return objectifs.stream().filter(o -> Objectif.VALIDE.equals(o.getStatut())).count(); }
     public long getNbProposes() { return objectifs.stream().filter(o -> Objectif.PROPOSE.equals(o.getStatut())).count(); }
     public int getPoidsTotal() { return objectifs.stream().filter(o -> Objectif.VALIDE.equals(o.getStatut())).mapToInt(Objectif::getPoids).sum(); }
