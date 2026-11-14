@@ -2295,3 +2295,5 @@ a.hx-contest-btn--ghost:hover { background: var(--hx-surface-2); color: var(--hx
 .hx-echeance .pi { margin-top: 2px; color: var(--hx-primary); }
 .hx-echeance.is-late { background: var(--hx-danger-soft); border-left-color: var(--hx-danger); }
 .hx-echeance.is-late .pi { color: var(--hx-danger); }
+/* Compteur dans un titre d'onglet */
+.hx-tabs__count { display: inline-grid; place-items: center; min-width: 20px; height: 19px; padding: 0 6px; border-radius: 10px; background: var(--hx-danger, #c0392b); color: #fff; font-size: 11.5px; font-weight: 700; }

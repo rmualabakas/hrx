@@ -28,12 +28,14 @@
         </div>
 
         <p:tabView id="tabs" styleClass="hx-tabs hx-card" activeIndex="#{mesEvaluationsView.onglet}" dynamic="false" onTabChange="hxOngletUrl(index)">
-            <p:tab title="Mes objectifs">
+            <p:tab>
+                <f:facet name="title"><i class="pi pi-flag"></i> Mes objectifs</f:facet>
                 <h:form id="frmFiche" prependId="false">
                     <ui:include src="/WEB-INF/includes/fiche-objectifs.xhtml"/>
                 </h:form>
             </p:tab>
-            <p:tab title="Mes évaluations">
+            <p:tab>
+                <f:facet name="title"><i class="pi pi-file-edit"></i> Mes évaluations</f:facet>
                 <h:form id="frmEvals" prependId="false">
                     <ui:fragment rendered="#{not empty mesEvaluationsView.essai}">
                         <div class="hx-alert #{mesEvaluationsView.essai.validee ? 'hx-alert--info' : 'hx-alert--warn'}"><i class="pi pi-hourglass"></i><div><strong>Évaluation individuelle (#{mesEvaluationsView.essai.typeLabel}) · #{mesEvaluationsView.essai.statutLabel}</strong>
@@ -94,7 +96,8 @@
                     </ui:fragment>
                 </h:form>
             </p:tab>
-            <p:tab title="Évaluations formations#{mesEvaluationsView.nbQuestionnairesEnAttente gt 0 ? ' (' += mesEvaluationsView.nbQuestionnairesEnAttente += ')' : ''}">
+            <p:tab>
+                <f:facet name="title"><i class="pi pi-graduation-cap"></i> Évaluations formations<ui:fragment rendered="#{mesEvaluationsView.nbQuestionnairesEnAttente gt 0}"> <span class="hx-tabs__count">#{mesEvaluationsView.nbQuestionnairesEnAttente}</span></ui:fragment></f:facet>
                 <ui:fragment rendered="#{not empty mesEvaluationsView.avisEquipe}">
                     <h3 class="hx-section-title"><i class="pi pi-user-edit"></i> Avis à donner sur l'efficacité des formations de votre équipe<ui:fragment rendered="#{mesEvaluationsView.nbAvisAttente gt 0}"> <span class="hx-badge hx-badge--pending">#{mesEvaluationsView.nbAvisAttente} en attente</span></ui:fragment></h3>
                     <div class="hx-camps" style="margin-bottom:var(--hx-s5)">
