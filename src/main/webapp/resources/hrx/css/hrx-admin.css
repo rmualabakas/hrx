@@ -2297,3 +2297,10 @@ a.hx-contest-btn--ghost:hover { background: var(--hx-surface-2); color: var(--hx
 .hx-echeance.is-late .pi { color: var(--hx-danger); }
 /* Compteur dans un titre d'onglet */
 .hx-tabs__count { display: inline-grid; place-items: center; min-width: 20px; height: 19px; padding: 0 6px; border-radius: 10px; background: var(--hx-danger, #c0392b); color: #fff; font-size: 11.5px; font-weight: 700; }
+
+/* Fiche d'évaluation : section que l'utilisateur connecté doit renseigner */
+.hx-appr.is-moi { border: 2px solid var(--hx-primary, #0b5cad); border-radius: 12px; padding: 14px 16px; margin: 10px -4px; background: color-mix(in srgb, var(--hx-primary, #0b5cad) 5%, transparent); box-shadow: 0 2px 10px rgba(11, 92, 173, .10); }
+.hx-appr.is-moi + .hx-appr { border-top: 0; }
+.hx-appr.is-moi header strong { color: var(--hx-primary, #0b5cad); }
+.hx-appr__moi { display: inline-flex; align-items: center; gap: 5px; margin-left: 10px; padding: 2px 9px; border-radius: 999px; background: var(--hx-primary, #0b5cad); color: #fff; font-size: 11px; font-weight: 600; vertical-align: middle; }
+.hx-appr__moi .pi { font-size: 10px; }

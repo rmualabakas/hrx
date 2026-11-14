@@ -91,7 +91,7 @@
                     <!-- I. Objectifs -->
                     <div class="hx-card hx-fiche__block">
                         <h3 class="hx-fiche__h hx-fiche__h--groupe">I. Appréciation de la performance réalisée #{ficheView.e.campagne.typeLabel.toLowerCase()} #{ficheView.e.campagne.exercice} (suivant les objectifs fixés)</h3>
-                        <ui:fragment rendered="#{ficheView.revisionDirecteur}"><p class="hx-mdl__note hx-lock" style="margin-bottom:10px"><i class="pi pi-pencil"></i><span>En tant que directeur, vous pouvez corriger les pourcentages retenus, les « non applicable », les commentaires et les niveaux de compétences du N+1. Chaque correction est tracée et la note /20 est recalculée lorsque vous rendez votre avis (partie V).</span></p></ui:fragment>
+                        <ui:fragment rendered="#{ficheView.revisionDirecteur}"><p class="hx-mdl__note hx-lock" style="margin-bottom:10px"><i class="pi pi-pencil"></i><span><b>Vous pouvez ajuster l'évaluation du N+1 avant de rendre votre avis.</b> Si vous n'êtes pas d'accord avec ce que le N+1 a retenu, modifiez directement dans la colonne « N+1 » : le pourcentage de réalisation, la case « non applicable », le commentaire ou le niveau d'une compétence. Le N+1 et le collaborateur verront vos corrections, qui sont enregistrées dans le journal. La note /20 est recalculée quand vous cliquez sur « Rendre mon avis », en bas de la fiche. Si vous êtes d'accord, ne touchez à rien.</span></p></ui:fragment>
                         <ui:fragment rendered="#{ficheView.saisieN1}"><p class="hx-field__help" style="margin-bottom:8px"><i class="pi pi-info-circle"></i> Votre colonne reprend l'auto-évaluation du collaborateur. Laissez-la si vous êtes d'accord, sinon corrigez et expliquez pourquoi.<ui:fragment rendered="#{ficheView.nbEcarts gt 0}"> <b class="hx-warn">#{ficheView.nbEcarts} écart#{ficheView.nbEcarts gt 1 ? 's' : ''}</b> actuellement.</ui:fragment></p></ui:fragment>
                         <ui:fragment rendered="#{empty ficheView.e.objectifs}"><div class="hx-empty hx-empty--sm"><i class="pi pi-flag"></i><strong>Aucun objectif repris</strong>La fiche de fixation ne contenait pas d'objectif validé à l'initiation.</div></ui:fragment>
                         <ui:fragment rendered="#{not empty ficheView.e.objectifs}">
@@ -226,8 +226,8 @@
                     <div class="hx-card hx-fiche__block">
                         <h3 class="hx-fiche__h hx-fiche__h--groupe">#{ficheView.e.avecCompetences ? 'V.' : 'IV.'} Appréciations et commentaires</h3>
 
-                        <section class="hx-appr">
-                            <header><strong>Appréciation générale du supérieur hiérarchique direct (N+1)</strong><small>#{empty ficheView.e.evaluateur ? '' : ficheView.e.evaluateur.nomComplet}<ui:fragment rendered="#{not empty ficheView.e.dateEvaluation}"> · <h:outputText value="#{ficheView.e.dateEvaluation}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></ui:fragment></small></header>
+                        <section class="hx-appr #{ficheView.saisieN1 ? 'is-moi' : ''}">
+                            <header><strong>Appréciation générale du supérieur hiérarchique direct (N+1)<ui:fragment rendered="#{ficheView.saisieN1}"><span class="hx-appr__moi"><i class="pi pi-pencil"></i> À vous de saisir</span></ui:fragment></strong><small>#{empty ficheView.e.evaluateur ? '' : ficheView.e.evaluateur.nomComplet}<ui:fragment rendered="#{not empty ficheView.e.dateEvaluation}"> · <h:outputText value="#{ficheView.e.dateEvaluation}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></ui:fragment></small></header>
                             <ui:fragment rendered="#{ficheView.saisieN1}">
                                 <p:selectOneRadio value="#{ficheView.e.niveauAtteinte}" layout="responsive" columns="2" styleClass="hx-check" unselectable="true">
                                     <f:selectItems value="#{ficheView.niveauxAtteinte}" var="na" itemLabel="#{ficheView.niveauAtteinteLabel(na)}" itemValue="#{na}"/>
@@ -245,8 +245,8 @@
                         </section>
 
                         <ui:fragment rendered="#{ficheView.visaN2Requis or not empty ficheView.e.dateVisaN2}">
-                        <section class="hx-appr">
-                            <header><strong>Visa du N+2</strong><small>#{empty ficheView.e.n2 ? '' : ficheView.e.n2.nomComplet}<ui:fragment rendered="#{not empty ficheView.e.dateVisaN2}"> · <h:outputText value="#{ficheView.e.dateVisaN2}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></ui:fragment></small></header>
+                        <section class="hx-appr #{ficheView.saisieN2 ? 'is-moi' : ''}">
+                            <header><strong>Visa du N+2<ui:fragment rendered="#{ficheView.saisieN2}"><span class="hx-appr__moi"><i class="pi pi-pencil"></i> À vous de saisir</span></ui:fragment></strong><small>#{empty ficheView.e.n2 ? '' : ficheView.e.n2.nomComplet}<ui:fragment rendered="#{not empty ficheView.e.dateVisaN2}"> · <h:outputText value="#{ficheView.e.dateVisaN2}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></ui:fragment></small></header>
                             <ui:fragment rendered="#{ficheView.saisieN2}">
                                 <p:inputTextarea value="#{ficheView.e.visaN2}" rows="2" autoResize="true" maxlength="2000" styleClass="hx-appr__ta" placeholder="Observations du supérieur hiérarchique intermédiaire (facultatif)"/>
                                 <div class="hx-appr__act"><p:commandButton value="Apposer mon visa" icon="pi pi-check" process="@form" update="@form :globalGrowl" actionListener="#{ficheView.viser}"/></div>
@@ -255,8 +255,8 @@
                         </section>
                         </ui:fragment>
 
-                        <section class="hx-appr">
-                            <header><strong>Commentaires et propositions du salarié (N)</strong><small>#{ficheView.e.salarie.nomComplet}</small></header>
+                        <section class="hx-appr #{ficheView.commentaireSalarie ? 'is-moi' : ''}">
+                            <header><strong>Commentaires et propositions du salarié (N)<ui:fragment rendered="#{ficheView.commentaireSalarie}"><span class="hx-appr__moi"><i class="pi pi-pencil"></i> À vous de saisir</span></ui:fragment></strong><small>#{ficheView.e.salarie.nomComplet}</small></header>
                             <ui:fragment rendered="#{ficheView.commentaireSalarie}">
                                 <h:panelGroup id="souhaitsN" layout="block">
                                     <p:selectManyCheckbox value="#{ficheView.souhaitsChoisis}" layout="responsive" columns="2" styleClass="hx-check">
@@ -273,8 +273,8 @@
                             </ui:fragment>
                         </section>
 
-                        <section class="hx-appr">
-                            <header><strong>#{ficheView.visaN2Requis or empty ficheView.n2Attendu ? 'Avis du directeur' : 'Avis du directeur (N+2)'}</strong><small>#{empty ficheView.e.directeur ? '' : ficheView.e.directeur.nomComplet}<ui:fragment rendered="#{not empty ficheView.e.dateAvisDirecteur}"> · <h:outputText value="#{ficheView.e.dateAvisDirecteur}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></ui:fragment></small></header>
+                        <section class="hx-appr #{ficheView.saisieDirecteur ? 'is-moi' : ''}">
+                            <header><strong>#{ficheView.visaN2Requis or empty ficheView.n2Attendu ? 'Avis du directeur' : 'Avis du directeur (N+2)'}<ui:fragment rendered="#{ficheView.saisieDirecteur}"><span class="hx-appr__moi"><i class="pi pi-pencil"></i> À vous de saisir</span></ui:fragment></strong><small>#{empty ficheView.e.directeur ? '' : ficheView.e.directeur.nomComplet}<ui:fragment rendered="#{not empty ficheView.e.dateAvisDirecteur}"> · <h:outputText value="#{ficheView.e.dateAvisDirecteur}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></ui:fragment></small></header>
                             <ui:fragment rendered="#{ficheView.saisieDirecteur}">
                                 <p:outputLabel value="Appréciation générale du travail du collaborateur" styleClass="hx-appr__lbl"/>
                                 <p:inputTextarea value="#{ficheView.e.avisDirecteur}" rows="3" autoResize="true" maxlength="4000" styleClass="hx-appr__ta"/>
@@ -292,8 +292,8 @@
                         </section>
 
                         <ui:fragment rendered="#{ficheView.validationDcht or not empty ficheView.e.commentaireDcht}">
-                            <section class="hx-appr">
-                                <header><strong>Contrôle DCHT</strong><small><ui:fragment rendered="#{not empty ficheView.e.dateValidation}">validée le <h:outputText value="#{ficheView.e.dateValidation}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></ui:fragment></small></header>
+                            <section class="hx-appr #{ficheView.validationDcht ? 'is-moi' : ''}">
+                                <header><strong>Contrôle DCHT<ui:fragment rendered="#{ficheView.validationDcht}"><span class="hx-appr__moi"><i class="pi pi-pencil"></i> À vous de saisir</span></ui:fragment></strong><small><ui:fragment rendered="#{not empty ficheView.e.dateValidation}">validée le <h:outputText value="#{ficheView.e.dateValidation}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></ui:fragment></small></header>
                                 <ui:fragment rendered="#{ficheView.validationDcht}"><p:inputTextarea value="#{ficheView.e.commentaireDcht}" rows="2" autoResize="true" maxlength="4000" styleClass="hx-appr__ta" placeholder="Observation de conformité (facultatif)"/></ui:fragment>
                                 <ui:fragment rendered="#{not ficheView.validationDcht}"><p class="hx-appr__txt">#{ficheView.e.commentaireDcht}</p></ui:fragment>
                             </section>
@@ -351,7 +351,7 @@
                         </ui:fragment>
                         <ui:fragment rendered="#{ficheView.revisionDirecteur}">
                             <p:commandButton value="Enregistrer mes corrections" icon="pi pi-save" styleClass="hx-btn-secondary" process="@form" update="@form :globalGrowl" actionListener="#{ficheView.enregistrerRevision}"/>
-                            <p class="hx-field__help"><i class="pi pi-info-circle"></i> Rendez ensuite votre avis en partie V : la note sera recalculée avec vos corrections.</p>
+                            <p class="hx-field__help"><i class="pi pi-info-circle"></i> Rendez ensuite votre avis dans la section « Avis du directeur », en bas de la fiche : la note sera recalculée avec vos corrections.</p>
                         </ui:fragment>
                         <ui:fragment rendered="#{ficheView.peutRouvrirN1}">
                             <p:commandButton value="Rouvrir mon évaluation" icon="pi pi-unlock" styleClass="hx-btn-secondary" process="@this" update="@form :globalGrowl" actionListener="#{ficheView.rouvrirN1}">
