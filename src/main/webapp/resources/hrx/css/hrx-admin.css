@@ -2244,3 +2244,17 @@ a.hx-contest-btn--ghost:hover { background: var(--hx-surface-2); color: var(--hx
 .hx-contest-cible small { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--hx-muted); }
 .hx-contest-cible span { font-size: 12.5px; color: var(--hx-text-muted); }
 .hx-contest-motifs td { padding: 3px 0; }
+
+/* Circuit de la fiche d'objectifs */
+.hx-circuit { list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin: 0 0 var(--hx-s3); padding: 12px 14px; background: var(--hx-surface); border: 1px solid var(--hx-border); border-radius: var(--hx-radius-md); }
+.hx-circuit li { position: relative; display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--hx-muted); padding-right: 14px; }
+.hx-circuit li:not(:last-child)::after { content: ""; position: absolute; right: 10px; left: calc(100% - 10px); top: 50%; }
+.hx-circuit li .pi { width: 28px; height: 28px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--hx-surface-2); border: 1px solid var(--hx-border); font-size: 12px; }
+.hx-circuit li.is-done { color: var(--hx-text); }
+.hx-circuit li.is-done .pi { background: var(--hx-success); border-color: var(--hx-success); color: #fff; }
+.hx-circuit li.is-on { color: var(--hx-text-strong); font-weight: 700; }
+.hx-circuit li.is-on .pi { background: var(--hx-primary); border-color: var(--hx-primary); color: #fff; box-shadow: 0 0 0 4px var(--hx-info-soft); }
+.hx-sign__hint { flex-basis: 100%; display: flex; gap: 6px; margin: 0 0 8px; font-size: 12.5px; color: var(--hx-text-muted); }
+.hx-sign__hint .pi { margin-top: 2px; color: var(--hx-primary); }
+@media (max-width: 760px) { .hx-circuit { grid-template-columns: 1fr 1fr; row-gap: 10px; } }
+.hx-sign__hint { max-width: 340px; }

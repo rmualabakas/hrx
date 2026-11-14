@@ -218,6 +218,21 @@ public class NotificationService {
                         "Voir mes objectifs", lienObjectifs(f), revise ? "Révisé" : "Maintenu"));
     }
 
+    public void ficheObjectifsTransmise(FicheObjectifs f) {
+        Users n1 = f.getSalarie().getSuperieurHierarchique();
+        envoyer(f.getSalarie(), "Vos objectifs " + f.getExercice() + " sont à consulter et signer",
+                gabarit("Votre fiche d'objectifs vous est transmise", "Bonjour " + prenom(f.getSalarie()) + ", <b>" + nom(n1) + "</b> vous transmet vos objectifs pour l'exercice " + f.getExercice()
+                        + ". Prenez-en connaissance : signez la fiche si elle vous convient, ou demandez la révision d'un objectif en précisant pourquoi. Votre N+1 signera après vous.",
+                        fiche("Exercice", String.valueOf(f.getExercice()), "Objectifs", String.valueOf(f.getNbValides())), "Consulter mes objectifs", lienObjectifs(f), "À signer"));
+    }
+
+    public void ficheObjectifsSigneeCollaborateur(FicheObjectifs f) {
+        Users n1 = f.getSalarie().getSuperieurHierarchique();
+        envoyer(n1, "Fiche d'objectifs signée par " + f.getSalarie().getNomComplet() + " : à votre tour",
+                gabarit("Le collaborateur a signé sa fiche d'objectifs", "Bonjour " + prenom(n1) + ", <b>" + nom(f.getSalarie()) + "</b> a signé sa fiche d'objectifs " + f.getExercice() + ". Signez-la à votre tour pour la figer.",
+                        fiche("Exercice", String.valueOf(f.getExercice()), "Objectifs", String.valueOf(f.getNbValides())), "Signer la fiche", lienObjectifs(f), "À signer"));
+    }
+
     public void ficheObjectifsSignee(FicheObjectifs f) {
         String corps = fiche("Collaborateur", nom(f.getSalarie()), "Exercice", String.valueOf(f.getExercice()), "Objectifs validés", String.valueOf(f.getNbValides()));
         envoyer(f.getSalarie(), "Votre fiche d'objectifs " + f.getExercice() + " est signée",

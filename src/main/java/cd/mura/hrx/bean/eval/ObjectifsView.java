@@ -127,8 +127,46 @@ public class ObjectifsView implements Serializable {
 
     // droits
     /** Le N+1 (ou la DCHT) pilote la fiche : fixe, valide, refuse, signe côté N+1. */
-    /** Une signature posée (salarié ou N+1) fige le contenu : toute modification passe par « Rouvrir la fiche ». */
+    /**
+     * Circuit : le N+1 saisit puis transmet ; le collaborateur signe (ou demande une révision) ; le N+1 signe en dernier.
+     * La signature du collaborateur fige le contenu : toute correction passe par « Rouvrir la fiche ».
+     */
     public boolean isFigee() { return fiche != null && (fiche.isSignee() || fiche.isSigneeSalarie() || fiche.isSigneeN1()); }
+    private boolean pilote() { return (n1 || hierarchie || dcht) && !moi; }
+    public boolean isPeutTransmettre() { return pilote() && fiche != null && !fiche.isTransmise() && !fiche.isSigneeSalarie() && !isVerrouEvaluation(); }
+    public boolean isPeutSignerSalarie() { return moi && fiche != null && fiche.isTransmise() && !fiche.isSigneeSalarie() && !fiche.isSignee(); }
+    public boolean isPeutSignerN1() { return pilote() && fiche != null && fiche.isSigneeSalarie() && !fiche.isSigneeN1() && !fiche.isSignee(); }
+    /** Étape du circuit, pour l'affichage. */
+    public String getEtapeCircuit() {
+        if (fiche == null || getNbValides() == 0) return "saisie";
+        if (fiche.isSignee()) return "signee";
+        if (fiche.isSigneeSalarie()) return "n1";
+        if (getNbContestations() > 0) return "revision";
+        if (fiche.isTransmise()) return "collaborateur";
+        return "saisie";
+    }
+    /** Toute modification de la hiérarchie après transmission annule celle-ci : la fiche doit être retransmise. */
+    private void annulerTransmissionSiModifiee() {
+        if (fiche != null && fiche.isTransmise() && pilote()) {
+            fiche.setDateTransmission(null);
+            fiche = objectifDAO.saveFiche(fiche);
+            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_WARN, "Fiche à retransmettre",
+                    "Vous avez modifié une fiche déjà transmise : transmettez-la à nouveau au collaborateur une fois vos corrections terminées."));
+        }
+    }
+
+    public void transmettre() {
+        if (!isPeutTransmettre()) return;
+        if (getNbValides() == 0) { cd.mura.hrx.utils.Dialogue.erreur("Aucun objectif validé", "Saisissez au moins un objectif avant de transmettre la fiche."); return; }
+        if (getNbProposes() > 0) { cd.mura.hrx.utils.Dialogue.erreur("Propositions en attente", "Validez ou refusez d'abord les objectifs proposés par le collaborateur."); return; }
+        if (getNbContestations() > 0) { cd.mura.hrx.utils.Dialogue.erreur("Demande de révision en attente", "Répondez d'abord aux demandes de révision du collaborateur (réviser ou maintenir)."); return; }
+        if (!isPonderationLibre() && getPoidsTotal() != 100) { cd.mura.hrx.utils.Dialogue.erreur("Pondération incomplète", "La somme des pondérations doit faire 100 %. Laissez-les toutes à 0 pour donner la même pondération à chaque objectif."); return; }
+        fiche.setDateTransmission(new Date());
+        fiche = objectifDAO.saveFiche(fiche);
+        auditService.updated("Objectifs", "FicheObjectifs", fiche.getId(), "Fiche d'objectifs transmise au collaborateur", salarie.getNomComplet() + " : " + exercice + " (" + getNbValides() + " objectifs)");
+        try { notifications.ficheObjectifsTransmise(objectifDAO.findFiche(fiche.getId())); } catch (Exception ex) { }
+        cd.mura.hrx.utils.Dialogue.succes("Fiche transmise au collaborateur", salarie.getNomComplet() + " est prévenu par e-mail. Il peut signer ou demander la révision d'un objectif ; vous signerez après lui.");
+    }
     /** Une fiche d'évaluation de l'exercice existe : les objectifs ne peuvent plus bouger, même après réouverture. */
     public boolean isVerrouEvaluation() { return evaluationBloquante != null; }
     public String getMotifVerrou() {
@@ -232,13 +270,20 @@ public class ObjectifsView implements Serializable {
                 ? "Le collaborateur demande la révision de " + getNbContestations() + " objectif(s) : révisez-les ou maintenez-les en motivant votre réponse avant de signer."
                 : "Votre N+1 doit d'abord répondre à votre demande de révision avant que la fiche puisse être signée."); return; }
         Date now = new Date();
-        if (moi && !fiche.isSigneeSalarie()) fiche.setDateSignatureSalarie(now);
-        if ((n1 || hierarchie || dcht) && !fiche.isSigneeN1()) { fiche.setDateSignatureN1(now); fiche.setSignataireN1(loginBean.getUsers()); }
+        boolean signeCollaborateur = false;
+        if (moi) {
+            if (!isPeutSignerSalarie()) { cd.mura.hrx.utils.Dialogue.erreur("Signature impossible", fiche.isTransmise() ? "Vous avez déjà signé cette fiche." : "Votre N+1 ne vous a pas encore transmis la fiche : vous pourrez la signer dès qu'il l'aura fait."); return; }
+            fiche.setDateSignatureSalarie(now); signeCollaborateur = true;
+        } else if (n1 || hierarchie || dcht) {
+            if (!fiche.isSigneeSalarie()) { cd.mura.hrx.utils.Dialogue.erreur("Signature du collaborateur attendue", "Le N+1 signe toujours après le collaborateur : transmettez-lui la fiche, il la signera ou demandera une révision."); return; }
+            if (!fiche.isSigneeN1()) { fiche.setDateSignatureN1(now); fiche.setSignataireN1(loginBean.getUsers()); }
+        }
         if (fiche.isSigneeSalarie() && fiche.isSigneeN1()) fiche.setStatut(FicheObjectifs.SIGNEE);
         fiche = objectifDAO.saveFiche(fiche);
         auditService.updated("Objectifs", "FicheObjectifs", fiche.getId(), fiche.isSignee() ? "Fiche d'objectifs signée par les deux parties" : "Signature de la fiche d'objectifs", salarie.getNomComplet() + " : " + exercice);
         if (fiche.isSignee()) { try { notifications.ficheObjectifsSignee(objectifDAO.findFiche(fiche.getId())); } catch (Exception ex) { } }
-        cd.mura.hrx.utils.Dialogue.succes(fiche.isSignee() ? "Fiche signée" : "Signature enregistrée", fiche.isSignee() ? "Les objectifs sont figés pour l'exercice " + exercice + "." : "En attente de la signature de l'autre partie.");
+        else if (signeCollaborateur) { try { notifications.ficheObjectifsSigneeCollaborateur(objectifDAO.findFiche(fiche.getId())); } catch (Exception ex) { } }
+        cd.mura.hrx.utils.Dialogue.succes(fiche.isSignee() ? "Fiche signée" : "Signature enregistrée", fiche.isSignee() ? "Les objectifs sont figés pour l'exercice " + exercice + "." : "Votre N+1 est prévenu par e-mail : il signera à son tour.");
     }
 
     public void rouvrir() {
@@ -248,9 +293,10 @@ public class ObjectifsView implements Serializable {
         fiche.setDateSignatureSalarie(null);
         fiche.setDateSignatureN1(null);
         fiche.setSignataireN1(null);
+        fiche.setDateTransmission(null);
         fiche = objectifDAO.saveFiche(fiche);
         auditService.updated("Objectifs", "FicheObjectifs", fiche.getId(), "Réouverture de la fiche d'objectifs", salarie.getNomComplet() + " : " + exercice);
-        cd.mura.hrx.utils.Dialogue.succes("Fiche rouverte", "Les objectifs peuvent de nouveau être modifiés ; les signatures sont à refaire.");
+        cd.mura.hrx.utils.Dialogue.succes("Fiche rouverte", "Les signatures sont annulées. Corrigez les objectifs puis transmettez de nouveau la fiche au collaborateur, qui la signera avant vous.");
     }
 
     // objectifs
@@ -292,6 +338,7 @@ public class ObjectifsView implements Serializable {
             reponseContestation = null;
         }
         objectifDAO.save(edit);
+        if (!revision && isPeutFixer()) annulerTransmissionSiModifiee();
         if (revision) {
             auditService.updated("Objectifs", "Objectif", edit.getId(), "Objectif révisé à la demande du collaborateur", salarie.getNomComplet() + " : " + edit.getLibelle());
             try { notifications.contestationTraitee(objectifDAO.findFiche(fiche.getId()), edit); } catch (Exception ex) { }
@@ -343,7 +390,7 @@ public class ObjectifsView implements Serializable {
 
     /** Le collaborateur peut contester un objectif validé tant qu'il n'a pas signé sa fiche. */
     public boolean isPeutContester(Objectif o) {
-        return moi && !n1 && fiche != null && !fiche.isSignee() && !fiche.isSigneeSalarie() && !isVerrouEvaluation()
+        return moi && !n1 && fiche != null && fiche.isTransmise() && !fiche.isSignee() && !fiche.isSigneeSalarie() && !isVerrouEvaluation()
                 && o.isValide() && !o.isContestationEnAttente();
     }
     public boolean isPeutRetirerContestation(Objectif o) { return moi && o.isContestationEnAttente() && fiche != null && !fiche.isSignee(); }
@@ -409,6 +456,7 @@ public class ObjectifsView implements Serializable {
     public void supprimer(Objectif o) {
         if (!isPeutSupprimer(o)) { error("Suppression refusée", "Cet objectif ne peut pas être supprimé."); return; }
         objectifDAO.remove(o.getId());
+        annulerTransmissionSiModifiee();
         auditService.deleted("Objectifs", "Objectif", o.getId(), "Suppression d'un objectif", salarie.getNomComplet() + " : " + o.getLibelle());
         info("Objectif supprimé", o.getLibelle());
         charger();

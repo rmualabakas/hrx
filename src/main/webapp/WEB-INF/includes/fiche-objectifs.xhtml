@@ -52,7 +52,7 @@
                         <p class="hx-mdl__note hx-lock"><i class="pi pi-lock"></i><span>#{objectifsView.motifVerrou}</span></p>
                     </ui:fragment>
                     <ui:fragment rendered="#{not objectifsView.verrouEvaluation and objectifsView.figee and not objectifsView.fiche.signee}">
-                        <p class="hx-mdl__note hx-lock"><i class="pi pi-lock"></i><span>Fiche signée par #{objectifsView.fiche.signeeN1 ? 'le N+1' : 'le collaborateur'}, en attente de la seconde signature : le contenu est figé. Pour le modifier, le N+1 doit d'abord rouvrir la fiche (les signatures seront annulées).</span></p>
+                        <p class="hx-mdl__note hx-lock"><i class="pi pi-lock"></i><span>Fiche signée par le collaborateur, en attente de la signature du N+1 : le contenu est figé. Pour corriger une erreur, le N+1 rouvre la fiche (les signatures sont annulées), la modifie puis la transmet de nouveau au collaborateur.</span></p>
                     </ui:fragment>
 
                     <!-- Identité -->
@@ -184,6 +184,14 @@
                         </div>
                     </ui:repeat>
 
+                    <!-- Circuit de signature : N+1 saisit et transmet → collaborateur signe (ou demande une révision) → N+1 signe -->
+                    <ol class="hx-circuit" aria-label="Circuit de la fiche d'objectifs">
+                        <li class="#{objectifsView.etapeCircuit eq 'saisie' ? 'is-on' : 'is-done'}"><i class="pi pi-pencil"></i><span>Saisie par le N+1</span></li>
+                        <li class="#{objectifsView.etapeCircuit eq 'collaborateur' or objectifsView.etapeCircuit eq 'revision' ? 'is-on' : (objectifsView.etapeCircuit eq 'n1' or objectifsView.etapeCircuit eq 'signee' ? 'is-done' : '')}"><i class="pi #{objectifsView.etapeCircuit eq 'revision' ? 'pi-comments' : 'pi-send'}"></i><span>#{objectifsView.etapeCircuit eq 'revision' ? 'Révision demandée' : 'Chez le collaborateur'}</span></li>
+                        <li class="#{objectifsView.etapeCircuit eq 'n1' ? 'is-on' : (objectifsView.etapeCircuit eq 'signee' ? 'is-done' : '')}"><i class="pi pi-user-edit"></i><span>Signée par le collaborateur</span></li>
+                        <li class="#{objectifsView.etapeCircuit eq 'signee' ? 'is-done' : ''}"><i class="pi pi-verified"></i><span>Signée par le N+1</span></li>
+                    </ol>
+
                     <!-- Signatures -->
                     <div class="hx-card hx-fiche__block hx-sign">
                         <div class="hx-sign__col">
@@ -197,13 +205,25 @@
                             <ui:fragment rendered="#{empty objectifsView.fiche or not objectifsView.fiche.signeeN1}"><span class="hx-muted">En attente</span></ui:fragment>
                         </div>
                         <div class="hx-sign__actions">
+                            <ui:fragment rendered="#{objectifsView.peutTransmettre}">
+                                <p class="hx-sign__hint"><i class="pi pi-info-circle"></i> Une fois les objectifs saisis, transmettez la fiche au collaborateur : il la signera ou demandera une révision. Vous signerez après lui.</p>
+                                <p:commandButton value="Transmettre au collaborateur" icon="pi pi-send" process="@this" update="@form :globalGrowl" actionListener="#{objectifsView.transmettre}">
+                                    <p:confirm header="Transmettre la fiche" message="#{objectifsView.salarie.nomComplet} sera prévenu par e-mail pour consulter et signer ses objectifs." icon="pi pi-send"/>
+                                </p:commandButton>
+                            </ui:fragment>
+                            <ui:fragment rendered="#{objectifsView.moi and not empty objectifsView.fiche and not objectifsView.fiche.transmise and not objectifsView.fiche.signee}">
+                                <p class="hx-sign__hint"><i class="pi pi-hourglass"></i> Votre N+1 prépare vos objectifs. Vous pourrez les signer ou demander une révision dès qu'il vous aura transmis la fiche.</p>
+                            </ui:fragment>
+                            <ui:fragment rendered="#{not objectifsView.moi and not empty objectifsView.fiche and objectifsView.fiche.transmise and not objectifsView.fiche.signeeSalarie and objectifsView.nbContestations eq 0}">
+                                <p class="hx-sign__hint"><i class="pi pi-hourglass"></i> Fiche transmise le <h:outputText value="#{objectifsView.fiche.dateTransmission}"><f:convertDateTime pattern="dd/MM/yyyy"/></h:outputText> : en attente de la signature du collaborateur. Vous signerez après lui.</p>
+                            </ui:fragment>
                             <p:commandButton value="Signer la fiche" icon="pi pi-pencil" process="@this" update="@form :globalGrowl" actionListener="#{objectifsView.signer}"
-                                             rendered="#{not empty objectifsView.fiche and not objectifsView.fiche.signee and ((objectifsView.moi and not objectifsView.fiche.signeeSalarie) or ((objectifsView.n1 or objectifsView.dcht) and not objectifsView.fiche.signeeN1))}">
-                                <p:confirm header="Signer la fiche d'objectifs" message="Vous attestez avoir pris connaissance des objectifs de l'exercice #{objectifsView.exercice}. Une fois signée par les deux parties, la fiche est figée." icon="pi pi-pencil"/>
+                                             rendered="#{objectifsView.peutSignerSalarie or objectifsView.peutSignerN1}">
+                                <p:confirm header="Signer la fiche d'objectifs" message="#{objectifsView.peutSignerSalarie ? 'Vous attestez avoir pris connaissance de vos objectifs et les acceptez. Votre N+1 signera ensuite.' : 'Le collaborateur a signé. Votre signature fige la fiche pour l’exercice.'}" icon="pi pi-pencil"/>
                             </p:commandButton>
                             <p:commandButton value="Rouvrir la fiche" icon="pi pi-unlock" styleClass="hx-btn-secondary" process="@this" update="@form :globalGrowl" actionListener="#{objectifsView.rouvrir}"
                                              rendered="#{objectifsView.peutRouvrir}">
-                                <p:confirm header="Rouvrir la fiche" message="Les signatures seront annulées et les objectifs redeviendront modifiables." icon="pi pi-exclamation-triangle"/>
+                                <p:confirm header="Rouvrir la fiche" message="Toutes les signatures seront annulées. Corrigez puis transmettez de nouveau la fiche au collaborateur." icon="pi pi-exclamation-triangle"/>
                             </p:commandButton>
                         </div>
                     </div>

@@ -67,6 +67,8 @@ public class FicheObjectifs implements Serializable {
     @OrderBy("ordre asc, id asc")
     private List<Objectif> objectifs = new ArrayList<>();
 
+    /** Le N+1 a transmis la fiche au collaborateur pour prise de connaissance (avant toute signature). */
+    @Column(name = "date_transmission") @Temporal(TemporalType.TIMESTAMP) private Date dateTransmission;
     @Column(name = "date_signature_salarie") @Temporal(TemporalType.TIMESTAMP) private Date dateSignatureSalarie;
     @Column(name = "date_signature_n1") @Temporal(TemporalType.TIMESTAMP) private Date dateSignatureN1;
     @Column(name = "date_creation") @Temporal(TemporalType.TIMESTAMP) private Date dateCreation = new Date();
@@ -77,6 +79,7 @@ public class FicheObjectifs implements Serializable {
     public String getMotifLabel() { return isRecrutement() ? "Fixation à la prise de poste" : "Fixation en début d'exercice"; }
     /** Premier trimestre couvert par la fiche (1 à 4). */
     public int getTrimestreDebut() { return dateEffet == null ? 1 : (dateEffet.getMonthValue() - 1) / 3 + 1; }
+    public boolean isTransmise() { return dateTransmission != null; }
     public boolean isSigneeSalarie() { return dateSignatureSalarie != null; }
     public boolean isSigneeN1() { return dateSignatureN1 != null; }
     /** Nom affiché pour la signature hiérarchique : le signataire réel, à défaut (fiches signées avant le suivi) le N+1 rattaché. */

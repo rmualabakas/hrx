@@ -220,9 +220,9 @@ public class TableauBordView implements Serializable {
             else if (mesObjectifs.getNbContestations() > 0)
                 taches.add(new Tache("pi-flag", pluriel(mesObjectifs.getNbContestations(), "demande de révision d'objectif", "demandes de révision d'objectifs") + " en attente de réponse",
                         "Votre N+1 doit réviser ou maintenir ces objectifs avant la signature.", "/ui/objectifs?salarie=" + moi.getId() + "&exercice=" + exercice, "info"));
-            else if (!mesObjectifs.isSignee() && !mesObjectifs.isSigneeSalarie())
+            else if (mesObjectifs.isTransmise() && !mesObjectifs.isSignee() && !mesObjectifs.isSigneeSalarie())
                 taches.add(new Tache("pi-pen-to-square", "Signer votre fiche d'objectifs " + exercice,
-                        pluriel(mesObjectifs.getNbValides(), "objectif validé", "objectifs validés") + (mesObjectifs.isSigneeN1() ? " · déjà signée par votre N+1 : il ne manque que votre signature." : " · votre signature et celle de votre N+1 figent les objectifs."),
+                        pluriel(mesObjectifs.getNbValides(), "objectif transmis", "objectifs transmis") + " par votre N+1 : signez-la, ou demandez la révision d'un objectif. Votre N+1 signera après vous.",
                         "/ui/objectifs?salarie=" + moi.getId() + "&exercice=" + exercice, "primary"));
             else if (!mesObjectifs.isSignee())
                 taches.add(new Tache("pi-hourglass", "Fiche d'objectifs signée, en attente de votre N+1",
@@ -280,19 +280,31 @@ public class TableauBordView implements Serializable {
                         "Révisez-les ou maintenez-les en motivant votre réponse : la fiche ne peut être signée qu'ensuite.",
                         contestees.size() == 1 ? "/ui/objectifs?salarie=" + f0.getSalarie().getId() + "&exercice=" + exercice : "/ui/equipe", "danger"));
             }
-            // fiches d'objectifs de mes collaborateurs directs prêtes à être signées par moi (N+1)
+            // fiches prêtes à être transmises au collaborateur (le N+1 ne signe jamais avant lui)
+            List<FicheObjectifs> aTransmettre = equipe.stream().filter(u -> niveaux.get(u.getId()) == 1)
+                    .map(u -> objectifsEquipe.get(u.getId()))
+                    .filter(f -> f != null && !f.isTransmise() && !f.isSigneeSalarie() && f.getNbValides() > 0 && f.getNbProposes() == 0 && f.getNbContestations() == 0).toList();
+            if (aTransmettre.size() == 1) {
+                FicheObjectifs f = aTransmettre.get(0);
+                taches.add(new Tache("pi-send", "Transmettre ses objectifs à " + f.getSalarie().getNomComplet(),
+                        pluriel(f.getNbValides(), "objectif saisi", "objectifs saisis") + " : le collaborateur signera ou demandera une révision, puis vous signerez.",
+                        "/ui/objectifs?salarie=" + f.getSalarie().getId() + "&exercice=" + exercice, "primary"));
+            } else if (aTransmettre.size() > 1) {
+                taches.add(new Tache("pi-send", pluriel(aTransmettre.size(), "fiche d'objectifs", "fiches d'objectifs") + " à transmettre à vos collaborateurs",
+                        "Une fois transmise, chaque fiche est signée d'abord par le collaborateur, puis par vous.", "/ui/equipe", "primary"));
+            }
+            // fiches signées par le collaborateur, en attente de ma signature (N+1)
             List<FicheObjectifs> aSigner = equipe.stream().filter(u -> niveaux.get(u.getId()) == 1)
                     .map(u -> objectifsEquipe.get(u.getId()))
-                    .filter(f -> f != null && !f.isSignee() && !f.isSigneeN1() && f.getNbValides() > 0 && f.getNbProposes() == 0 && f.getNbContestations() == 0).toList();
+                    .filter(f -> f != null && !f.isSignee() && f.isSigneeSalarie() && !f.isSigneeN1()).toList();
             if (aSigner.size() == 1) {
                 FicheObjectifs f = aSigner.get(0);
                 taches.add(new Tache("pi-pen-to-square", "Signer la fiche d'objectifs de " + f.getSalarie().getNomComplet(),
-                        f.isSigneeSalarie() ? "Le collaborateur a déjà signé : il ne manque que votre signature." : pluriel(f.getNbValides(), "objectif validé", "objectifs validés") + ", prêts à être signés.",
+                        "Le collaborateur a signé : il ne manque que votre signature pour figer la fiche.",
                         "/ui/objectifs?salarie=" + f.getSalarie().getId() + "&exercice=" + exercice, "primary"));
             } else if (aSigner.size() > 1) {
-                long dejaSignees = aSigner.stream().filter(FicheObjectifs::isSigneeSalarie).count();
                 taches.add(new Tache("pi-pen-to-square", pluriel(aSigner.size(), "fiche d'objectifs", "fiches d'objectifs") + " à signer",
-                        dejaSignees > 0 ? dejaSignees + " déjà signée(s) par le collaborateur, en attente de votre signature." : "Objectifs validés de vos collaborateurs, prêts à être signés.",
+                        "Signées par vos collaborateurs, en attente de votre signature.",
                         "/ui/equipe", "primary"));
             }
             long sansObj = getEquipeSansObjectifs();
@@ -422,7 +434,7 @@ public class TableauBordView implements Serializable {
     public long getMesObjectifsProposes() { return mesObjectifs == null ? 0 : mesObjectifs.getNbProposes(); }
     public boolean isMesObjectifsSignes() { return mesObjectifs != null && mesObjectifs.isSignee(); }
     /** Objectifs validés, sans proposition en attente, et pas encore signés par moi. */
-    public boolean isMesObjectifsASigner() { return mesObjectifs != null && !mesObjectifs.isSignee() && !mesObjectifs.isSigneeSalarie() && mesObjectifs.getNbValides() > 0 && mesObjectifs.getNbProposes() == 0 && mesObjectifs.getNbContestations() == 0; }
+    public boolean isMesObjectifsASigner() { return mesObjectifs != null && mesObjectifs.isTransmise() && !mesObjectifs.isSignee() && !mesObjectifs.isSigneeSalarie() && mesObjectifs.getNbValides() > 0 && mesObjectifs.getNbProposes() == 0 && mesObjectifs.getNbContestations() == 0; }
     public String getMaFicheEtat() {
         if (!isMoiEvaluable()) return "Compte non évaluable";
         if (campagne == null) return "Aucune campagne ouverte";
