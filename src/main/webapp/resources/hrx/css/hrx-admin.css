@@ -2276,11 +2276,19 @@ a.hx-contest-btn--ghost:hover { background: var(--hx-surface-2); color: var(--hx
 .hx-fer__date b { font-size: 18px; }
 .hx-fer__date small { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
 .hx-fer__txt { display: grid; gap: 2px; }
-.hx-fer__txt small { color: var(--hx-muted); font-size: 12px; text-transform: capitalize; }
+.hx-fer__txt small { color: var(--hx-muted); font-size: 12px; }
+.hx-fer__wd { text-transform: capitalize; }
 .hx-fer__list li.is-we .hx-fer__date { background: var(--hx-surface-2); color: var(--hx-muted); }
 .hx-fer__list li.is-past { opacity: .55; }
-.hx-fer__table { width: 100%; }
-.hx-fer__table td { vertical-align: middle; }
+.hx-fer__scroll { overflow-x: auto; }
+.hx-fer__table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.hx-fer__table th { padding: 10px 16px; text-align: left; font-size: 11.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--hx-muted); border-bottom: 1px solid var(--hx-border); white-space: nowrap; }
+.hx-fer__table td { padding: 10px 16px; vertical-align: middle; border-bottom: 1px solid var(--hx-border); }
+.hx-fer__table tr:last-child td { border-bottom: 0; }
+.hx-fer__table tr.is-off td { opacity: .55; }
+.hx-fer__quand { white-space: nowrap; }
+.hx-fer__quand small { display: block; font-size: 11.5px; color: var(--hx-muted); }
+.hx-fer__act { text-align: right; white-space: nowrap; width: 1%; }
 .hx-fer__next { font-size: 22px; }
 /* Échéance du circuit (48 h ouvrées) */
 .hx-echeance { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 var(--hx-s3); padding: 10px 14px; border-radius: 10px; background: var(--hx-info-soft); color: var(--hx-text-strong); font-size: 13px; border-left: 3px solid var(--hx-primary); }

@@ -49,7 +49,7 @@
                             <ui:repeat value="#{jourFerieView.occurrences}" var="o">
                                 <li class="#{o.passe ? 'is-past' : ''} #{o.weekend ? 'is-we' : ''}">
                                     <span class="hx-fer__date"><b>#{o.date.dayOfMonth}</b><small>#{o.dateCourte.substring(o.dateCourte.indexOf(' ') + 1)}</small></span>
-                                    <span class="hx-fer__txt"><strong>#{o.libelle}</strong><small>#{o.jour}#{o.weekend ? ' · tombe un week-end' : ''}</small></span>
+                                    <span class="hx-fer__txt"><strong>#{o.libelle}</strong><small><span class="hx-fer__wd">#{o.jour}</span>#{o.weekend ? ' · tombe un week-end' : ''}</small></span>
                                 </li>
                             </ui:repeat>
                         </ul>
@@ -58,15 +58,16 @@
                     <!-- Paramétrage -->
                     <div class="hx-card">
                         <div class="hx-card__head"><div><h3>Paramétrage</h3><small>#{jourFerieView.recurrents.size()} récurrent(s) · #{jourFerieView.ponctuels.size()} ponctuel(s)</small></div></div>
-                        <table class="hx-teamlist hx-fer__table">
-                            <thead><tr><th>Jour férié</th><th>Date</th><th>Statut</th><th class="hx-teamlist__act"></th></tr></thead>
+                        <div class="hx-fer__scroll">
+                        <table class="hx-fer__table">
+                            <thead><tr><th>Jour férié</th><th>Date</th><th>Statut</th><th></th></tr></thead>
                             <tbody>
                             <ui:repeat value="#{jourFerieView.feries}" var="j">
                                 <tr class="#{j.actif ? '' : 'is-off'}">
                                     <td><strong>#{j.libelle}</strong></td>
-                                    <td><span class="hx-tag">#{j.recurrent ? 'récurrent' : 'ponctuel'}</span> #{j.dateLisible}</td>
+                                    <td class="hx-fer__quand">#{j.recurrent ? j.jour.toString().concat(' ').concat(jourFerieView.nomMois(j.mois)) : j.dateLisible}<small>#{j.recurrent ? 'chaque année' : 'date précise'}</small></td>
                                     <td><span class="hx-badge #{j.actif ? 'hx-badge--done' : 'hx-badge--draft'}">#{j.actif ? 'Actif' : 'Inactif'}</span></td>
-                                    <td class="hx-teamlist__act">
+                                    <td class="hx-fer__act">
                                         <ui:fragment rendered="#{jourFerieView.editable}">
                                             <p:commandLink process="@this" title="Modifier" styleClass="hx-icon-btn" actionListener="#{jourFerieView.modifier(j)}" update="dlgFer" oncomplete="PF('dlgFer').show()"><i class="pi pi-pencil"></i></p:commandLink>
                                             <p:commandLink process="@this" title="#{j.actif ? 'Désactiver' : 'Activer'}" styleClass="hx-icon-btn" actionListener="#{jourFerieView.basculer(j)}" update="corps"><i class="pi #{j.actif ? 'pi-eye-slash' : 'pi-eye'}"></i></p:commandLink>
@@ -79,6 +80,7 @@
                             </ui:repeat>
                             </tbody>
                         </table>
+                        </div>
                     </div>
                 </div>
             </h:panelGroup>

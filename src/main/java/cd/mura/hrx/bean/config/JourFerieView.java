@@ -76,6 +76,8 @@ public class JourFerieView implements Serializable {
         return m;
     }
 
+    public String nomMois(Integer m) { return m == null || m < 1 || m > 12 ? "" : Month.of(m).getDisplayName(TextStyle.FULL, Locale.FRENCH); }
+
     public void nouveau() { edit = new JourFerie(); edit.setRecurrent(true); edit.setActif(true); }
     public void modifier(JourFerie j) { edit = j; }
 
