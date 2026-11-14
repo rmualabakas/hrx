@@ -81,7 +81,7 @@
                                                 <td class="num">#{d.evaluees + d.validees}</td>
                                                 <td class="num">#{d.validees}</td>
                                                 <td><div class="hx-rpt__taux"><div class="hx-att__bar"><span class="#{d.taux ge 80 ? 'hx-att--4' : (d.taux ge 50 ? 'hx-att--3' : (d.taux gt 0 ? 'hx-att--2' : 'hx-att--1'))}" style="width:#{d.taux}%"></span></div><b>#{d.taux} %</b></div></td>
-                                                <td class="num" title="#{d.atteintSeuil} sur #{d.effectif}"><b>#{d.pctAtteinteSeuil} %</b></td>
+                                                <td class="num" title="#{d.pctSeuilEvalues} % des évalués"><b>#{d.pctAtteinteSeuil} %</b><small class="hx-muted" style="display:block">#{d.atteintSeuil} / #{d.effectif}</small></td>
                                                 <td class="num"><ui:fragment rendered="#{not empty d.noteMoyenne}"><b><h:outputText value="#{d.noteMoyenne}"><f:convertNumber minFractionDigits="1" maxFractionDigits="1"/></h:outputText></b></ui:fragment><ui:fragment rendered="#{empty d.noteMoyenne}"><span class="hx-muted">—</span></ui:fragment></td>
                                                 <td>
                                                     <ui:fragment rendered="#{d.notees eq 0}"><span class="hx-muted">—</span></ui:fragment>
@@ -105,7 +105,7 @@
                                             <td class="num">#{reportingView.total.evaluees + reportingView.total.validees}</td>
                                             <td class="num">#{reportingView.total.validees}</td>
                                             <td><b>#{reportingView.total.taux} %</b></td>
-                                            <td class="num" title="#{reportingView.total.atteintSeuil} sur #{reportingView.attendues}"><b>#{reportingView.pctAtteinteSeuil} %</b></td>
+                                            <td class="num" title="#{reportingView.total.pctSeuilEvalues} % des évalués"><b>#{reportingView.pctAtteinteSeuil} %</b><small class="hx-muted" style="display:block">#{reportingView.total.atteintSeuil} / #{reportingView.attendues}</small></td>
                                             <td class="num"><ui:fragment rendered="#{not empty reportingView.total.noteMoyenne}"><b><h:outputText value="#{reportingView.total.noteMoyenne}"><f:convertNumber minFractionDigits="1" maxFractionDigits="1"/></h:outputText></b></ui:fragment></td>
                                             <td><small class="hx-muted">#{reportingView.total.notees} évaluée(s)</small></td>
                                             <td class="num">#{reportingView.total.pctATemps} %</td>

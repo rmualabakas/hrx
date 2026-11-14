@@ -66,6 +66,8 @@ public class ReportingView implements Serializable {
         /** Part des évaluables ayant atteint le seuil (base : effectif évaluable). */
         public int getPctAtteinteSeuil() { return effectif == 0 ? 0 : (int) Math.min(100, Math.round(100.0 * atteintSeuil / effectif)); }
         public long getAtteintSeuil() { return atteintSeuil; }
+        /** Même indicateur rapporté aux seuls évalués (fiches notées par le N+1). */
+        public int getPctSeuilEvalues() { long n = evaluees + validees; return n == 0 ? 0 : (int) Math.min(100, Math.round(100.0 * atteintSeuil / n)); }
         public int getTaux() { return effectif == 0 ? 0 : (int) Math.min(100, Math.round(100.0 * validees / effectif)); }
         public int getTauxIntegration() { return effectif == 0 ? 0 : (int) Math.min(100, Math.round(100.0 * initiees / effectif)); }
         public Double getNoteMoyenne() { return nbNotes == 0 ? null : Math.round(sommeNotes / nbNotes * 10) / 10.0; }
@@ -295,7 +297,7 @@ public class ReportingView implements Serializable {
         return n + "." + ext;
     }
     private ReportingExportService.Donnees donnees() {
-        return new ReportingExportService.Donnees(campagne, perimetreLibelle, getAttendues(), getTauxGlobal(), total, directions, niveaux, appreciations, souhaits, formations, fiches, parIdDirection());
+        return new ReportingExportService.Donnees(campagne, perimetreLibelle, getAttendues(), getTauxGlobal(), total, directions, niveaux, appreciations, souhaits, formations, fiches, parIdDirection(), seuil, getPctAtteinteSeuil());
     }
     private Map<Integer, String> parIdDirection() {
         Map<Integer, String> m = new HashMap<>();

@@ -47,7 +47,8 @@ public class ReportingExportService implements Serializable {
     public record Donnees(Campagne campagne, String perimetre, long attendues, int tauxGlobal, ReportingView.Agregat total,
                           List<ReportingView.Agregat> directions, List<ReportingView.Repartition> niveaux,
                           List<ReportingView.Repartition> appreciations, List<ReportingView.Repartition> souhaits,
-                          List<ReportingView.Formation> formations, List<Evaluation> fiches, Map<Integer, String> directionParSalarie) { }
+                          List<ReportingView.Formation> formations, List<Evaluation> fiches, Map<Integer, String> directionParSalarie,
+                          int seuil, int pctSeuilGlobal) { }
 
     // Excel
 
@@ -58,11 +59,12 @@ public class ReportingExportService implements Serializable {
             // --- Synthèse par direction
             Sheet s1 = wb.createSheet("Synthèse par direction");
             int r = entete(s1, st, d, "Taux de réalisation par direction", 12);
-            String[] h1 = {"Direction", "Effectif évaluable", "Fiches initiées", "Intégration %", "Auto-éval. soumises", "Évaluées (N+1)", "Validées", "Taux de réalisation %", "Note moyenne /20", "Soumises à temps %", "Atteints", "Moyennement", "Faiblement", "Non atteints"};
+            String[] h1 = {"Direction", "Effectif évaluable", "Fiches initiées", "Intégration %", "Auto-éval. soumises", "Évaluées (N+1)", "Validées", "Taux de réalisation %", "Note moyenne /20", "Soumises à temps %", "Atteints", "Moyennement", "Faiblement", "Non atteints",
+                    "Objectifs ≥ " + d.seuil() + " % (nb)", "≥ " + d.seuil() + " % / effectif %", "≥ " + d.seuil() + " % / évalués %"};
             r = ligneEntete(s1, st, r, h1);
-            for (ReportingView.Agregat a : d.directions()) r = ligneAgregat(s1, st, r, a, false);
-            ligneAgregat(s1, st, r, d.total(), true);
-            largeurs(s1, 38, 14, 14, 12, 16, 14, 11, 16, 14, 16, 10, 12, 11, 12);
+            for (ReportingView.Agregat a : d.directions()) r = ligneAgregat(s1, st, r, a, false, a.getPctAtteinteSeuil());
+            ligneAgregat(s1, st, r, d.total(), true, d.pctSeuilGlobal());
+            largeurs(s1, 38, 14, 14, 12, 16, 14, 11, 16, 14, 16, 10, 12, 11, 12, 16, 18, 18);
             s1.createFreezePane(1, 5);
 
             // --- Répartitions
@@ -146,7 +148,7 @@ public class ReportingExportService implements Serializable {
         for (int i = 0; i < h.length; i++) txt(row, i, h[i], st.head);
         return r + 1;
     }
-    private int ligneAgregat(Sheet s, Styles st, int r, ReportingView.Agregat a, boolean tot) {
+    private int ligneAgregat(Sheet s, Styles st, int r, ReportingView.Agregat a, boolean tot, int pctSeuil) {
         Row row = s.createRow(r);
         CellStyle t = tot ? st.totalTxt : st.cell, n = tot ? st.totalNum : st.num, dd = tot ? st.totalDec : st.dec;
         txt(row, 0, a.getNom(), t); num(row, 1, a.getEffectif(), n); num(row, 2, a.getInitiees(), n); num(row, 3, a.getTauxIntegration(), n);
@@ -154,6 +156,7 @@ public class ReportingExportService implements Serializable {
         num(row, 7, a.getTaux(), n);
         if (a.getNoteMoyenne() != null) dec(row, 8, a.getNoteMoyenne(), dd); else txt(row, 8, "", t);
         num(row, 9, a.getPctATemps(), n); num(row, 10, a.getAtteints(), n); num(row, 11, a.getMoyennement(), n); num(row, 12, a.getFaiblement(), n); num(row, 13, a.getNonAtteints(), n);
+        num(row, 14, a.getAtteintSeuil(), n); num(row, 15, pctSeuil, n); num(row, 16, a.getPctSeuilEvalues(), n);
         return r + 1;
     }
     private int bloc(Sheet s, Styles st, int r, String titre, List<ReportingView.Repartition> l) {
@@ -169,7 +172,7 @@ public class ReportingExportService implements Serializable {
 
     // PDF
 
-    private static final Color NAVY = new DeviceRgb(7, 41, 74), GOLD = new DeviceRgb(184, 135, 43), GRIS = new DeviceRgb(107, 114, 128),
+    private static final Color NAVY = new DeviceRgb(7, 41, 74), GOLD = new DeviceRgb(143, 163, 116) /* vert sauge du logo BGFI (filets) */, GRIS = new DeviceRgb(107, 114, 128),
             LIGNE = new DeviceRgb(220, 226, 232), FOND = new DeviceRgb(244, 247, 250), VERT = new DeviceRgb(46, 125, 80), ROUGE = new DeviceRgb(185, 56, 56), BLEU = new DeviceRgb(10, 92, 143);
 
     public byte[] pdf(Donnees d) {
@@ -196,23 +199,24 @@ public class ReportingExportService implements Serializable {
 
             // Indicateurs clés
             ReportingView.Agregat t = d.total();
-            Table k = new Table(UnitValue.createPercentArray(6)).useAllAvailableWidth().setMarginBottom(14);
+            Table k = new Table(UnitValue.createPercentArray(7)).useAllAvailableWidth().setMarginBottom(14);
             kpi(k, bold, String.valueOf(d.attendues()), "Évaluations attendues");
             kpi(k, bold, String.valueOf(t.getInitiees()), "Fiches initiées");
             kpi(k, bold, String.valueOf(t.getValidees()), "Fiches validées");
             kpi(k, bold, d.tauxGlobal() + " %", "Taux de réalisation");
             kpi(k, bold, t.getNoteMoyenne() == null ? "—" : String.format("%.1f /20", t.getNoteMoyenne()), "Note moyenne");
+            kpi(k, bold, d.pctSeuilGlobal() + " %", "Objectifs ≥ " + d.seuil() + " % (" + t.getAtteintSeuil() + "/" + d.attendues() + ")");
             kpi(k, bold, t.getPctATemps() + " %", "Soumises à temps");
             doc.add(k);
 
             // Tableau par direction
             titre(doc, bold, "1. Taux de réalisation par direction");
-            Table tb = new Table(UnitValue.createPercentArray(new float[]{30, 8, 8, 8, 8, 9, 9, 7, 7, 7, 7})).useAllAvailableWidth();
-            for (String h : new String[]{"Direction", "Effectif", "Initiées", "Évaluées", "Validées", "Réalisation", "Note moy.", "Atteints", "Moyen.", "Faibl.", "Non att."})
+            Table tb = new Table(UnitValue.createPercentArray(new float[]{26, 7, 7, 7, 7, 9, 11, 8, 6, 6, 6, 6})).useAllAvailableWidth();
+            for (String h : new String[]{"Direction", "Effectif", "Initiées", "Évaluées", "Validées", "Réalisation", "≥ " + d.seuil() + " %", "Note moy.", "Atteints", "Moyen.", "Faibl.", "Non att."})
                 tb.addHeaderCell(new Cell().add(new Paragraph(h).setFont(bold).setFontSize(8).setFontColor(DeviceRgb.WHITE)).setBackgroundColor(NAVY).setBorder(new SolidBorder(NAVY, .5f)).setPadding(4));
             boolean alt = false;
-            for (ReportingView.Agregat a : d.directions()) { ligneDir(tb, reg, bold, a, alt, false); alt = !alt; }
-            ligneDir(tb, reg, bold, t, false, true);
+            for (ReportingView.Agregat a : d.directions()) { ligneDir(tb, reg, bold, a, alt, false, a.getPctAtteinteSeuil(), a.getEffectif()); alt = !alt; }
+            ligneDir(tb, reg, bold, t, false, true, d.pctSeuilGlobal(), d.attendues());
             doc.add(tb);
 
             // Répartitions côte à côte
@@ -257,7 +261,7 @@ public class ReportingExportService implements Serializable {
         return new Cell().add(new Paragraph(v == null ? "" : v).setFont(f).setFontSize(8.5f).setMargin(0)).setBackgroundColor(bg).setTextAlignment(al)
                 .setBorder(Border.NO_BORDER).setBorderBottom(new SolidBorder(LIGNE, .5f)).setPadding(4);
     }
-    private static void ligneDir(Table tb, PdfFont reg, PdfFont bold, ReportingView.Agregat a, boolean alt, boolean tot) {
+    private static void ligneDir(Table tb, PdfFont reg, PdfFont bold, ReportingView.Agregat a, boolean alt, boolean tot, int pctSeuil, long base) {
         Color bg = tot ? new DeviceRgb(230, 236, 242) : alt ? FOND : DeviceRgb.WHITE;
         PdfFont f = tot ? bold : reg;
         tb.addCell(c(a.getNom(), f, bg, TextAlignment.LEFT));
@@ -268,6 +272,7 @@ public class ReportingExportService implements Serializable {
         Cell taux = c(a.getTaux() + " %", bold, bg, TextAlignment.RIGHT);
         taux.setFontColor(a.getTaux() >= 80 ? VERT : a.getTaux() >= 50 ? BLEU : ROUGE);
         tb.addCell(taux);
+        tb.addCell(c(pctSeuil + " % (" + a.getAtteintSeuil() + "/" + base + ")", bold, bg, TextAlignment.RIGHT));
         tb.addCell(c(a.getNoteMoyenne() == null ? "—" : String.format("%.1f", a.getNoteMoyenne()), f, bg, TextAlignment.RIGHT));
         tb.addCell(c(String.valueOf(a.getAtteints()), f, bg, TextAlignment.RIGHT));
         tb.addCell(c(String.valueOf(a.getMoyennement()), f, bg, TextAlignment.RIGHT));
