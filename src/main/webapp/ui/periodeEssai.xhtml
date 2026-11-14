@@ -180,6 +180,7 @@
                         <div class="hx-card__body hx-card__body--flush">
                             <ui:fragment rendered="#{empty periodeEssaiView.courant.criteresObjectifs}"><div class="hx-empty"><i class="pi pi-flag"></i><strong>Aucun objectif validé</strong>Aucun objectif validé n'a été fixé à ce collaborateur sur la période. Fixez-les dans « Objectifs » : ils apparaîtront ici automatiquement tant que l'évaluation n'est pas transmise.</div></ui:fragment>
                             <ui:fragment rendered="#{not empty periodeEssaiView.courant.criteresObjectifs}">
+                            <ui:fragment rendered="#{periodeEssaiView.revisionDirecteur}"><p class="hx-mdl__note hx-lock" style="margin:12px 20px 0"><i class="pi pi-pencil"></i><span><b>Vous pouvez corriger les réalisations (R) retenues par le N+1</b> avant de rendre votre avis : modifiez directement les pourcentages surlignés. Chaque correction est enregistrée dans le journal, avec l'ancienne et la nouvelle valeur.</span></p></ui:fragment>
                             <div class="hx-rpt__scroll">
                                 <table class="hx-dirtable hx-essai-obj">
                                     <thead>
@@ -193,13 +194,13 @@
                                             <td><strong>#{k.libelle}</strong></td>
                                             <td><small>#{empty k.indicateur ? '—' : k.indicateur}</small></td>
                                             <td class="hx-essai-o">#{empty k.o1 ? '' : k.o1}</td>
-                                            <td class="hx-essai-r"><p:inputText value="#{k.r1}" maxlength="60" styleClass="hx-essai-rin" rendered="#{periodeEssaiView.peutEditer and not empty k.o1}"/><ui:fragment rendered="#{not periodeEssaiView.peutEditer or empty k.o1}">#{k.r1}</ui:fragment></td>
+                                            <td class="hx-essai-r #{periodeEssaiView.revisionDirecteur and not empty k.o1 ? 'is-rev' : ''}"><p:inputNumber value="#{k.r1Pct}" decimalPlaces="0" minValue="0" maxValue="999" symbol=" %" symbolPosition="s" emptyValue="empty" styleClass="hx-essai-rin" rendered="#{periodeEssaiView.saisieRealise and not empty k.o1}"/><ui:fragment rendered="#{not periodeEssaiView.saisieRealise or empty k.o1}">#{k.r1Aff}</ui:fragment></td>
                                             <td class="hx-essai-o">#{empty k.o2 ? '' : k.o2}</td>
-                                            <td class="hx-essai-r"><p:inputText value="#{k.r2}" maxlength="60" styleClass="hx-essai-rin" rendered="#{periodeEssaiView.peutEditer and not empty k.o2}"/><ui:fragment rendered="#{not periodeEssaiView.peutEditer or empty k.o2}">#{k.r2}</ui:fragment></td>
+                                            <td class="hx-essai-r #{periodeEssaiView.revisionDirecteur and not empty k.o2 ? 'is-rev' : ''}"><p:inputNumber value="#{k.r2Pct}" decimalPlaces="0" minValue="0" maxValue="999" symbol=" %" symbolPosition="s" emptyValue="empty" styleClass="hx-essai-rin" rendered="#{periodeEssaiView.saisieRealise and not empty k.o2}"/><ui:fragment rendered="#{not periodeEssaiView.saisieRealise or empty k.o2}">#{k.r2Aff}</ui:fragment></td>
                                             <td class="hx-essai-o">#{empty k.o3 ? '' : k.o3}</td>
-                                            <td class="hx-essai-r"><p:inputText value="#{k.r3}" maxlength="60" styleClass="hx-essai-rin" rendered="#{periodeEssaiView.peutEditer and not empty k.o3}"/><ui:fragment rendered="#{not periodeEssaiView.peutEditer or empty k.o3}">#{k.r3}</ui:fragment></td>
+                                            <td class="hx-essai-r #{periodeEssaiView.revisionDirecteur and not empty k.o3 ? 'is-rev' : ''}"><p:inputNumber value="#{k.r3Pct}" decimalPlaces="0" minValue="0" maxValue="999" symbol=" %" symbolPosition="s" emptyValue="empty" styleClass="hx-essai-rin" rendered="#{periodeEssaiView.saisieRealise and not empty k.o3}"/><ui:fragment rendered="#{not periodeEssaiView.saisieRealise or empty k.o3}">#{k.r3Aff}</ui:fragment></td>
                                             <td class="hx-essai-o">#{empty k.o4 ? '' : k.o4}</td>
-                                            <td class="hx-essai-r"><p:inputText value="#{k.r4}" maxlength="60" styleClass="hx-essai-rin" rendered="#{periodeEssaiView.peutEditer and not empty k.o4}"/><ui:fragment rendered="#{not periodeEssaiView.peutEditer or empty k.o4}">#{k.r4}</ui:fragment></td>
+                                            <td class="hx-essai-r #{periodeEssaiView.revisionDirecteur and not empty k.o4 ? 'is-rev' : ''}"><p:inputNumber value="#{k.r4Pct}" decimalPlaces="0" minValue="0" maxValue="999" symbol=" %" symbolPosition="s" emptyValue="empty" styleClass="hx-essai-rin" rendered="#{periodeEssaiView.saisieRealise and not empty k.o4}"/><ui:fragment rendered="#{not periodeEssaiView.saisieRealise or empty k.o4}">#{k.r4Aff}</ui:fragment></td>
                                             <td class="hx-essai-com">
                                                 <p:inputTextarea value="#{k.commentaire}" maxlength="500" rows="2" autoResize="true" styleClass="hx-essai-comin" placeholder="Commentaire" rendered="#{periodeEssaiView.peutEditer}"/>
                                                 <ui:fragment rendered="#{not periodeEssaiView.peutEditer}">#{k.commentaire}</ui:fragment>
@@ -361,7 +362,7 @@
                             <div class="hx-card__body hx-form">
                                 <ui:fragment rendered="#{periodeEssaiView.saisieDirecteur}">
                                     <div class="hx-field"><p:inputTextarea styleClass="hx-essai-ta" value="#{periodeEssaiView.courant.avisDirecteur}" rows="3" autoResize="true" maxlength="3000" placeholder="Votre avis sur la proposition du N+1 : confirmation, prolongation ou non-confirmation"/></div>
-                                    <div class="hx-form__actions"><p:commandButton value="Donner mon avis" icon="pi pi-send" process="@form" update="@form :globalGrowl" actionListener="#{periodeEssaiView.donnerAvis}">
+                                    <div class="hx-form__actions"><p:commandButton value="Enregistrer mes corrections" icon="pi pi-save" styleClass="hx-btn-secondary" process="@form" update="@form :globalGrowl" actionListener="#{periodeEssaiView.enregistrerCorrections}" rendered="#{periodeEssaiView.revisionDirecteur}"/><p:commandButton value="Donner mon avis" icon="pi pi-send" process="@form" update="@form :globalGrowl" actionListener="#{periodeEssaiView.donnerAvis}">
                                         <p:confirm header="Donner votre avis" message="Votre avis sera joint à l'évaluation et la DCHT sera prévenue pour validation." icon="pi pi-send"/>
                                     </p:commandButton></div>
                                 </ui:fragment>

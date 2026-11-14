@@ -503,6 +503,19 @@ public class PeriodeEssaiService {
         return em.merge(e);
     }
 
+    /** Le directeur corrige les réalisés du N+1 avant de rendre son avis (mêmes droits que pour l'avis). */
+    public EvaluationEssai corrigerRealises(EvaluationEssai e, Users directeur) {
+        requireState(enBase(e), EvaluationEssai.TRANSMISE);
+        EvaluationEssai x = enBase(e);
+        Users attendu = directeurAttendu(x);
+        boolean ok = directeur != null && x.getSalarie().getId() != directeur.getId()
+                && (attendu != null ? attendu.getId() == directeur.getId() : estDcht(directeur));
+        if (!ok) refuser("Seul le directeur de la direction peut corriger les réalisations");
+        if (x.getDateAvisDirecteur() != null) throw new IllegalStateException("L'avis du directeur est déjà rendu : les réalisations ne sont plus modifiables");
+        e.setDateMaj(new Date());
+        return em.merge(e);
+    }
+
     /** Avis du directeur : requis avant la validation DCHT. */
     public EvaluationEssai avisDirecteur(EvaluationEssai e, Users directeur, String avis) {
         requireState(enBase(e), EvaluationEssai.TRANSMISE);

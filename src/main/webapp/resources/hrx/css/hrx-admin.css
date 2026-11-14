@@ -2317,3 +2317,7 @@ a.hx-contest-btn--ghost:hover { background: var(--hx-surface-2); color: var(--hx
 .hx-alert--moi .hx-pill-retour { flex: none; margin: 0; }
 .hx-card.hx-card--moi { border: 2px solid var(--hx-primary); box-shadow: 0 2px 12px rgba(10, 92, 143, .12); scroll-margin-top: 90px; }
 .hx-card.hx-card--moi .hx-card__head h3 { color: var(--hx-primary); }
+
+/* Fiche d'essai : réalisés numériques, et cellules que le directeur peut corriger */
+body .hx-essai-rin.ui-inputnumber input, body .hx-essai-rin input.ui-inputfield { width: 64px; padding: 4px 6px; text-align: center; }
+.hx-essai-r.is-rev { background: color-mix(in srgb, var(--hx-primary) 7%, transparent); }

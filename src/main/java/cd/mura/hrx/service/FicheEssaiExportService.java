@@ -162,7 +162,7 @@ public class FicheEssaiExportService implements Serializable {
                 if (!s(k.getCommentaire()).isBlank()) op.add(new Text("\n" + k.getCommentaire()).setFont(ital).setFontSize(6.5f));
                 t.addCell(new Cell().setBorder(b).setPadding(3).add(op));
                 t.addCell(new Cell().setBorder(b).setPadding(3).add(new Paragraph(s(k.getIndicateur())).setFontSize(7).setMargin(0)));
-                for (String v : new String[]{k.getO1(), k.getR1(), k.getO2(), k.getR2(), k.getO3(), k.getR3(), k.getO4(), k.getR4()})
+                for (String v : new String[]{k.getO1(), k.getR1Aff(), k.getO2(), k.getR2Aff(), k.getO3(), k.getR3Aff(), k.getO4(), k.getR4Aff()})
                     t.addCell(new Cell().setBorder(b).setPadding(2).setTextAlignment(TextAlignment.CENTER).setVerticalAlignment(VerticalAlignment.MIDDLE).add(new Paragraph(s(v)).setFontSize(6.5f).setMargin(0)));
             }
             doc.add(t);
@@ -299,7 +299,7 @@ public class FicheEssaiExportService implements Serializable {
                 XWPFParagraph op = r.getCell(0).getParagraphs().get(0); run(op, num++ + "- ", true, 7.5, NAVY); run(op, s(k.getLibelle()), false, 7.5, NAVY);
                 if (!s(k.getCommentaire()).isBlank()) run(r.getCell(0).addParagraph(), k.getCommentaire(), false, 6.5, NAVY).setItalic(true);
                 run(r.getCell(1).getParagraphs().get(0), s(k.getIndicateur()), false, 7, NAVY);
-                String[] v = {k.getO1(), k.getR1(), k.getO2(), k.getR2(), k.getO3(), k.getR3(), k.getO4(), k.getR4()};
+                String[] v = {k.getO1(), k.getR1Aff(), k.getO2(), k.getR2Aff(), k.getO3(), k.getR3Aff(), k.getO4(), k.getR4Aff()};
                 for (int i = 0; i < 8; i++) { vcenter(r.getCell(2 + i)); centerRun(r.getCell(2 + i), s(v[i]), false, 6.5, NAVY); }
             }
             // fusions de l'en-tête en dernier : createRow() reprend le nombre de cellules de la première ligne
