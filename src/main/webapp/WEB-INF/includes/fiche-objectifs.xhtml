@@ -157,7 +157,7 @@
                                                     <div class="hx-objtab__cell hx-objtab__poids"><ui:fragment rendered="#{o.poids gt 0}">#{o.poids} %</ui:fragment><ui:fragment rendered="#{o.poids le 0}">—</ui:fragment></div>
                                                     <div class="hx-row-actions">
                                                         <p:commandLink process="@this" title="Demander à votre N+1 de revoir cet objectif" styleClass="hx-contest-btn" rendered="#{objectifsView.isPeutContester(o)}"
-                                                                       actionListener="#{objectifsView.preparerContestation(o)}" update=":dlgContester" oncomplete="PF('dlgContester').show()"><i class="pi pi-comments"></i> Demander une révision</p:commandLink>
+                                                                       actionListener="#{objectifsView.preparerContestation(o)}" update=":dlgContester" oncomplete="PF('dlgContester').show()"><i class="pi pi-flag"></i> Révision</p:commandLink>
                                                         <p:commandLink process="@this" title="Retirer ma demande de révision" styleClass="hx-contest-btn hx-contest-btn--ghost" rendered="#{objectifsView.isPeutRetirerContestation(o)}"
                                                                        actionListener="#{objectifsView.retirerContestation(o)}" update="@form :globalGrowl"><i class="pi pi-undo"></i> Retirer</p:commandLink>
                                                         <p:commandLink process="@this" title="Réviser l'objectif" styleClass="hx-contest-btn" rendered="#{objectifsView.isPeutTraiterContestation(o)}"
