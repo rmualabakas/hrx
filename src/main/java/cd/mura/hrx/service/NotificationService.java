@@ -195,6 +195,29 @@ public class NotificationService {
                         "Voir mes objectifs", lienObjectifs(f), valide ? "Validé" : "Refusé"));
     }
 
+    public void objectifConteste(FicheObjectifs f, Objectif o) {
+        Users n1 = f.getSalarie().getSuperieurHierarchique();
+        String corps = "<blockquote style='margin:0 0 14px;padding:12px 16px;border-left:4px solid #b8872b;background:#fdf8ee;font-size:14px'><b>"
+                + esc(o.getContestationMotifLabel()) + "</b><br/>" + esc(o.getContestationCommentaire()) + "</blockquote>"
+                + fiche("Objectif", esc(o.getLibelle()), "Indicateur", esc(o.getIndicateur()), "Cible", esc(o.getCible()));
+        envoyer(n1, "Objectif contesté : " + f.getSalarie().getNomComplet(),
+                gabarit("Un collaborateur conteste un objectif", "Bonjour " + prenom(n1) + ", <b>" + nom(f.getSalarie()) + "</b> demande la révision d'un objectif de l'exercice " + f.getExercice()
+                        + ". Révisez-le ou maintenez-le en motivant votre réponse : la fiche ne pourra être signée qu'ensuite.", corps, "Traiter la contestation", lienObjectifs(f), "Révision demandée"));
+        envoyer(f.getSalarie(), "Accusé de réception - contestation d'objectif",
+                gabarit("Votre demande de révision est transmise", "Bonjour " + prenom(f.getSalarie()) + ", votre contestation a été transmise à <b>" + nom(n1) + "</b>. Vous serez prévenu de sa réponse.",
+                        corps, "Voir mes objectifs", lienObjectifs(f), "Accusé d'envoi"));
+    }
+
+    public void contestationTraitee(FicheObjectifs f, Objectif o) {
+        boolean revise = o.isContestationRevise();
+        envoyer(f.getSalarie(), revise ? "Objectif révisé suite à votre contestation" : "Objectif maintenu par votre N+1",
+                gabarit(revise ? "Votre N+1 a révisé l'objectif" : "Votre N+1 maintient l'objectif",
+                        "Bonjour " + prenom(f.getSalarie()) + ", votre supérieur hiérarchique a répondu à votre demande de révision.",
+                        (o.getContestationReponse() == null || o.getContestationReponse().isBlank() ? "" : "<blockquote style='margin:0 0 14px;padding:12px 16px;border-left:4px solid #07294a;background:#f2f6fa;font-size:14px'>" + esc(o.getContestationReponse()) + "</blockquote>")
+                                + fiche("Objectif", esc(o.getLibelle()), "Votre motif", esc(o.getContestationMotifLabel())),
+                        "Voir mes objectifs", lienObjectifs(f), revise ? "Révisé" : "Maintenu"));
+    }
+
     public void ficheObjectifsSignee(FicheObjectifs f) {
         String corps = fiche("Collaborateur", nom(f.getSalarie()), "Exercice", String.valueOf(f.getExercice()), "Objectifs validés", String.valueOf(f.getNbValides()));
         envoyer(f.getSalarie(), "Votre fiche d'objectifs " + f.getExercice() + " est signée",

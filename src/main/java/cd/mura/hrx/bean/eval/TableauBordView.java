@@ -217,6 +217,9 @@ public class TableauBordView implements Serializable {
             else if (mesObjectifs.getNbProposes() > 0)
                 taches.add(new Tache("pi-hourglass", pluriel(mesObjectifs.getNbProposes(), "proposition d'objectif", "propositions d'objectifs") + " en attente de validation",
                         "Votre hiérarchie doit les valider ou les refuser.", "/ui/mesEvaluations", "info"));
+            else if (mesObjectifs.getNbContestations() > 0)
+                taches.add(new Tache("pi-flag", pluriel(mesObjectifs.getNbContestations(), "objectif contesté", "objectifs contestés") + " en attente de réponse",
+                        "Votre N+1 doit réviser ou maintenir les objectifs contestés avant la signature.", "/ui/objectifs?salarie=" + moi.getId() + "&exercice=" + exercice, "info"));
             else if (!mesObjectifs.isSignee() && !mesObjectifs.isSigneeSalarie())
                 taches.add(new Tache("pi-pen-to-square", "Signer votre fiche d'objectifs " + exercice,
                         pluriel(mesObjectifs.getNbValides(), "objectif validé", "objectifs validés") + (mesObjectifs.isSigneeN1() ? " · déjà signée par votre N+1 : il ne manque que votre signature." : " · votre signature et celle de votre N+1 figent les objectifs."),
@@ -267,10 +270,20 @@ public class TableauBordView implements Serializable {
             long props = getEquipePropositions();
             if (props > 0) taches.add(new Tache("pi-check-square", pluriel(props, "proposition d'objectif", "propositions d'objectifs") + " à valider",
                     "Objectifs saisis par vos collaborateurs, à valider ou refuser.", "/ui/equipe", "info"));
+            // contestations d'objectifs à traiter (révision ou maintien motivé)
+            List<FicheObjectifs> contestees = equipe.stream().filter(u -> niveaux.get(u.getId()) == 1)
+                    .map(u -> objectifsEquipe.get(u.getId())).filter(f -> f != null && f.getNbContestations() > 0).toList();
+            if (!contestees.isEmpty()) {
+                long nb = contestees.stream().mapToLong(FicheObjectifs::getNbContestations).sum();
+                FicheObjectifs f0 = contestees.get(0);
+                taches.add(new Tache("pi-flag-fill", pluriel(nb, "objectif contesté", "objectifs contestés") + (contestees.size() == 1 ? " par " + f0.getSalarie().getNomComplet() : " par vos collaborateurs"),
+                        "Révisez-les ou maintenez-les en motivant votre réponse : la fiche ne peut être signée qu'ensuite.",
+                        contestees.size() == 1 ? "/ui/objectifs?salarie=" + f0.getSalarie().getId() + "&exercice=" + exercice : "/ui/equipe", "danger"));
+            }
             // fiches d'objectifs de mes collaborateurs directs prêtes à être signées par moi (N+1)
             List<FicheObjectifs> aSigner = equipe.stream().filter(u -> niveaux.get(u.getId()) == 1)
                     .map(u -> objectifsEquipe.get(u.getId()))
-                    .filter(f -> f != null && !f.isSignee() && !f.isSigneeN1() && f.getNbValides() > 0 && f.getNbProposes() == 0).toList();
+                    .filter(f -> f != null && !f.isSignee() && !f.isSigneeN1() && f.getNbValides() > 0 && f.getNbProposes() == 0 && f.getNbContestations() == 0).toList();
             if (aSigner.size() == 1) {
                 FicheObjectifs f = aSigner.get(0);
                 taches.add(new Tache("pi-pen-to-square", "Signer la fiche d'objectifs de " + f.getSalarie().getNomComplet(),
@@ -409,7 +422,7 @@ public class TableauBordView implements Serializable {
     public long getMesObjectifsProposes() { return mesObjectifs == null ? 0 : mesObjectifs.getNbProposes(); }
     public boolean isMesObjectifsSignes() { return mesObjectifs != null && mesObjectifs.isSignee(); }
     /** Objectifs validés, sans proposition en attente, et pas encore signés par moi. */
-    public boolean isMesObjectifsASigner() { return mesObjectifs != null && !mesObjectifs.isSignee() && !mesObjectifs.isSigneeSalarie() && mesObjectifs.getNbValides() > 0 && mesObjectifs.getNbProposes() == 0; }
+    public boolean isMesObjectifsASigner() { return mesObjectifs != null && !mesObjectifs.isSignee() && !mesObjectifs.isSigneeSalarie() && mesObjectifs.getNbValides() > 0 && mesObjectifs.getNbProposes() == 0 && mesObjectifs.getNbContestations() == 0; }
     public String getMaFicheEtat() {
         if (!isMoiEvaluable()) return "Compte non évaluable";
         if (campagne == null) return "Aucune campagne ouverte";

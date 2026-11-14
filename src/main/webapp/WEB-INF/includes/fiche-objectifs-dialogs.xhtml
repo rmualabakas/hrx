@@ -119,6 +119,14 @@
                     <ui:fragment rendered="#{not objectifsView.peutFixer}">
                         <p class="hx-field__help"><i class="pi pi-info-circle"></i> Votre proposition sera soumise à votre N+1, qui la validera ou la refusera avec un motif.</p>
                     </ui:fragment>
+                    <ui:fragment rendered="#{objectifsView.edit.contestationEnAttente and objectifsView.peutFixer}">
+                        <div class="hx-contest hx-contest--EN_ATTENTE">
+                            <span class="hx-contest__head"><i class="pi pi-flag-fill"></i> Contesté par le collaborateur · <b>#{objectifsView.edit.contestationMotifLabel}</b></span>
+                            <span class="hx-contest__txt">« #{objectifsView.edit.contestationCommentaire} »</span>
+                        </div>
+                        <div class="hx-field"><p:outputLabel for="oRepContest" value="Votre réponse au collaborateur (facultatif)"/>
+                            <p:inputTextarea id="oRepContest" value="#{objectifsView.reponseContestation}" rows="2" autoResize="true" maxlength="2000" placeholder="Ce qui a été revu et pourquoi"/></div>
+                    </ui:fragment>
                 </div>
                 <div class="hx-form__actions">
                     <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgObjectif').hide()"/>
@@ -138,6 +146,47 @@
                 <div class="hx-form__actions">
                     <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgRefus').hide()"/>
                     <p:commandButton value="Refuser" icon="pi pi-ban" styleClass="hx-btn-danger" process="@form" update="@form :frmFiche :globalGrowl" actionListener="#{objectifsView.refuser}" oncomplete="if (!args.validationFailed) PF('dlgRefus').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+        <p:dialog id="dlgContester" widgetVar="dlgContester" header="Contester l’objectif" modal="true" responsive="true" width="560" closeOnEscape="true" showEffect="fade" hideEffect="fade">
+            <h:form id="frmContester">
+                <div class="hx-form">
+                    <div class="hx-contest-cible"><small>Objectif contesté</small><b>#{objectifsView.edit.libelle}</b>
+                        <ui:fragment rendered="#{not empty objectifsView.edit.cible}"><span>Cible : #{objectifsView.edit.cible}</span></ui:fragment></div>
+                    <div class="hx-field"><p:outputLabel for="cMotif" value="Raison de la demande de révision"/>
+                        <p:selectOneRadio id="cMotif" value="#{objectifsView.motifContestation}" layout="pageDirection" styleClass="hx-contest-motifs">
+                            <f:selectItems value="#{objectifsView.motifsContestation.entrySet()}" var="m" itemValue="#{m.key}" itemLabel="#{m.value}"/>
+                        </p:selectOneRadio></div>
+                    <div class="hx-field"><p:outputLabel for="cCom" value="Expliquez à votre N+1 ce qui pose problème"/>
+                        <p:inputTextarea id="cCom" value="#{objectifsView.commentaireContestation}" rows="3" autoResize="true" maxlength="2000"
+                                         placeholder="Ex. : la cible de 100 % suppose un budget qui n'est pas prévu cette année ; une cible de 80 % serait réaliste."/></div>
+                    <p class="hx-field__help"><i class="pi pi-info-circle"></i> Votre N+1 est prévenu par e-mail. S'il avait déjà signé, sa signature est annulée pour qu'il puisse réviser. La fiche ne pourra être signée qu'après sa réponse.</p>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgContester').hide()"/>
+                    <p:commandButton value="Envoyer ma demande de révision" icon="pi pi-send" process="@form" update="@form :frmFiche :globalGrowl"
+                                     actionListener="#{objectifsView.contester}" oncomplete="if (args &amp;&amp; args.ok) PF('dlgContester').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog id="dlgMaintien" widgetVar="dlgMaintien" header="Maintenir l’objectif" modal="true" responsive="true" width="540" closeOnEscape="true" showEffect="fade" hideEffect="fade">
+            <h:form id="frmMaintien">
+                <div class="hx-form">
+                    <div class="hx-contest-cible"><small>Objectif</small><b>#{objectifsView.edit.libelle}</b></div>
+                    <div class="hx-contest hx-contest--EN_ATTENTE">
+                        <span class="hx-contest__head"><i class="pi pi-flag-fill"></i> Motif du collaborateur · <b>#{objectifsView.edit.contestationMotifLabel}</b></span>
+                        <span class="hx-contest__txt">« #{objectifsView.edit.contestationCommentaire} »</span>
+                    </div>
+                    <div class="hx-field"><p:outputLabel for="mRep" value="Pourquoi maintenez-vous cet objectif ?"/>
+                        <p:inputTextarea id="mRep" value="#{objectifsView.reponseContestation}" rows="3" autoResize="true" maxlength="2000" placeholder="Votre justification, transmise au collaborateur"/></div>
+                    <p class="hx-field__help"><i class="pi pi-info-circle"></i> Pour changer la cible, l’indicateur ou les moyens, utilisez plutôt « Réviser ».</p>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgMaintien').hide()"/>
+                    <p:commandButton value="Maintenir l’objectif" icon="pi pi-lock" process="@form" update="@form :frmFiche :globalGrowl"
+                                     actionListener="#{objectifsView.maintenir}" oncomplete="if (args &amp;&amp; args.ok) PF('dlgMaintien').hide()"/>
                 </div>
             </h:form>
         </p:dialog>

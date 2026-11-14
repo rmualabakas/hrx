@@ -87,6 +87,27 @@ public class Objectif implements Serializable {
     @Column(nullable = false)
     private int ordre = 0;
 
+    // contestation par le collaborateur d'un objectif fixé par sa hiérarchie
+    public static final String CONTEST_EN_ATTENTE = "EN_ATTENTE", CONTEST_REVISE = "REVISE", CONTEST_MAINTENU = "MAINTENU";
+    /** Motifs de contestation proposés au collaborateur (code → libellé). */
+    public static final java.util.Map<String, String> MOTIFS_CONTESTATION = java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>() {{
+        put("CIBLE", "Cible non atteignable");
+        put("MOYENS", "Moyens ou ressources insuffisants");
+        put("PERIMETRE", "Hors de mon périmètre ou de ma fonction");
+        put("INDICATEUR", "Indicateur non mesurable ou ambigu");
+        put("DELAI", "Délai ou période irréaliste");
+        put("DEPENDANCE", "Dépend de facteurs hors de mon contrôle");
+        put("PONDERATION", "Pondération inadaptée");
+        put("AUTRE", "Autre motif");
+    }});
+
+    @Column(name = "contestation_statut", length = 12) private String contestationStatut;
+    @Column(name = "contestation_motif", length = 20) private String contestationMotif;
+    @Column(name = "contestation_commentaire", columnDefinition = "TEXT") private String contestationCommentaire;
+    @Column(name = "date_contestation") @Temporal(TemporalType.TIMESTAMP) private Date dateContestation;
+    @Column(name = "contestation_reponse", columnDefinition = "TEXT") private String contestationReponse;
+    @Column(name = "date_reponse_contestation") @Temporal(TemporalType.TIMESTAMP) private Date dateReponseContestation;
+
     @Column(name = "cree_par") private int creePar;
     @Column(name = "date_creation") @Temporal(TemporalType.TIMESTAMP) private Date dateCreation = new Date();
     @Column(name = "valide_par") private Integer validePar;
@@ -96,6 +117,10 @@ public class Objectif implements Serializable {
     public boolean isValide() { return VALIDE.equals(statut); }
     public boolean isPropose() { return PROPOSE.equals(statut); }
     public boolean isParSalarie() { return ORIGINE_SALARIE.equals(origine); }
+    public boolean isContestationEnAttente() { return CONTEST_EN_ATTENTE.equals(contestationStatut); }
+    public boolean isContestationRevise() { return CONTEST_REVISE.equals(contestationStatut); }
+    public boolean isContestationMaintenue() { return CONTEST_MAINTENU.equals(contestationStatut); }
+    public String getContestationMotifLabel() { return contestationMotif == null ? "" : MOTIFS_CONTESTATION.getOrDefault(contestationMotif, contestationMotif); }
     public String getPeriodeLabel() {
         StringBuilder b = new StringBuilder();
         if (t1) b.append("T1 "); if (t2) b.append("T2 "); if (t3) b.append("T3 "); if (t4) b.append("T4 ");

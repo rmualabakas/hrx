@@ -88,5 +88,6 @@ public class FicheObjectifs implements Serializable {
     public boolean isSigneeParAutreQueN1() { return signataireN1 != null && (n1 == null || n1.getId() != signataireN1.getId()); }
     public long getNbValides() { return objectifs.stream().filter(o -> Objectif.VALIDE.equals(o.getStatut())).count(); }
     public long getNbProposes() { return objectifs.stream().filter(o -> Objectif.PROPOSE.equals(o.getStatut())).count(); }
+    public long getNbContestations() { return objectifs.stream().filter(Objectif::isContestationEnAttente).count(); }
     public int getPoidsTotal() { return objectifs.stream().filter(o -> Objectif.VALIDE.equals(o.getStatut())).mapToInt(Objectif::getPoids).sum(); }
 }

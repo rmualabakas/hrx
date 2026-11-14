@@ -2219,3 +2219,28 @@ a.hx-ntab.is-on .pi { color: var(--hx-gold); }
 .hx-cvt__ico-doc b { z-index: 1; }
 .hx-cvt__ico-badge { z-index: 2; }
 .hx-cvt__item--file .hx-cvt__ico-doc { width: 72px; height: 96px; }
+
+/* Contestation d'objectif par le collaborateur */
+.hx-objtab__row.is-contested { background: rgba(184, 135, 43, .08); box-shadow: inset 3px 0 0 var(--hx-gold); }
+.hx-objtab .hx-row-actions { flex-wrap: wrap; gap: 4px; }
+.hx-objtab__head, .hx-objtab__row { grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.5fr) minmax(0, 1.5fr) 128px 82px 118px; }
+a.hx-contest-btn { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--hx-gold); background: rgba(184, 135, 43, .1); color: #8a6219; font-size: 12px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+a.hx-contest-btn:hover { background: var(--hx-gold); color: #fff; text-decoration: none; }
+a.hx-contest-btn .pi { font-size: 11px; }
+a.hx-contest-btn--ghost { border-color: var(--hx-border-strong); background: var(--hx-surface); color: var(--hx-text-muted); }
+a.hx-contest-btn--ghost:hover { background: var(--hx-surface-2); color: var(--hx-text-strong); }
+.hx-contest { display: grid; gap: 4px; margin-top: 8px; padding: 8px 12px; border-radius: 8px; border-left: 3px solid var(--hx-gold); background: rgba(184, 135, 43, .1); font-size: 12.5px; }
+.hx-contest--REVISE { border-left-color: var(--hx-success); background: var(--hx-success-soft); }
+.hx-contest--MAINTENU { border-left-color: var(--hx-primary); background: rgba(7, 41, 74, .06); }
+.hx-contest__head { display: flex; align-items: center; gap: 6px; color: var(--hx-text-strong); font-weight: 600; }
+.hx-contest--EN_ATTENTE .hx-contest__head .pi { color: var(--hx-gold); }
+.hx-contest--REVISE .hx-contest__head .pi { color: var(--hx-success); }
+.hx-contest--MAINTENU .hx-contest__head .pi { color: var(--hx-primary); }
+.hx-contest__txt { color: var(--hx-text); font-style: italic; }
+.hx-contest__rep { display: flex; gap: 6px; color: var(--hx-text-strong); }
+.hx-contest__rep .pi { font-size: 11px; margin-top: 3px; color: var(--hx-muted); }
+.hx-contest-banner { margin-bottom: var(--hx-s4); }
+.hx-contest-cible { display: grid; gap: 2px; padding: 10px 14px; border-radius: 10px; background: var(--hx-surface-2); border: 1px solid var(--hx-border); }
+.hx-contest-cible small { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--hx-muted); }
+.hx-contest-cible span { font-size: 12.5px; color: var(--hx-text-muted); }
+.hx-contest-motifs td { padding: 3px 0; }

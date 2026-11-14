@@ -170,12 +170,14 @@ public class AlertesService {
         for (Attendu a : attendus) {
             if (a.echeance() == null || !vues.add(a.cle())) continue;
             Relance r = ouvertes.get(a.cle());
-            if (r == null) {
+            boolean nouvelle = r == null;
+            if (nouvelle) {
                 r = new Relance();
                 r.setCle(a.cle()); r.setType(a.type()); r.setRefId(a.refId()); r.setSalarieId(a.salarieId()); r.setDestinataireId(a.destinataireId());
-                em.persist(r);
             }
-            r.setLibelle(tronque(a.libelle(), 300)); r.setLien(tronque(a.lien(), 300)); r.setEcheance(a.echeance());
+            // libellé renseigné avant l'insertion (colonne non nulle, insertion immédiate en IDENTITY)
+            r.setLibelle(tronque(a.libelle() == null || a.libelle().isBlank() ? a.type() : a.libelle(), 300)); r.setLien(tronque(a.lien(), 300)); r.setEcheance(a.echeance());
+            if (nouvelle) em.persist(r);
             if (planifier(r, jour)) aEnvoyer.computeIfAbsent(r.getDestinataireId(), k -> new ArrayList<>()).add(r);
         }
         for (Relance r : ouvertes.values()) if (!vues.contains(r.getCle())) { r.setResolue(true); r.setDateResolution(new Date()); }
