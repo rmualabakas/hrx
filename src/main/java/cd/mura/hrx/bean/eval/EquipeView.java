@@ -49,6 +49,8 @@ public class EquipeView implements Serializable {
     @EJB private cd.mura.hrx.dao.config.DirectionDAO directionDAO;
     /** Fiches transmises attendant mon visa (N+2) ou mon avis (directeur) : id salarié → libellé de l'action. */
     private Map<Integer, String> actionsHierarchiques = new HashMap<>();
+    /** Évaluations d'essai transmises attendant mon visa ou mon avis : id salarié → {libellé, id de l'évaluation}. */
+    private Map<Integer, String[]> essaisHierarchiques = new HashMap<>();
 
     private Campagne campagne;
     private List<Users> membres = new ArrayList<>();
@@ -121,6 +123,16 @@ public class EquipeView implements Serializable {
             if (dir == moi.getId()) { if (f.getDateAvisDirecteur() == null) actionsHierarchiques.put(u.getId(), "Donner mon avis"); }
             else if (niveau(u) == 2 && f.getDateVisaN2() == null) actionsHierarchiques.put(u.getId(), "Apposer mon visa");
         }
+        // Évaluations de fin d'essai / de CDD transmises : visa N+2 ou avis du directeur attendu de moi.
+        essaisHierarchiques.clear();
+        for (Users u : membres) {
+            if (isDirect(u) || !essaisNonClos.contains(u.getId())) continue;
+            cd.mura.hrx.entity.eval.EvaluationEssai ee = periodeEssai.findBySalarie(u.getId());
+            if (ee == null || !ee.isTransmise()) continue;
+            Users dir = periodeEssai.directeurAttendu(ee);
+            if (dir != null && dir.getId() == moi.getId()) { if (ee.getDateAvisDirecteur() == null) essaisHierarchiques.put(u.getId(), new String[]{"Donner mon avis", String.valueOf(ee.getId())}); }
+            else if (ee.getDateVisaN2() == null && periodeEssai.estAuDessusEvaluateur(moi, ee)) essaisHierarchiques.put(u.getId(), new String[]{"Apposer mon visa", String.valueOf(ee.getId())});
+        }
     }
 
     private void collecter(int n1, int niveau, Set<Integer> vus) {
@@ -139,7 +151,7 @@ public class EquipeView implements Serializable {
             if (!f.isEmpty() && !(s(u.getNomComplet()) + " " + s(u.getFonction()) + " " + s(u.getMatricule())).toLowerCase(Locale.ROOT).contains(f)) return false;
             return switch (filtre) {
                 case "aInitier" -> u.getEvaluable() == 1 && !enEssai(u) && fiche(u) == null;
-                case "aTraiter" -> fiche(u) != null && Evaluation.SOUMISE.equals(fiche(u).getStatut()) || actionHierarchique(u) != null;
+                case "aTraiter" -> fiche(u) != null && Evaluation.SOUMISE.equals(fiche(u).getStatut()) || actionHierarchique(u) != null || actionEssai(u) != null;
                 case "retard" -> enRetard(u);
                 case "finalisees" -> fiche(u) != null && fiche(u).isFinalisee();
                 default -> true;
@@ -150,6 +162,8 @@ public class EquipeView implements Serializable {
     public Evaluation fiche(Users u) { return fiches.get(u.getId()); }
     /** Action attendue de moi, supérieur indirect, sur la fiche transmise de ce collaborateur (null si aucune). */
     public String actionHierarchique(Users u) { return actionsHierarchiques.get(u.getId()); }
+    public String actionEssai(Users u) { String[] a = essaisHierarchiques.get(u.getId()); return a == null ? null : a[0]; }
+    public String essaiId(Users u) { String[] a = essaisHierarchiques.get(u.getId()); return a == null ? null : a[1]; }
     public int niveau(Users u) { return niveaux.getOrDefault(u.getId(), 1); }
     public boolean isDirect(Users u) { return niveau(u) == 1; }
 

@@ -2310,3 +2310,10 @@ a.hx-contest-btn--ghost:hover { background: var(--hx-surface-2); color: var(--hx
 .hx-actions--bas .hx-actions__rang { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 10px; }
 .hx-actions--bas .hx-actions__rang .ui-button { width: auto; }
 .hx-actions--bas .hx-actions__rang > p { flex-basis: 100%; margin: 0; text-align: right; }
+
+/* Fiche d'essai : saisie attendue de l'utilisateur connecté (N+2, directeur) */
+.hx-alert--moi { align-items: center; background: color-mix(in srgb, var(--hx-primary) 6%, var(--hx-surface)); border: 1px solid color-mix(in srgb, var(--hx-primary) 35%, transparent); color: var(--hx-primary); }
+.hx-alert--moi > div { flex: 1; }
+.hx-alert--moi .hx-pill-retour { flex: none; margin: 0; }
+.hx-card.hx-card--moi { border: 2px solid var(--hx-primary); box-shadow: 0 2px 12px rgba(10, 92, 143, .12); scroll-margin-top: 90px; }
+.hx-card.hx-card--moi .hx-card__head h3 { color: var(--hx-primary); }

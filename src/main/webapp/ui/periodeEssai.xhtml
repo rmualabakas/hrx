@@ -136,6 +136,15 @@
                         <li class="#{periodeEssaiView.courant.validee ? 'is-done' : (periodeEssaiView.courant.transmise and not empty periodeEssaiView.courant.dateAvisDirecteur ? 'is-now' : '')}"><i class="pi #{periodeEssaiView.courant.validee ? 'pi-check' : 'pi-verified'}"></i><div><b>Validation DCHT</b><small>#{periodeEssaiView.courant.validee ? 'Validée' : 'Décision finale'}</small></div></li>
                     </ol>
 
+                    <ui:fragment rendered="#{periodeEssaiView.saisieN2 or periodeEssaiView.saisieDirecteur}">
+                        <div class="hx-alert hx-alert--moi">
+                            <i class="pi pi-pencil"></i>
+                            <div><strong>#{periodeEssaiView.saisieDirecteur ? 'Votre avis de directeur est attendu' : 'Votre visa de N+2 est attendu (facultatif)'}</strong>
+                                <span>Lisez l'évaluation du N+1 ci-dessous, puis renseignez la section « #{periodeEssaiView.saisieDirecteur ? 'Avis du directeur' : 'Visa du N+2'} » en bas de la fiche.</span></div>
+                            <a class="hx-pill-retour" href="##{periodeEssaiView.saisieDirecteur ? 'saisieDirecteur' : 'saisieN2'}"><i class="pi pi-arrow-down"></i> Aller à la saisie</a>
+                        </div>
+                    </ui:fragment>
+
                     <div class="hx-card">
                         <div class="hx-card__body">
                             <dl class="hx-campaign__facts hx-essai__facts">
@@ -334,8 +343,8 @@
                     </div>
 
                     <ui:fragment rendered="#{not periodeEssaiView.courant.enCours}">
-                        <div class="hx-card" style="margin-top:var(--hx-s5)">
-                            <div class="hx-card__head"><div><h3>Visa du N+2 <span class="hx-badge hx-badge--info" style="margin-left:6px">facultatif</span></h3>
+                        <div id="saisieN2" class="hx-card #{periodeEssaiView.saisieN2 ? 'hx-card--moi' : ''}" style="margin-top:var(--hx-s5)">
+                            <div class="hx-card__head"><div><h3>Visa du N+2<ui:fragment rendered="#{periodeEssaiView.saisieN2}"><span class="hx-appr__moi"><i class="pi pi-pencil"></i> À vous de saisir</span></ui:fragment> <span class="hx-badge hx-badge--info" style="margin-left:6px">facultatif</span></h3>
                                 <small>#{empty periodeEssaiView.courant.n2 ? (empty periodeEssaiView.n2Attendu ? '' : periodeEssaiView.n2Attendu.nomComplet) : periodeEssaiView.courant.n2.nomComplet}<ui:fragment rendered="#{not empty periodeEssaiView.courant.dateVisaN2}"> · <h:outputText value="#{periodeEssaiView.courant.dateVisaN2}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></ui:fragment></small></div></div>
                             <div class="hx-card__body hx-form">
                                 <ui:fragment rendered="#{periodeEssaiView.saisieN2}">
@@ -346,8 +355,8 @@
                             </div>
                         </div>
 
-                        <div class="hx-card" style="margin-top:var(--hx-s5)">
-                            <div class="hx-card__head"><div><h3>Avis du directeur</h3>
+                        <div id="saisieDirecteur" class="hx-card #{periodeEssaiView.saisieDirecteur ? 'hx-card--moi' : ''}" style="margin-top:var(--hx-s5)">
+                            <div class="hx-card__head"><div><h3>Avis du directeur<ui:fragment rendered="#{periodeEssaiView.saisieDirecteur}"><span class="hx-appr__moi"><i class="pi pi-pencil"></i> À vous de saisir</span></ui:fragment></h3>
                                 <small>#{empty periodeEssaiView.courant.directeur ? (empty periodeEssaiView.directeurAttendu ? 'Pas de directeur désigné : la DCHT saisit l\'avis' : periodeEssaiView.directeurAttendu.nomComplet) : periodeEssaiView.courant.directeur.nomComplet}<ui:fragment rendered="#{not empty periodeEssaiView.courant.dateAvisDirecteur}"> · <h:outputText value="#{periodeEssaiView.courant.dateAvisDirecteur}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></ui:fragment></small></div></div>
                             <div class="hx-card__body hx-form">
                                 <ui:fragment rendered="#{periodeEssaiView.saisieDirecteur}">

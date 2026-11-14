@@ -161,7 +161,9 @@
                                 <ui:fragment rendered="#{not equipeView.isDirect(u)}">
                                     <p:button value="#{equipeView.actionHierarchique(u)}" icon="pi #{equipeView.actionHierarchique(u) eq 'Donner mon avis' ? 'pi-briefcase' : 'pi-check'}" styleClass="hx-btn-sm"
                                               rendered="#{not empty equipeView.actionHierarchique(u)}" outcome="/ui/fiche"><f:param name="id" value="#{equipeView.fiche(u).id}"/></p:button>
-                                    <p:button value="Consulter" icon="pi pi-eye" styleClass="hx-btn-secondary hx-btn-sm" outcome="/ui/objectifs" rendered="#{empty equipeView.actionHierarchique(u)}"><f:param name="salarie" value="#{u.id}"/><f:param name="exercice" value="#{equipeView.exercice}"/></p:button>
+                                    <p:button value="#{equipeView.actionEssai(u)}" icon="pi #{equipeView.actionEssai(u) eq 'Donner mon avis' ? 'pi-briefcase' : 'pi-check'}" styleClass="hx-btn-sm"
+                                              rendered="#{not empty equipeView.actionEssai(u)}" outcome="/ui/periodeEssai" title="Évaluation de fin de période d'essai"><f:param name="id" value="#{equipeView.essaiId(u)}"/></p:button>
+                                    <p:button value="Consulter" icon="pi pi-eye" styleClass="hx-btn-secondary hx-btn-sm" outcome="/ui/objectifs" rendered="#{empty equipeView.actionHierarchique(u) and empty equipeView.actionEssai(u)}"><f:param name="salarie" value="#{u.id}"/><f:param name="exercice" value="#{equipeView.exercice}"/></p:button>
                                     <small class="hx-muted"><i class="pi pi-lock"></i> géré par #{u.superieurHierarchique.prenom} #{u.superieurHierarchique.nom}</small>
                                 </ui:fragment>
                             </div>
@@ -232,6 +234,8 @@
                                         <ui:fragment rendered="#{not equipeView.isDirect(u)}">
                                             <p:button icon="pi #{equipeView.actionHierarchique(u) eq 'Donner mon avis' ? 'pi-briefcase' : 'pi-check'}" title="#{equipeView.actionHierarchique(u)}" styleClass="hx-icon-btn hx-icon-btn--primary"
                                                       rendered="#{not empty equipeView.actionHierarchique(u)}" outcome="/ui/fiche"><f:param name="id" value="#{equipeView.fiche(u).id}"/></p:button>
+                                            <p:button icon="pi #{equipeView.actionEssai(u) eq 'Donner mon avis' ? 'pi-briefcase' : 'pi-check'}" title="#{equipeView.actionEssai(u)} (évaluation d'essai)" styleClass="hx-icon-btn hx-icon-btn--primary"
+                                                      rendered="#{not empty equipeView.actionEssai(u)}" outcome="/ui/periodeEssai"><f:param name="id" value="#{equipeView.essaiId(u)}"/></p:button>
                                             <p:button icon="pi pi-eye" title="Consulter (géré par #{u.superieurHierarchique.prenom} #{u.superieurHierarchique.nom})" styleClass="hx-icon-btn" outcome="/ui/objectifs"><f:param name="salarie" value="#{u.id}"/><f:param name="exercice" value="#{equipeView.exercice}"/></p:button>
                                         </ui:fragment>
                                     </td>
