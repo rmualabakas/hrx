@@ -228,8 +228,8 @@ window.hxDialogue = function (o) {
     o = o || {};
     var ancien = document.getElementById('hxDialogue');
     if (ancien) ancien.remove();
-    var icones = { succes: 'pi-check', info: 'pi-info', alerte: 'pi-exclamation-triangle' };
-    var eyebrows = { succes: 'Opération effectuée', info: 'Information', alerte: 'Attention' };
+    var icones = { succes: 'pi-check', info: 'pi-info', alerte: 'pi-exclamation-triangle', erreur: 'pi-times' };
+    var eyebrows = { succes: 'Opération effectuée', info: 'Information', alerte: 'Attention', erreur: 'Action impossible' };
     var type = icones[o.type] ? o.type : 'succes';
     function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt) e.textContent = txt; return e; }
 

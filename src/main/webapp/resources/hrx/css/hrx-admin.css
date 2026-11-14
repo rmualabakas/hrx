@@ -2207,3 +2207,6 @@ a.hx-ntab.is-on .pi { color: var(--hx-gold); }
 .hx-ntabs__corps { padding: 2px var(--hx-s4) var(--hx-s4); background: #fff; border: 1px solid var(--hx-border-strong); border-top: 0; border-radius: 0 0 var(--hx-radius-md) var(--hx-radius-md); box-shadow: var(--hx-shadow-sm); }
 .hx-ntabs__corps .hx-ntabs__desc { margin-top: 14px; }
 .hx-ntabs__corps .hx-card { background: var(--hx-surface-2, #f7f9fb); box-shadow: none; }
+.hx-alerte--erreur { --hx-alerte-c: var(--hx-danger); --hx-alerte-bg: var(--hx-danger-soft); }
+.hx-dlg-boite p { white-space: pre-line; }
+.hx-alerte--erreur.hx-dlg-boite p { text-align: left; width: 100%; padding: 10px 14px; border-radius: 10px; background: var(--hx-danger-soft); color: var(--hx-text-strong); }

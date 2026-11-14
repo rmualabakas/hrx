@@ -11,13 +11,15 @@ import org.primefaces.PrimeFaces;
  */
 public final class Dialogue {
 
-    public static final String SUCCES = "succes", INFO = "info", ALERTE = "alerte";
+    public static final String SUCCES = "succes", INFO = "info", ALERTE = "alerte", ERREUR = "erreur";
 
     private Dialogue() { }
 
     public static void succes(String titre, String texte) { afficher(SUCCES, titre, texte, null, null); }
     public static void info(String titre, String texte) { afficher(INFO, titre, texte, null, null); }
     public static void alerte(String titre, String texte) { afficher(ALERTE, titre, texte, null, null); }
+    /** Refus ou erreur bloquante ; les « ; » d'une énumération deviennent une liste à puces. */
+    public static void erreur(String titre, String texte) { afficher(ERREUR, titre, texte == null ? null : texte.replaceFirst(" : ", " :\n• ").replace(" ; ", "\n• "), null, null); }
     /** Avec un bouton de navigation (lien relatif au contexte, ex. "/ui/periodeEssai?id=3"). */
     public static void succes(String titre, String texte, String lienLibelle, String lien) { afficher(SUCCES, titre, texte, lienLibelle, lien); }
 
@@ -25,7 +27,7 @@ public final class Dialogue {
         FacesContext fc = FacesContext.getCurrentInstance();
         if (fc == null) return;
         if (!fc.getPartialViewContext().isAjaxRequest()) {
-            fc.addMessage(null, new FacesMessage(ALERTE.equals(type) ? FacesMessage.SEVERITY_WARN : FacesMessage.SEVERITY_INFO, titre, texte));
+            fc.addMessage(null, new FacesMessage(ERREUR.equals(type) ? FacesMessage.SEVERITY_ERROR : ALERTE.equals(type) ? FacesMessage.SEVERITY_WARN : FacesMessage.SEVERITY_INFO, titre, texte));
             return;
         }
         String url = lien == null || lien.isBlank() ? null : fc.getExternalContext().getRequestContextPath() + lien;

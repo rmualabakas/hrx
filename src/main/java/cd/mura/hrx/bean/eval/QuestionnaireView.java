@@ -270,7 +270,7 @@ public class QuestionnaireView implements Serializable {
             cd.mura.hrx.utils.Dialogue.succes("Merci pour votre réponse", suite);
             charger();
         } catch (Exception ex) {
-            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, "Réponse non enregistrée", PeriodeEssaiView.cause(ex)));
+            cd.mura.hrx.utils.Dialogue.erreur("Réponse non enregistrée", PeriodeEssaiView.cause(ex));
         }
     }
 
@@ -285,7 +285,7 @@ public class QuestionnaireView implements Serializable {
                     "L'évaluation à froid de " + reponse.getParticipant().getNomComplet() + " est complète.");
             charger();
         } catch (Exception ex) {
-            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, "Avis non enregistré", PeriodeEssaiView.cause(ex)));
+            cd.mura.hrx.utils.Dialogue.erreur("Avis non enregistré", PeriodeEssaiView.cause(ex));
         }
     }
 
