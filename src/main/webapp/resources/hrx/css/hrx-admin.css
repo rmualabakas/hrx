@@ -2304,3 +2304,9 @@ a.hx-contest-btn--ghost:hover { background: var(--hx-surface-2); color: var(--hx
 .hx-appr.is-moi header strong { color: var(--hx-primary, #0b5cad); }
 .hx-appr__moi { display: inline-flex; align-items: center; gap: 5px; margin-left: 10px; padding: 2px 9px; border-radius: 999px; background: var(--hx-primary, #0b5cad); color: #fff; font-size: 11px; font-weight: 600; vertical-align: middle; }
 .hx-appr__moi .pi { font-size: 10px; }
+
+/* Fiche d'évaluation : mêmes actions répétées sous la fiche, en ligne */
+.hx-actions--bas { margin-top: 14px; border: 1px solid var(--hx-border); }
+.hx-actions--bas .hx-actions__rang { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 10px; }
+.hx-actions--bas .hx-actions__rang .ui-button { width: auto; }
+.hx-actions--bas .hx-actions__rang > p { flex-basis: 100%; margin: 0; text-align: right; }

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Boutons d'action de la fiche d'évaluation : affichés dans le panneau latéral et sous la fiche. -->
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui">
+                        <ui:fragment rendered="#{ficheView.saisieSalarie}">
+                            <p:commandButton value="Enregistrer le brouillon" icon="pi pi-save" styleClass="hx-btn-secondary" process="@form" update="@form :globalGrowl" actionListener="#{ficheView.enregistrer}"/>
+                            <p:commandButton value="Soumettre mon auto-évaluation" icon="pi pi-send" process="@form" update="@form :globalGrowl" actionListener="#{ficheView.soumettre}">
+                                <p:confirm header="Soumettre l'auto-évaluation" message="Votre auto-évaluation sera transmise à votre N+1. Vous ne pourrez plus la modifier sauf retour pour correction." icon="pi pi-send"/>
+                            </p:commandButton>
+                        </ui:fragment>
+                        <ui:fragment rendered="#{ficheView.commentaireSalarie and not ficheView.saisieSalarie}">
+                            <p:commandButton value="Enregistrer mes commentaires" icon="pi pi-save" styleClass="hx-btn-secondary" process="@form" update="@form :globalGrowl" actionListener="#{ficheView.enregistrer}"/>
+                        </ui:fragment>
+                        <ui:fragment rendered="#{ficheView.saisieN1}">
+                            <p:commandButton value="Enregistrer le brouillon" icon="pi pi-save" styleClass="hx-btn-secondary" process="@form" update="@form :globalGrowl" actionListener="#{ficheView.enregistrer}"/>
+                            <p:commandButton value="Transmettre au directeur" icon="pi pi-send" process="@form" update="@form :globalGrowl" actionListener="#{ficheView.evaluer}">
+                                <p:confirm header="Transmettre l'évaluation" message="La note /20 sera calculée et la fiche transmise au N+2 (visa), au directeur (avis) puis à la DCHT (validation). Vous pourrez la rouvrir tant qu'elle n'est pas validée." icon="pi pi-send"/>
+                            </p:commandButton>
+                            <p:commandButton value="Retourner au salarié" icon="pi pi-undo" styleClass="hx-btn-secondary" process="@this" update=":dlgRetour" oncomplete="PF('dlgRetour').show()"/>
+                        </ui:fragment>
+                        <ui:fragment rendered="#{ficheView.revisionDirecteur}">
+                            <p:commandButton value="Enregistrer mes corrections" icon="pi pi-save" styleClass="hx-btn-secondary" process="@form" update="@form :globalGrowl" actionListener="#{ficheView.enregistrerRevision}"/>
+                            <p class="hx-field__help"><i class="pi pi-info-circle"></i> Rendez ensuite votre avis dans la section « Avis du directeur », en bas de la fiche : la note sera recalculée avec vos corrections.</p>
+                        </ui:fragment>
+                        <ui:fragment rendered="#{ficheView.peutRouvrirN1}">
+                            <p:commandButton value="Rouvrir mon évaluation" icon="pi pi-unlock" styleClass="hx-btn-secondary" process="@this" update="@form :globalGrowl" actionListener="#{ficheView.rouvrirN1}">
+                                <p:confirm header="Rouvrir l'évaluation" message="La fiche revient à l'étape « évaluation N+1 » pour correction, puis devra être retransmise." icon="pi pi-unlock"/>
+                            </p:commandButton>
+                        </ui:fragment>
+                        <ui:fragment rendered="#{ficheView.validationDcht}">
+                            <p:commandButton value="Valider la fiche" icon="pi pi-verified" process="@form" update="@form :globalGrowl" actionListener="#{ficheView.valider}">
+                                <p:confirm header="Valider la fiche" message="La fiche devient définitive et archivée." icon="pi pi-verified"/>
+                            </p:commandButton>
+                            <p:commandButton value="Retourner au N+1" icon="pi pi-undo" styleClass="hx-btn-secondary" process="@this" update=":dlgRetour" oncomplete="PF('dlgRetour').show()"/>
+                        </ui:fragment>
+                        <ui:fragment rendered="#{ficheView.attenteDirecteurDcht}"><p class="hx-muted"><i class="pi pi-hourglass"></i> En attente de l'avis du directeur (#{ficheView.directeurAttendu.nomComplet}) : la validation DCHT sera possible ensuite.</p></ui:fragment>
+                        <ui:fragment rendered="#{ficheView.lectureSeule and not ficheView.attenteDirecteurDcht}"><p class="hx-muted"><i class="pi pi-lock"></i> Lecture seule à cette étape.</p></ui:fragment>
+</ui:composition>
