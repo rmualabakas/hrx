@@ -55,7 +55,7 @@ public class NotificationService {
                 + "<tr><td style='background:#07294a;border-radius:12px 12px 0 0;padding:20px 28px'>"
                 + "<table role='presentation' width='100%' cellspacing='0' cellpadding='0'><tr><td style='color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-.01em'>HRX</td>"
                 + "<td align='right' style='color:#b9c7d6;font-size:12px'>Plateforme collaborative RH &middot; BGFIBank RDC</td></tr></table></td></tr>"
-                + "<tr><td style='height:3px;background:#b8872b'></td></tr>"
+                + "<tr><td style='height:3px;background:#8fa474'></td></tr>"
                 + "<tr><td style='background:#ffffff;padding:28px 28px 22px'>"
                 + pastille
                 + "<h1 style='margin:12px 0 6px;font-size:21px;line-height:1.3;color:#07294a'>" + esc(titre) + "</h1>"
@@ -122,10 +122,10 @@ public class NotificationService {
     public void ficheRetournee(Evaluation e, boolean versSalarie, String motif) {
         if (versSalarie) envoyer(e.getSalarie(), "Votre auto-évaluation vous est retournée pour correction",
                 gabarit("Correction demandée sur votre auto-évaluation", "Bonjour " + prenom(e.getSalarie()) + ", <b>" + nom(e.getEvaluateur()) + "</b> vous retourne votre fiche pour correction :",
-                        "<blockquote style='margin:0 0 14px;padding:12px 16px;border-left:4px solid #b8872b;background:#fdf8ee;font-size:14px'>" + esc(motif) + "</blockquote>" + contexte(e), "Corriger ma fiche", lienFiche(e), "À corriger"));
+                        "<blockquote style='margin:0 0 14px;padding:12px 16px;border-left:4px solid #8fa474;background:#f4f7f0;font-size:14px'>" + esc(motif) + "</blockquote>" + contexte(e), "Corriger ma fiche", lienFiche(e), "À corriger"));
         else envoyer(e.getEvaluateur(), "Évaluation retournée par la DCHT : " + e.getSalarie().getNomComplet(),
                 gabarit("La DCHT vous retourne une évaluation", "Bonjour " + prenom(e.getEvaluateur()) + ", l'évaluation de <b>" + nom(e.getSalarie()) + "</b> vous est retournée pour correction :",
-                        "<blockquote style='margin:0 0 14px;padding:12px 16px;border-left:4px solid #b8872b;background:#fdf8ee;font-size:14px'>" + esc(motif) + "</blockquote>" + contexte(e), "Corriger l'évaluation", lienFiche(e), "À corriger"));
+                        "<blockquote style='margin:0 0 14px;padding:12px 16px;border-left:4px solid #8fa474;background:#f4f7f0;font-size:14px'>" + esc(motif) + "</blockquote>" + contexte(e), "Corriger l'évaluation", lienFiche(e), "À corriger"));
     }
 
     public void ficheValidee(Evaluation e) {
@@ -139,14 +139,14 @@ public class NotificationService {
 
     /** Relance DCHT : message libre adressé au collaborateur, au N+1 ou au directeur selon l'étape de la fiche. */
     public void relance(Evaluation e, Users dest, String objet, String message, Users auteur) {
-        String corps = "<blockquote style='margin:0 0 14px;padding:12px 16px;border-left:4px solid #b8872b;background:#fdf8ee;font-size:14px;white-space:pre-line'>" + esc(message) + "</blockquote>" + contexte(e)
+        String corps = "<blockquote style='margin:0 0 14px;padding:12px 16px;border-left:4px solid #8fa474;background:#f4f7f0;font-size:14px;white-space:pre-line'>" + esc(message) + "</blockquote>" + contexte(e)
                 + "<p style='margin:14px 0 0;font-size:12.5px;color:#6b7280'>Relance émise par " + nom(auteur) + " (DCHT) le " + DT.format(new java.util.Date()) + ".</p>";
         envoyer(dest, "Relance : " + objet, gabarit(objet, "Bonjour " + prenom(dest) + ", la Direction du Capital Humain vous adresse une relance concernant la fiche d'évaluation de <b>" + nom(e.getSalarie()) + "</b> :", corps, "Ouvrir la fiche", lienFiche(e), "Relance DCHT"));
     }
 
     /** Relance d'un N+1 qui n'a pas encore intégré un collaborateur évaluable à la campagne. */
     public void relanceIntegration(Users n1, Users salarie, Campagne c, String message, Users auteur) {
-        String corps = "<blockquote style='margin:0 0 14px;padding:12px 16px;border-left:4px solid #b8872b;background:#fdf8ee;font-size:14px;white-space:pre-line'>" + esc(message) + "</blockquote>"
+        String corps = "<blockquote style='margin:0 0 14px;padding:12px 16px;border-left:4px solid #8fa474;background:#f4f7f0;font-size:14px;white-space:pre-line'>" + esc(message) + "</blockquote>"
                 + fiche("Collaborateur", nom(salarie), "Campagne", esc(c.getLibelle()), "Échéance", c.getDateFin() == null ? "—" : c.getDateFin().format(D))
                 + "<p style='margin:14px 0 0;font-size:12.5px;color:#6b7280'>Relance émise par " + nom(auteur) + " (DCHT) le " + DT.format(new java.util.Date()) + ".</p>";
         envoyer(n1, "Relance - collaborateur à intégrer à la campagne " + c.getLibelle(),
@@ -163,7 +163,7 @@ public class NotificationService {
         String corps = fiche("Campagne", esc(c.getLibelle()), "Type", esc(c.getTypeLabel()), "Exercice évalué", String.valueOf(c.getExercice()),
                 "Échéance", echeance, "Objectifs validés", eligible ? nbObjectifs + " objectif" + (nbObjectifs > 1 ? "s" : "") : "<span style='color:#b91c1c'>Aucun</span>");
         if (c.getDescription() != null && !c.getDescription().isBlank())
-            corps += "<blockquote style='margin:14px 0 0;padding:12px 16px;border-left:4px solid #b8872b;background:#fdf8ee;font-size:14px;white-space:pre-line'>" + esc(c.getDescription()) + "</blockquote>";
+            corps += "<blockquote style='margin:14px 0 0;padding:12px 16px;border-left:4px solid #8fa474;background:#f4f7f0;font-size:14px;white-space:pre-line'>" + esc(c.getDescription()) + "</blockquote>";
         if (eligible) {
             corps += "<p style='margin:16px 0 0;font-size:14px;line-height:1.55'>Votre supérieur hiérarchique va vous intégrer à la campagne. Vous recevrez alors un e-mail pour renseigner votre auto-évaluation.</p>";
         } else {
@@ -191,13 +191,13 @@ public class NotificationService {
     public void objectifTraite(FicheObjectifs f, Objectif o, boolean valide) {
         envoyer(f.getSalarie(), valide ? "Objectif validé par votre N+1" : "Objectif refusé par votre N+1",
                 gabarit(valide ? "Votre objectif a été validé" : "Votre proposition d'objectif a été refusée", "Bonjour " + prenom(f.getSalarie()) + ", votre supérieur hiérarchique a " + (valide ? "validé" : "refusé") + " l'objectif suivant" + (valide ? "." : " :"),
-                        (valide ? "" : "<blockquote style='margin:0 0 14px;padding:12px 16px;border-left:4px solid #b8872b;background:#fdf8ee;font-size:14px'>" + esc(o.getMotifRefus()) + "</blockquote>") + fiche("Objectif", esc(o.getLibelle())),
+                        (valide ? "" : "<blockquote style='margin:0 0 14px;padding:12px 16px;border-left:4px solid #8fa474;background:#f4f7f0;font-size:14px'>" + esc(o.getMotifRefus()) + "</blockquote>") + fiche("Objectif", esc(o.getLibelle())),
                         "Voir mes objectifs", lienObjectifs(f), valide ? "Validé" : "Refusé"));
     }
 
     public void objectifConteste(FicheObjectifs f, Objectif o) {
         Users n1 = f.getSalarie().getSuperieurHierarchique();
-        String corps = "<blockquote style='margin:0 0 14px;padding:12px 16px;border-left:4px solid #b8872b;background:#fdf8ee;font-size:14px'><b>"
+        String corps = "<blockquote style='margin:0 0 14px;padding:12px 16px;border-left:4px solid #8fa474;background:#f4f7f0;font-size:14px'><b>"
                 + esc(o.getContestationMotifLabel()) + "</b><br/>" + esc(o.getContestationCommentaire()) + "</blockquote>"
                 + fiche("Objectif", esc(o.getLibelle()), "Indicateur", esc(o.getIndicateur()), "Cible", esc(o.getCible()));
         envoyer(n1, "Demande de révision d'objectif : " + f.getSalarie().getNomComplet(),
@@ -442,7 +442,7 @@ public class NotificationService {
         String corps = fiche("Formation", esc(c.getIntitule()), "Organisme", esc(c.getOrganisme() == null || c.getOrganisme().isBlank() ? "—" : c.getOrganisme()),
                 "Questionnaire ouvert jusqu'au", d(c.getDateFin()));
         if (c.getConsignes() != null && !c.getConsignes().isBlank())
-            corps += "<blockquote style='margin:14px 0 0;padding:12px 16px;border-left:4px solid #b8872b;background:#fdf8ee;font-size:14px;white-space:pre-line'>" + esc(c.getConsignes()) + "</blockquote>";
+            corps += "<blockquote style='margin:14px 0 0;padding:12px 16px;border-left:4px solid #8fa474;background:#f4f7f0;font-size:14px;white-space:pre-line'>" + esc(c.getConsignes()) + "</blockquote>";
         String accroche = c.isFroid()
                 ? "Bonjour " + prenom(u) + ", quelques mois après la formation <b>" + esc(c.getIntitule()) + "</b>, dites-nous ce qu'elle a changé dans votre poste : "
                   + "compétences mises en pratique, changements observés, impact sur l'activité. Votre supérieur hiérarchique complétera ensuite la fiche par son avis."

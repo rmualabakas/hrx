@@ -74,6 +74,7 @@ html body.hrx-theme-bgfi-elegance {
     --hx-primary-strong: #07294a;
     --hx-on-primary: #ffffff;
     --hx-accent: #8fa47d;
+    --hx-filet: #8fa474; /* vert sauge du logo BGFI : filets et soulignements */
     --hx-hover: #f1f6f8;
     --hx-focus: rgba(10, 92, 143, .28);
 

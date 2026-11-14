@@ -322,7 +322,7 @@ public class EvalChaudExportService implements Serializable {
 
     // ------------------------------------------------------------------ PDF
 
-    private static final Color NAVY = new DeviceRgb(7, 41, 74), GOLD = new DeviceRgb(184, 135, 43), GRIS = new DeviceRgb(107, 114, 128),
+    private static final Color NAVY = new DeviceRgb(7, 41, 74), GOLD = new DeviceRgb(143, 163, 116) /* vert sauge du logo BGFI (filets) */, GRIS = new DeviceRgb(107, 114, 128),
             LIGNE = new DeviceRgb(220, 226, 232), FOND = new DeviceRgb(244, 247, 250), VERT = new DeviceRgb(46, 125, 80),
             ORANGE = new DeviceRgb(196, 132, 29), ROUGE = new DeviceRgb(185, 56, 56), PISTE = new DeviceRgb(229, 233, 238);
 

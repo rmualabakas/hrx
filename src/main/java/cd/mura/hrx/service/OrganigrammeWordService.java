@@ -27,7 +27,7 @@ public class OrganigrammeWordService implements Serializable {
     // unités : points typographiques (1 pt = 12 700 EMU = 20 twips)
     private static final float W = 150, H = 60, GAP_H = 14, GAP_V = 36, MARGE = 28, ENTETE = 58, PIED = 22;
     private static final float A4_L = 841.89f, A4_H = 595.28f, A3_L = 1190.55f, A3_H = 841.89f;
-    private static final String BLEU = "1E4A7A", OR = "B8872B", TRAIT = "AAB4C3", TEXTE = "19202D", GRIS = "6E7682", BORD = "D6DCE4", FOND = "F7F9FC";
+    private static final String BLEU = "1E4A7A", OR = "8FA474", TRAIT = "AAB4C3", TEXTE = "19202D", GRIS = "6E7682", BORD = "D6DCE4", FOND = "F7F9FC";
 
     private static final String NS = "xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" "
             + "xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" "

@@ -29,7 +29,7 @@ public class OrganigrammePdfService implements Serializable {
     public record Noeud(String nom, String fonction, String direction, boolean directeur, boolean racine, int effectif, List<Noeud> enfants) implements Serializable { }
 
     private static final float W = 150, H = 60, GAP_H = 14, GAP_V = 36, MARGE = 28, ENTETE = 58, PIED = 22;
-    private static final Color BLEU = new DeviceRgb(30, 74, 122), OR = new DeviceRgb(190, 145, 55), TRAIT = new DeviceRgb(170, 180, 195),
+    private static final Color BLEU = new DeviceRgb(30, 74, 122), OR = new DeviceRgb(143, 163, 116), TRAIT = new DeviceRgb(170, 180, 195),
             TEXTE = new DeviceRgb(25, 32, 45), GRIS = new DeviceRgb(110, 118, 130), BORD = new DeviceRgb(214, 220, 228), FOND = new DeviceRgb(247, 249, 252);
 
     public byte[] pdf(Noeud racine, String perimetre, int effectif) {
