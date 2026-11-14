@@ -27,7 +27,7 @@
             </div>
         </div>
 
-        <p:tabView id="tabs" styleClass="hx-tabs hx-card" activeIndex="#{mesEvaluationsView.onglet}" dynamic="false">
+        <p:tabView id="tabs" styleClass="hx-tabs hx-card" activeIndex="#{mesEvaluationsView.onglet}" dynamic="false" onTabChange="hxOngletUrl(index)">
             <p:tab title="Mes objectifs">
                 <h:form id="frmFiche" prependId="false">
                     <ui:include src="/WEB-INF/includes/fiche-objectifs.xhtml"/>

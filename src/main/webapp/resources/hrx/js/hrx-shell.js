@@ -260,3 +260,12 @@ window.hxDialogue = function (o) {
     document.addEventListener('keydown', clavier);
     requestAnimationFrame(function () { voile.classList.add('is-ouvert'); ok.focus(); });
 };
+
+/* Mémorise l'onglet actif dans l'URL (?onglet=n) pour qu'une actualisation y revienne. */
+window.hxOngletUrl = function (index) {
+    try {
+        var u = new URL(window.location.href);
+        if (index > 0) u.searchParams.set('onglet', index); else u.searchParams.delete('onglet');
+        window.history.replaceState(window.history.state, '', u.toString());
+    } catch (e) { /* navigateur ancien : sans effet */ }
+};
