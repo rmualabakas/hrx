@@ -47,6 +47,8 @@ public class FicheView implements Serializable {
     @EJB private cd.mura.hrx.dao.config.DirectionDAO directionDAO;
     /** Directeur désigné de la direction du collaborateur (null si la direction n'en a pas). */
     private Users directeurAttendu;
+    /** N+2 attendu : supérieur direct du N+1 (null s'il n'y en a pas). */
+    private Users n2Attendu;
     private String directionSalarie;
 
     private Integer id;
@@ -101,6 +103,7 @@ public class FicheView implements Serializable {
         directionSalarie = dir == null || dir.getId() == 0 ? null : dir.getNom();
         directeurAttendu = dir == null || dir.getDirigePar() <= 0 ? null : userDAO.findAccountById(dir.getDirigePar());
         directeur = directeurAttendu != null && directeurAttendu.getId() == me.getId();
+        n2Attendu = chefN1;
         java.util.logging.Logger.getLogger(FicheView.class.getName()).info("HRX fiche " + e.getId() + " - rôles de " + me.getLogin() + " : moi=" + (s.getId() == me.getId())
                 + " n1=" + (e.getEvaluateur() != null && e.getEvaluateur().getId() == me.getId()) + " directeur=" + directeur
                 + " (direction salarié=" + directionSalarie + ", dirigée par=" + (directeurAttendu == null ? "personne" : directeurAttendu.getLogin()) + ")");
@@ -150,7 +153,12 @@ public class FicheView implements Serializable {
     public boolean isCommentaireSalarie() { return moi && !isStatut(Evaluation.VALIDEE); }
     /** Le N+1 évalue après soumission ; il peut aussi évaluer une fiche non soumise (collaborateur absent). */
     public boolean isSaisieN1() { return (n1 || dcht) && (isStatut(Evaluation.SOUMISE) || isStatut(Evaluation.INITIEE) || isStatut(Evaluation.RETOURNEE)); }
-    public boolean isSaisieN2() { return (n2 || dcht) && isStatut(Evaluation.EVALUEE) && e.getDateVisaN2() == null; }
+    /**
+     * Visa N+2 : étape distincte seulement si le N+2 n'est pas le directeur. Quand le N+1 rapporte directement au directeur,
+     * l'avis du directeur tient lieu de visa N+2 (pas de double signature). Seul le N+2 réel vise : ni le N+1, ni la DCHT.
+     */
+    public boolean isVisaN2Requis() { return n2Attendu != null && (directeurAttendu == null || n2Attendu.getId() != directeurAttendu.getId()); }
+    public boolean isSaisieN2() { return n2 && !directeur && isVisaN2Requis() && isStatut(Evaluation.EVALUEE) && e.getDateVisaN2() == null; }
     /** Avis du directeur : le directeur de la direction ; la DCHT ne le remplace que si la direction n'a pas de directeur. */
     public boolean isSaisieDirecteur() { return (directeur || dcht && directeurAttendu == null) && isStatut(Evaluation.EVALUEE) && e.getDateAvisDirecteur() == null; }
     /** Le directeur désigné peut réviser l'évaluation du N+1 (pourcentages, NA, commentaires, compétences) tant qu'il n'a pas rendu son avis. */

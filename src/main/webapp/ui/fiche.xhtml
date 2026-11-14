@@ -35,8 +35,10 @@
             <ol class="hx-flow">
                 <li class="#{ficheView.e.statut ne 'INITIEE' ? 'is-done' : 'is-current'}"><i class="pi pi-user-edit"></i><span>Auto-évaluation</span><small>#{ficheView.e.salarie.nomComplet}</small></li>
                 <li class="#{ficheView.e.statut eq 'EVALUEE' or ficheView.e.statut eq 'VALIDEE' ? 'is-done' : (ficheView.e.statut eq 'SOUMISE' ? 'is-current' : '')}"><i class="pi pi-star"></i><span>Évaluation N+1</span><small>#{empty ficheView.e.evaluateur ? '—' : ficheView.e.evaluateur.nomComplet}</small></li>
-                <li class="#{not empty ficheView.e.dateVisaN2 ? 'is-done' : (ficheView.e.statut eq 'EVALUEE' ? 'is-current' : '')}"><i class="pi pi-check"></i><span>Visa N+2</span><small>#{empty ficheView.e.n2 ? 'facultatif' : ficheView.e.n2.nomComplet}</small></li>
-                <li class="#{not empty ficheView.e.dateAvisDirecteur ? 'is-done' : (ficheView.e.statut eq 'EVALUEE' ? 'is-current' : '')}"><i class="pi pi-briefcase"></i><span>Avis du directeur</span><small>#{empty ficheView.e.directeur ? (empty ficheView.directeurAttendu ? 'direction sans directeur' : ficheView.directeurAttendu.nomComplet) : ficheView.e.directeur.nomComplet}</small></li>
+                <ui:fragment rendered="#{ficheView.visaN2Requis or not empty ficheView.e.dateVisaN2}">
+                <li class="#{not empty ficheView.e.dateVisaN2 ? 'is-done' : (ficheView.e.statut eq 'EVALUEE' ? 'is-current' : '')}"><i class="pi pi-check"></i><span>Visa N+2</span><small>#{not empty ficheView.e.n2 ? ficheView.e.n2.nomComplet : (empty ficheView.n2Attendu ? 'facultatif' : ficheView.n2Attendu.nomComplet.concat(' · facultatif'))}</small></li>
+                </ui:fragment>
+                <li class="#{not empty ficheView.e.dateAvisDirecteur ? 'is-done' : (ficheView.e.statut eq 'EVALUEE' ? 'is-current' : '')}"><i class="pi pi-briefcase"></i><span>#{ficheView.visaN2Requis or empty ficheView.n2Attendu ? 'Avis du directeur' : 'Avis du directeur (N+2)'}</span><small>#{empty ficheView.e.directeur ? (empty ficheView.directeurAttendu ? 'direction sans directeur' : ficheView.directeurAttendu.nomComplet) : ficheView.e.directeur.nomComplet}</small></li>
                 <li class="#{ficheView.e.statut eq 'VALIDEE' ? 'is-done' : (ficheView.e.statut eq 'EVALUEE' ? 'is-current' : '')}"><i class="pi pi-verified"></i><span>Validation DCHT</span><small>#{ficheView.e.statut eq 'VALIDEE' ? 'validée' : 'en attente'}</small></li>
             </ol>
 
@@ -242,6 +244,7 @@
                             </ui:fragment>
                         </section>
 
+                        <ui:fragment rendered="#{ficheView.visaN2Requis or not empty ficheView.e.dateVisaN2}">
                         <section class="hx-appr">
                             <header><strong>Visa du N+2</strong><small>#{empty ficheView.e.n2 ? '' : ficheView.e.n2.nomComplet}<ui:fragment rendered="#{not empty ficheView.e.dateVisaN2}"> · <h:outputText value="#{ficheView.e.dateVisaN2}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></ui:fragment></small></header>
                             <ui:fragment rendered="#{ficheView.saisieN2}">
@@ -250,6 +253,7 @@
                             </ui:fragment>
                             <ui:fragment rendered="#{not ficheView.saisieN2}"><p class="hx-appr__txt #{empty ficheView.e.dateVisaN2 ? 'hx-muted' : ''}">#{empty ficheView.e.dateVisaN2 ? 'En attente.' : (empty ficheView.e.visaN2 ? 'Visé sans observation.' : ficheView.e.visaN2)}</p></ui:fragment>
                         </section>
+                        </ui:fragment>
 
                         <section class="hx-appr">
                             <header><strong>Commentaires et propositions du salarié (N)</strong><small>#{ficheView.e.salarie.nomComplet}</small></header>
@@ -270,7 +274,7 @@
                         </section>
 
                         <section class="hx-appr">
-                            <header><strong>Avis du directeur</strong><small>#{empty ficheView.e.directeur ? '' : ficheView.e.directeur.nomComplet}<ui:fragment rendered="#{not empty ficheView.e.dateAvisDirecteur}"> · <h:outputText value="#{ficheView.e.dateAvisDirecteur}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></ui:fragment></small></header>
+                            <header><strong>#{ficheView.visaN2Requis or empty ficheView.n2Attendu ? 'Avis du directeur' : 'Avis du directeur (N+2)'}</strong><small>#{empty ficheView.e.directeur ? '' : ficheView.e.directeur.nomComplet}<ui:fragment rendered="#{not empty ficheView.e.dateAvisDirecteur}"> · <h:outputText value="#{ficheView.e.dateAvisDirecteur}"><f:convertDateTime pattern="dd/MM/yyyy HH:mm"/></h:outputText></ui:fragment></small></header>
                             <ui:fragment rendered="#{ficheView.saisieDirecteur}">
                                 <p:outputLabel value="Appréciation générale du travail du collaborateur" styleClass="hx-appr__lbl"/>
                                 <p:inputTextarea value="#{ficheView.e.avisDirecteur}" rows="3" autoResize="true" maxlength="4000" styleClass="hx-appr__ta"/>

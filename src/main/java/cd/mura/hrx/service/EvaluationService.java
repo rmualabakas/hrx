@@ -148,6 +148,8 @@ public class EvaluationService {
     public Evaluation viser(Evaluation e, Users n2, String visa) {
         requireState(e, Evaluation.EVALUEE);
         if (e.getDateVisaN2() != null) throw new IllegalStateException("Le visa N+2 est déjà enregistré");
+        if (n2 == null || e.getEvaluateur() != null && e.getEvaluateur().getId() == n2.getId())
+            throw new SecurityException("Le N+1 ne peut pas viser sa propre évaluation en tant que N+2");
         e.setN2(em.getReference(Users.class, n2.getId())); e.setVisaN2(visa); e.setDateVisaN2(new Date());
         return mergeEvaluation(e);
     }
