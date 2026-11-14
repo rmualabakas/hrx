@@ -117,6 +117,17 @@ public class Objectif implements Serializable {
     public boolean isValide() { return VALIDE.equals(statut); }
     public boolean isPropose() { return PROPOSE.equals(statut); }
     public boolean isParSalarie() { return ORIGINE_SALARIE.equals(origine); }
+    /**
+     * Pourcentage attendu déduit de la cible : « 85 », « 85 % », « 85% » → 85.
+     * Une cible qui n'est pas un pourcentage (ex. « 5 rapports ») ou vide donne 100 %.
+     */
+    public int getCiblePourcentage() {
+        if (cible == null) return 100;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("^\\s*(\\d{1,3})(?:[.,]\\d+)?\\s*%?\\s*$").matcher(cible);
+        if (!m.matches()) return 100;
+        int v = Integer.parseInt(m.group(1));
+        return v >= 1 && v <= 100 ? v : 100;
+    }
     public boolean isContestationEnAttente() { return CONTEST_EN_ATTENTE.equals(contestationStatut); }
     public boolean isContestationRevise() { return CONTEST_REVISE.equals(contestationStatut); }
     public boolean isContestationMaintenue() { return CONTEST_MAINTENU.equals(contestationStatut); }

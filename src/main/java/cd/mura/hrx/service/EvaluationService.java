@@ -53,7 +53,7 @@ public class EvaluationService {
                     .setParameter("f", ficheObjectifs.getId()).setParameter("s", Objectif.VALIDE).getResultList();
             for (Objectif o : objs) {
                 ObjectifEvaluation oe = new ObjectifEvaluation();
-                oe.setEvaluation(e); oe.setObjectif(o); oe.setAttendu(100);
+                oe.setEvaluation(e); oe.setObjectif(o); oe.setAttendu(o.getCiblePourcentage());   // attendu = cible de l'objectif (100 % si non chiffrée)
                 em.persist(oe); e.getObjectifs().add(oe);
             }
         }
