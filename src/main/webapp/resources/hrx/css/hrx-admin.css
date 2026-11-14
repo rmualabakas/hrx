@@ -2262,3 +2262,28 @@ a.hx-contest-btn--ghost:hover { background: var(--hx-surface-2); color: var(--hx
 .hx-contest__head { display: block; line-height: 1.45; }
 .hx-contest__head .pi { margin-right: 6px; vertical-align: -1px; }
 .hx-contest__head b { font-weight: 700; }
+
+/* Jours fériés */
+.hx-fer { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: var(--hx-s4); align-items: start; }
+@media (max-width: 1100px) { .hx-fer { grid-template-columns: 1fr; } }
+.hx-fer__head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.hx-fer__nav { display: inline-flex; align-items: center; gap: 6px; }
+.hx-fer__nav strong { min-width: 48px; text-align: center; }
+.hx-fer__list { list-style: none; margin: 0; padding: 4px 0; }
+.hx-fer__list li { display: flex; align-items: center; gap: 14px; padding: 10px var(--hx-s4); border-top: 1px solid var(--hx-border); }
+.hx-fer__list li:first-child { border-top: 0; }
+.hx-fer__date { width: 52px; flex: none; display: grid; place-items: center; padding: 6px 0; border-radius: 10px; background: rgba(184, 135, 43, .12); color: #8a6219; line-height: 1.1; }
+.hx-fer__date b { font-size: 18px; }
+.hx-fer__date small { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+.hx-fer__txt { display: grid; gap: 2px; }
+.hx-fer__txt small { color: var(--hx-muted); font-size: 12px; text-transform: capitalize; }
+.hx-fer__list li.is-we .hx-fer__date { background: var(--hx-surface-2); color: var(--hx-muted); }
+.hx-fer__list li.is-past { opacity: .55; }
+.hx-fer__table { width: 100%; }
+.hx-fer__table td { vertical-align: middle; }
+.hx-fer__next { font-size: 22px; }
+/* Échéance du circuit (48 h ouvrées) */
+.hx-echeance { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 var(--hx-s3); padding: 10px 14px; border-radius: 10px; background: var(--hx-info-soft); color: var(--hx-text-strong); font-size: 13px; border-left: 3px solid var(--hx-primary); }
+.hx-echeance .pi { margin-top: 2px; color: var(--hx-primary); }
+.hx-echeance.is-late { background: var(--hx-danger-soft); border-left-color: var(--hx-danger); }
+.hx-echeance.is-late .pi { color: var(--hx-danger); }

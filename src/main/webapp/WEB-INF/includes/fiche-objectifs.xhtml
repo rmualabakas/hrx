@@ -192,6 +192,13 @@
                         <li class="#{objectifsView.etapeCircuit eq 'signee' ? 'is-done' : ''}"><i class="pi pi-verified"></i><span>Signée par le N+1</span></li>
                     </ol>
 
+                    <ui:fragment rendered="#{not empty objectifsView.echeanceCircuit}">
+                        <div class="hx-echeance #{objectifsView.echeanceDepassee ? 'is-late' : ''}" role="status">
+                            <i class="pi #{objectifsView.echeanceDepassee ? 'pi-exclamation-triangle' : 'pi-clock'}"></i>
+                            <span><b>#{objectifsView.nbContestations gt 0 ? 'Réponse du N+1 à la demande de révision' : 'Signature ou demande de révision du collaborateur'}</b> · délai de 48 h ouvrées (hors week-ends et jours fériés) : #{objectifsView.echeanceTexte}</span>
+                        </div>
+                    </ui:fragment>
+
                     <!-- Signatures -->
                     <div class="hx-card hx-fiche__block hx-sign">
                         <div class="hx-sign__col">

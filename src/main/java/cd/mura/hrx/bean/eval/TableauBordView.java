@@ -220,10 +220,14 @@ public class TableauBordView implements Serializable {
             else if (mesObjectifs.getNbContestations() > 0)
                 taches.add(new Tache("pi-flag", pluriel(mesObjectifs.getNbContestations(), "demande de révision d'objectif", "demandes de révision d'objectifs") + " en attente de réponse",
                         "Votre N+1 doit réviser ou maintenir ces objectifs avant la signature.", "/ui/objectifs?salarie=" + moi.getId() + "&exercice=" + exercice, "info"));
-            else if (mesObjectifs.isTransmise() && !mesObjectifs.isSignee() && !mesObjectifs.isSigneeSalarie())
+            else if (mesObjectifs.isTransmise() && !mesObjectifs.isSignee() && !mesObjectifs.isSigneeSalarie()) {
+                LocalDate ech = alertesService.echeanceSignature(mesObjectifs);
+                boolean late = ech != null && LocalDate.now().isAfter(ech);
                 taches.add(new Tache("pi-pen-to-square", "Signer votre fiche d'objectifs " + exercice,
-                        pluriel(mesObjectifs.getNbValides(), "objectif transmis", "objectifs transmis") + " par votre N+1 : signez-la, ou demandez la révision d'un objectif. Votre N+1 signera après vous.",
-                        "/ui/objectifs?salarie=" + moi.getId() + "&exercice=" + exercice, "primary"));
+                        (ech == null ? "" : (late ? "Échéance dépassée (" : "À faire avant le ") + ech.format(DF) + (late ? ") · " : " · "))
+                                + "signez-la, ou demandez la révision d'un objectif. Votre N+1 signera après vous.",
+                        "/ui/objectifs?salarie=" + moi.getId() + "&exercice=" + exercice, late ? "danger" : "primary"));
+            }
             else if (!mesObjectifs.isSignee())
                 taches.add(new Tache("pi-hourglass", "Fiche d'objectifs signée, en attente de votre N+1",
                         "Elle sera figée dès que votre N+1 l'aura signée à son tour.", "/ui/objectifs?salarie=" + moi.getId() + "&exercice=" + exercice, "info"));
@@ -276,8 +280,9 @@ public class TableauBordView implements Serializable {
             if (!contestees.isEmpty()) {
                 long nb = contestees.stream().mapToLong(FicheObjectifs::getNbContestations).sum();
                 FicheObjectifs f0 = contestees.get(0);
+                LocalDate ech = contestees.stream().map(alertesService::echeanceRevision).filter(java.util.Objects::nonNull).min(java.util.Comparator.naturalOrder()).orElse(null);
                 taches.add(new Tache("pi-flag-fill", pluriel(nb, "demande de révision d'objectif", "demandes de révision d'objectifs") + (contestees.size() == 1 ? " de " + f0.getSalarie().getNomComplet() : " de vos collaborateurs"),
-                        "Révisez-les ou maintenez-les en motivant votre réponse : la fiche ne peut être signée qu'ensuite.",
+                        (ech == null ? "" : (LocalDate.now().isAfter(ech) ? "Échéance dépassée (" : "Réponse attendue avant le ") + ech.format(DF) + (LocalDate.now().isAfter(ech) ? ") · " : " · ")) + "révisez ou maintenez en motivant votre réponse.",
                         contestees.size() == 1 ? "/ui/objectifs?salarie=" + f0.getSalarie().getId() + "&exercice=" + exercice : "/ui/equipe", "danger"));
             }
             // fiches prêtes à être transmises au collaborateur (le N+1 ne signe jamais avant lui)

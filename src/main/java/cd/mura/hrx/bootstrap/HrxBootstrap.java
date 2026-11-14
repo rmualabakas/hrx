@@ -29,6 +29,8 @@ public class HrxBootstrap {
     @jakarta.ejb.EJB
     private cd.mura.hrx.dao.eval.ModeleFicheDAO modeleFicheDAO;
 
+    @jakarta.ejb.EJB private cd.mura.hrx.service.CalendrierService calendrier;
+
     private record MenuDef(String nom, String url, String icone, String[][] privileges) { }
 
     private static final MenuDef[] ADMIN_MENUS = {
@@ -43,6 +45,7 @@ public class HrxBootstrap {
             new MenuDef("Organigramme", "organigramme", "pi pi-sitemap", new String[][]{{"Modifier l'organisation (N+1, direction, directeur)", "ORG_EDIT"}}),
             new MenuDef("Journal d'audit", "userLogs", "pi pi-history", new String[][]{{"Consulter le journal", "LOG_VIEW"}}),
             new MenuDef("Paramètres", "parametres", "pi pi-cog", new String[][]{{"Modifier la configuration", "CFG_EDIT"}}),
+            new MenuDef("Jours fériés", "joursFeries", "pi pi-calendar-times", new String[][]{{"Gérer les jours fériés", "FERIE_EDIT"}}),
     };
 
     private static final MenuDef[] EVAL_MENUS = {
@@ -116,8 +119,10 @@ public class HrxBootstrap {
                 ajouterMenuEval("periodeEssai", "ESSAI_DCHT");
                 ajouterMenuEval("evaluationsFormations", "FORM_CHAUD");
                 ajouterModuleRecrutement();
+                ajouterMenuAdmin("joursFeries", "FERIE_EDIT");
             }
             ensureApp();
+            try { calendrier.initialiserSiVide(); } catch (Exception e) { LOG.log(Level.WARNING, "HRX : jours fériés non initialisés", e); }
             LOG.info("HRX : amorçage terminé");
         } catch (Exception e) {
             LOG.log(Level.SEVERE, "HRX : amorçage impossible", e);
@@ -151,6 +156,16 @@ public class HrxBootstrap {
         if (module == null) module = firstInt("select module_id from menu where url = ?1 order by id", "campagnes");
         if (module == null) return;
         for (MenuDef def : EVAL_MENUS) if (url.equals(def.url())) ensureMenu(module, def);
+        LOG.info("HRX : menu « " + url + " » ajouté");
+    }
+
+    /** Ajout d'un menu du module Administration sur une base existante, une seule fois (son privilège sert de témoin). */
+    private void ajouterMenuAdmin(String url, String privilegeTemoin) {
+        if (firstInt("select id from privilege where code = ?1", privilegeTemoin) != null) return;
+        Integer module = firstInt("select module_id from menu where url = ?1 order by id", "parametres");
+        if (module == null) module = firstInt("select module_id from menu where url = ?1 order by id", "users");
+        if (module == null) return;
+        for (MenuDef def : ADMIN_MENUS) if (url.equals(def.url())) ensureMenu(module, def);
         LOG.info("HRX : menu « " + url + " » ajouté");
     }
 

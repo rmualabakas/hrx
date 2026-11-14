@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/template.xhtml">
+
+    <ui:param name="pageTitle" value="Jours fériés"/>
+    <ui:param name="pageSubtitle" value="Calendrier ouvré utilisé pour les délais et les relances"/>
+    <ui:define name="title">Jours fériés</ui:define>
+
+    <ui:define name="content">
+        <h:form id="frmFer" prependId="false">
+
+            <div class="hx-page-head">
+                <div>
+                    <h2>Jours fériés</h2>
+                    <p>Les délais (par exemple 48 h ouvrées pour signer une fiche d'objectifs) et les relances automatiques ne comptent ni les week-ends ni ces jours. Un férié <b>récurrent</b> revient chaque année à la même date ; un férié <b>ponctuel</b> ne vaut que pour une date précise (férié décrété, pont…).</p>
+                </div>
+                <div class="hx-page-head__actions">
+                    <p:commandButton value="Nouveau jour férié" icon="pi pi-plus" process="@this" rendered="#{jourFerieView.editable}"
+                                     actionListener="#{jourFerieView.nouveau}" update="dlgFer" oncomplete="PF('dlgFer').show()"/>
+                </div>
+            </div>
+
+            <h:panelGroup id="corps" layout="block">
+                <div class="hx-grid hx-grid--kpi hx-kpis-compact">
+                    <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-calendar"></i> Fériés en #{jourFerieView.annee}</span><span class="hx-kpi__value">#{jourFerieView.occurrences.size()}</span></div>
+                    <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-briefcase"></i> Tombant un jour ouvré</span><span class="hx-kpi__value hx-kpi__value--gold">#{jourFerieView.nbOuvresPerdus}</span></div>
+                    <div class="hx-kpi"><span class="hx-kpi__label"><i class="pi pi-forward"></i> Prochain férié</span>
+                        <span class="hx-kpi__value hx-fer__next">#{empty jourFerieView.prochain ? '—' : jourFerieView.prochain.dateCourte}</span>
+                        <span class="hx-kpi__delta">#{empty jourFerieView.prochain ? 'aucun d’ici la fin de l’année' : jourFerieView.prochain.libelle}</span></div>
+                </div>
+
+                <div class="hx-fer">
+                    <!-- Calendrier de l'année -->
+                    <div class="hx-card">
+                        <div class="hx-card__head hx-fer__head">
+                            <div><h3>Calendrier #{jourFerieView.annee}</h3><small>Fériés actifs, dans l'ordre de l'année</small></div>
+                            <div class="hx-fer__nav">
+                                <p:commandLink process="@this" update="corps" action="#{jourFerieView.anneePrecedente}" styleClass="hx-icon-btn" title="Année précédente"><i class="pi pi-chevron-left"></i></p:commandLink>
+                                <strong>#{jourFerieView.annee}</strong>
+                                <p:commandLink process="@this" update="corps" action="#{jourFerieView.anneeSuivante}" styleClass="hx-icon-btn" title="Année suivante"><i class="pi pi-chevron-right"></i></p:commandLink>
+                            </div>
+                        </div>
+                        <ui:fragment rendered="#{empty jourFerieView.occurrences}"><div class="hx-empty"><i class="pi pi-calendar"></i><strong>Aucun férié</strong>Ajoutez les jours fériés de l'année.</div></ui:fragment>
+                        <ul class="hx-fer__list">
+                            <ui:repeat value="#{jourFerieView.occurrences}" var="o">
+                                <li class="#{o.passe ? 'is-past' : ''} #{o.weekend ? 'is-we' : ''}">
+                                    <span class="hx-fer__date"><b>#{o.date.dayOfMonth}</b><small>#{o.dateCourte.substring(o.dateCourte.indexOf(' ') + 1)}</small></span>
+                                    <span class="hx-fer__txt"><strong>#{o.libelle}</strong><small>#{o.jour}#{o.weekend ? ' · tombe un week-end' : ''}</small></span>
+                                </li>
+                            </ui:repeat>
+                        </ul>
+                    </div>
+
+                    <!-- Paramétrage -->
+                    <div class="hx-card">
+                        <div class="hx-card__head"><div><h3>Paramétrage</h3><small>#{jourFerieView.recurrents.size()} récurrent(s) · #{jourFerieView.ponctuels.size()} ponctuel(s)</small></div></div>
+                        <table class="hx-teamlist hx-fer__table">
+                            <thead><tr><th>Jour férié</th><th>Date</th><th>Statut</th><th class="hx-teamlist__act"></th></tr></thead>
+                            <tbody>
+                            <ui:repeat value="#{jourFerieView.feries}" var="j">
+                                <tr class="#{j.actif ? '' : 'is-off'}">
+                                    <td><strong>#{j.libelle}</strong></td>
+                                    <td><span class="hx-tag">#{j.recurrent ? 'récurrent' : 'ponctuel'}</span> #{j.dateLisible}</td>
+                                    <td><span class="hx-badge #{j.actif ? 'hx-badge--done' : 'hx-badge--draft'}">#{j.actif ? 'Actif' : 'Inactif'}</span></td>
+                                    <td class="hx-teamlist__act">
+                                        <ui:fragment rendered="#{jourFerieView.editable}">
+                                            <p:commandLink process="@this" title="Modifier" styleClass="hx-icon-btn" actionListener="#{jourFerieView.modifier(j)}" update="dlgFer" oncomplete="PF('dlgFer').show()"><i class="pi pi-pencil"></i></p:commandLink>
+                                            <p:commandLink process="@this" title="#{j.actif ? 'Désactiver' : 'Activer'}" styleClass="hx-icon-btn" actionListener="#{jourFerieView.basculer(j)}" update="corps"><i class="pi #{j.actif ? 'pi-eye-slash' : 'pi-eye'}"></i></p:commandLink>
+                                            <p:commandLink process="@this" title="Supprimer" styleClass="hx-icon-btn hx-icon-btn--danger" actionListener="#{jourFerieView.supprimer(j)}" update="corps :globalGrowl">
+                                                <p:confirm header="Supprimer le jour férié" message="Supprimer « #{j.libelle} » ?" icon="pi pi-exclamation-triangle"/>
+                                                <i class="pi pi-trash"></i></p:commandLink>
+                                        </ui:fragment>
+                                    </td>
+                                </tr>
+                            </ui:repeat>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </h:panelGroup>
+
+            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" responsive="true" width="440">
+                <p:commandButton value="Annuler" type="button" styleClass="ui-confirmdialog-no hx-btn-secondary" icon="pi pi-times"/>
+                <p:commandButton value="Supprimer" type="button" styleClass="ui-confirmdialog-yes hx-btn-danger" icon="pi pi-trash"/>
+            </p:confirmDialog>
+        </h:form>
+
+        <p:dialog id="dlgFer" widgetVar="dlgFer" header="#{jourFerieView.edit.id eq 0 ? 'Nouveau jour férié' : 'Modifier le jour férié'}"
+                  modal="true" responsive="true" width="520" closeOnEscape="true" showEffect="fade" hideEffect="fade">
+            <h:form id="frmFerEdit">
+                <p:messages showDetail="true" closable="true"/>
+                <div class="hx-form">
+                    <div class="hx-field"><p:outputLabel for="fLib" value="Nom"/><p:inputText id="fLib" value="#{jourFerieView.edit.libelle}" maxlength="150" placeholder="Fête de l'indépendance"/></div>
+                    <div class="hx-field">
+                        <p:outputLabel for="fType" value="Type"/>
+                        <p:selectOneButton id="fType" value="#{jourFerieView.edit.recurrent}">
+                            <f:selectItem itemLabel="Chaque année" itemValue="#{true}"/>
+                            <f:selectItem itemLabel="Date précise" itemValue="#{false}"/>
+                            <p:ajax process="@this" update="dates"/>
+                        </p:selectOneButton>
+                    </div>
+                    <h:panelGroup id="dates" layout="block">
+                        <ui:fragment rendered="#{jourFerieView.edit.recurrent}">
+                            <div class="hx-field__grid">
+                                <div class="hx-field"><p:outputLabel for="fJour" value="Jour"/>
+                                    <p:selectOneMenu id="fJour" value="#{jourFerieView.edit.jour}" styleClass="hx-select" converter="jakarta.faces.Integer">
+                                        <f:selectItem itemLabel="—" itemValue="#{null}"/><f:selectItems value="#{jourFerieView.jours}"/></p:selectOneMenu></div>
+                                <div class="hx-field"><p:outputLabel for="fMois" value="Mois"/>
+                                    <p:selectOneMenu id="fMois" value="#{jourFerieView.edit.mois}" styleClass="hx-select" converter="jakarta.faces.Integer">
+                                        <f:selectItem itemLabel="—" itemValue="#{null}"/><f:selectItems value="#{jourFerieView.moisListe.entrySet()}" var="m" itemLabel="#{m.key}" itemValue="#{m.value}"/></p:selectOneMenu></div>
+                            </div>
+                        </ui:fragment>
+                        <ui:fragment rendered="#{not jourFerieView.edit.recurrent}">
+                            <div class="hx-field"><p:outputLabel for="fDate" value="Date"/>
+                                <p:datePicker id="fDate" value="#{jourFerieView.edit.dateFerie}" pattern="dd/MM/yyyy" showIcon="true" locale="fr"/></div>
+                        </ui:fragment>
+                    </h:panelGroup>
+                    <div class="hx-field hx-field--inline"><p:selectBooleanCheckbox id="fActif" value="#{jourFerieView.edit.actif}" itemLabel="Actif (pris en compte dans les délais)"/></div>
+                </div>
+                <div class="hx-form__actions">
+                    <p:commandButton value="Annuler" type="button" styleClass="hx-btn-secondary" onclick="PF('dlgFer').hide()"/>
+                    <p:commandButton value="Enregistrer" icon="pi pi-check" process="@form" update="@form :corps :globalGrowl"
+                                     actionListener="#{jourFerieView.enregistrer}" oncomplete="if (args &amp;&amp; args.ok) PF('dlgFer').hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>

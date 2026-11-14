@@ -133,6 +133,23 @@ public class ObjectifsView implements Serializable {
      */
     public boolean isFigee() { return fiche != null && (fiche.isSignee() || fiche.isSigneeSalarie() || fiche.isSigneeN1()); }
     private boolean pilote() { return (n1 || hierarchie || dcht) && !moi; }
+
+    @jakarta.ejb.EJB private cd.mura.hrx.service.AlertesService alertes;
+    /** Échéance en cours du circuit (48 h ouvrées) : signature du collaborateur ou réponse du N+1 à une révision. */
+    public LocalDate getEcheanceCircuit() {
+        if (fiche == null) return null;
+        FicheObjectifs f = objectifDAO.findFiche(fiche.getId());
+        LocalDate r = alertes.echeanceRevision(f);
+        return r != null ? r : alertes.echeanceSignature(f);
+    }
+    public boolean isEcheanceDepassee() { LocalDate e = getEcheanceCircuit(); return e != null && LocalDate.now().isAfter(e); }
+    public String getEcheanceTexte() {
+        LocalDate e = getEcheanceCircuit();
+        if (e == null) return "";
+        String d = e.format(java.time.format.DateTimeFormatter.ofPattern("EEEE d MMMM", java.util.Locale.FRENCH));
+        long j = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), e);
+        return j < 0 ? "échéance dépassée depuis le " + d : j == 0 ? "échéance aujourd'hui (" + d + ")" : j == 1 ? "échéance demain (" + d + ")" : "à faire avant le " + d;
+    }
     public boolean isPeutTransmettre() { return pilote() && fiche != null && !fiche.isTransmise() && !fiche.isSigneeSalarie() && !isVerrouEvaluation(); }
     /** Le collaborateur signe une fiche transmise, sans demande de révision ni proposition en attente. */
     public boolean isPeutSignerSalarie() { return moi && fiche != null && fiche.isTransmise() && !fiche.isSigneeSalarie() && !fiche.isSignee() && getNbContestations() == 0 && getNbProposes() == 0; }

@@ -40,6 +40,10 @@ public class AlertesService {
     /** Délai laissé au directeur pour donner son avis sur une évaluation de fin de période d'essai. */
     public static final int DELAI_AVIS_DIRECTEUR_JOURS = 7;
 
+    /** Délai, en jours ouvrés, pour signer (ou demander une révision) et pour répondre à une demande de révision : 48 h ouvrées. */
+    public static final int DELAI_OBJECTIFS_JOURS_OUVRES = 2;
+    /** Circuit court des fiches d'objectifs : rappel la veille et le jour même, puis relance critique chaque jour ouvré. */
+    public static final String T_SIGNATURE_OBJ = "SIGNATURE_OBJ", T_REVISION_N1 = "REVISION_N1";
     public static final String T_OBJECTIFS = "OBJECTIFS", T_AUTO_EVAL = "AUTO_EVAL", T_EVAL_N1 = "EVAL_N1", T_AVIS_DIRECTEUR = "AVIS_DIRECTEUR",
             T_ESSAI_N1 = "ESSAI_N1", T_ESSAI_DIRECTEUR = "ESSAI_DIRECTEUR";
 
@@ -51,6 +55,7 @@ public class AlertesService {
     @EJB private SuiviObjectifsService suiviObjectifs;
     @EJB private PeriodeEssaiService periodeEssai;
     @EJB private NotificationService notifications;
+    @EJB private CalendrierService calendrier;
 
     /** Action attendue d'un acteur à une date. */
     public record Attendu(String type, int refId, int salarieId, int destinataireId, String libelle, String lien, LocalDate echeance) {
@@ -65,6 +70,7 @@ public class AlertesService {
         try { if (objectifs) l.addAll(objectifs()); } catch (Exception e) { LOG.log(Level.WARNING, "HRX alertes : objectifs", e); }
         try { l.addAll(campagnes()); } catch (Exception e) { LOG.log(Level.WARNING, "HRX alertes : campagnes", e); }
         try { l.addAll(periodesEssai()); } catch (Exception e) { LOG.log(Level.WARNING, "HRX alertes : périodes d'essai", e); }
+        try { l.addAll(circuitObjectifs()); } catch (Exception e) { LOG.log(Level.WARNING, "HRX alertes : signature des objectifs", e); }
         return l;
     }
 
@@ -82,6 +88,94 @@ public class AlertesService {
                     "/ui/objectifs?salarie=" + x.salarie().getId() + "&exercice=" + exercice, effet.plusMonths(1)));
         }
         return l;
+    }
+
+    /**
+     * Circuit de la fiche d'objectifs, délai de 48 h ouvrées à compter de la réception :
+     * le collaborateur signe ou demande une révision ; le N+1 répond à une demande de révision.
+     */
+    private List<Attendu> circuitObjectifs() {
+        List<cd.mura.hrx.entity.eval.FicheObjectifs> fiches = em.createQuery("""
+                select distinct f from FicheObjectifs f join fetch f.salarie left join fetch f.objectifs
+                where f.statut <> :s and f.dateSignatureSalarie is null""", cd.mura.hrx.entity.eval.FicheObjectifs.class)
+                .setParameter("s", cd.mura.hrx.entity.eval.FicheObjectifs.SIGNEE).getResultList();
+        List<Attendu> l = new ArrayList<>();
+        for (cd.mura.hrx.entity.eval.FicheObjectifs f : fiches) {
+            Users sal = f.getSalarie();
+            String lien = "/ui/objectifs?salarie=" + sal.getId() + "&exercice=" + f.getExercice();
+            if (f.getNbContestations() > 0) {
+                Users n1 = sal.getSuperieurHierarchique();
+                LocalDate recu = f.getObjectifs().stream().filter(cd.mura.hrx.entity.eval.Objectif::isContestationEnAttente)
+                        .map(o -> local(o.getDateContestation())).filter(Objects::nonNull).max(Comparator.naturalOrder()).orElse(LocalDate.now());
+                if (n1 != null)
+                    l.add(new Attendu(T_REVISION_N1, f.getId(), sal.getId(), n1.getId(),
+                            "Répondre à la demande de révision d'objectif de " + sal.getNomComplet() + " (réviser ou maintenir)", lien, echeanceObjectifs(recu)));
+            } else if (f.isTransmise() && f.getNbProposes() == 0) {
+                LocalDate recu = local(f.getDateTransmission());
+                for (cd.mura.hrx.entity.eval.Objectif o : f.getObjectifs()) {
+                    LocalDate rep = local(o.getDateReponseContestation());
+                    if (rep != null && rep.isAfter(recu)) recu = rep;   // la fiche revient au collaborateur après la réponse du N+1
+                }
+                l.add(new Attendu(T_SIGNATURE_OBJ, f.getId(), sal.getId(), sal.getId(),
+                        "Signer votre fiche d'objectifs " + f.getExercice() + " ou demander la révision d'un objectif", lien, echeanceObjectifs(recu)));
+            }
+        }
+        return l;
+    }
+
+    /** Échéance du collaborateur (signer ou demander une révision), ou null s'il n'a rien à faire. */
+    public LocalDate echeanceSignature(cd.mura.hrx.entity.eval.FicheObjectifs f) {
+        if (f == null || f.isSignee() || f.isSigneeSalarie() || !f.isTransmise() || f.getNbContestations() > 0 || f.getNbProposes() > 0) return null;
+        LocalDate recu = local(f.getDateTransmission());
+        for (cd.mura.hrx.entity.eval.Objectif o : f.getObjectifs()) { LocalDate rep = local(o.getDateReponseContestation()); if (rep != null && rep.isAfter(recu)) recu = rep; }
+        return echeanceObjectifs(recu);
+    }
+
+    /** Échéance du N+1 pour répondre aux demandes de révision en attente, ou null. */
+    public LocalDate echeanceRevision(cd.mura.hrx.entity.eval.FicheObjectifs f) {
+        if (f == null || f.getNbContestations() == 0) return null;
+        LocalDate recu = f.getObjectifs().stream().filter(cd.mura.hrx.entity.eval.Objectif::isContestationEnAttente)
+                .map(o -> local(o.getDateContestation())).filter(Objects::nonNull).max(Comparator.naturalOrder()).orElse(LocalDate.now());
+        return echeanceObjectifs(recu);
+    }
+
+    /** Échéance du circuit des objectifs : 48 h ouvrées (2 jours ouvrés) après la réception. */
+    public LocalDate echeanceObjectifs(LocalDate reception) {
+        return calendrier.ajouterJoursOuvres(reception == null ? LocalDate.now() : reception, DELAI_OBJECTIFS_JOURS_OUVRES);
+    }
+
+    static boolean circuitCourt(String type) { return T_SIGNATURE_OBJ.equals(type) || T_REVISION_N1.equals(type); }
+
+    /**
+     * Rythme du circuit court, en jours ouvrés : rappel la veille et le jour de l'échéance,
+     * puis relance critique chaque jour ouvré (copie au supérieur et à la DCHT). Rien n'est envoyé un week-end ou un jour férié.
+     */
+    boolean planifierCourt(Relance r, LocalDate jour, List<cd.mura.hrx.entity.config.JourFerie> feries) {
+        if (jour.equals(r.getDernierEnvoi()) || !CalendrierService.estOuvre(jour, feries)) return false;
+        int avant = joursOuvres(jour, r.getEcheance(), feries);
+        if (avant >= 2) return false;
+        if (avant == 1) {
+            if (r.getNbRappels() >= 1) return false;
+            r.setNbRappels(1); r.setNiveau(Relance.RAPPEL);
+        } else if (avant == 0) {
+            if (r.getNbRappels() >= 2) return false;
+            r.setNbRappels(2); r.setNiveau(Relance.RAPPEL);
+        } else {
+            r.setNbRelances(r.getNbRelances() + 1);
+            r.setNiveau(Relance.CRITIQUE);
+            if (r.getDateCritique() == null) r.setDateCritique(jour);
+        }
+        r.setDernierEnvoi(jour);
+        return true;
+    }
+
+    private static int joursOuvres(LocalDate a, LocalDate b, List<cd.mura.hrx.entity.config.JourFerie> feries) {
+        if (a.equals(b)) return 0;
+        boolean avant = b.isBefore(a);
+        LocalDate debut = avant ? b : a, fin = avant ? a : b;
+        int n = 0;
+        for (LocalDate d = debut.plusDays(1); !d.isAfter(fin); d = d.plusDays(1)) if (CalendrierService.estOuvre(d, feries)) n++;
+        return avant ? -n : n;
     }
 
     /** Évaluations des campagnes ouvertes : auto-évaluation (salarié), évaluation (N+1), avis (directeur). Échéance = fin de campagne. */
@@ -167,6 +261,7 @@ public class AlertesService {
 
         Map<Integer, List<Relance>> aEnvoyer = new LinkedHashMap<>();
         Set<String> vues = new HashSet<>();
+        List<cd.mura.hrx.entity.config.JourFerie> feries = calendrier.actifs();
         for (Attendu a : attendus) {
             if (a.echeance() == null || !vues.add(a.cle())) continue;
             Relance r = ouvertes.get(a.cle());
@@ -178,7 +273,7 @@ public class AlertesService {
             // libellé renseigné avant l'insertion (colonne non nulle, insertion immédiate en IDENTITY)
             r.setLibelle(tronque(a.libelle() == null || a.libelle().isBlank() ? a.type() : a.libelle(), 300)); r.setLien(tronque(a.lien(), 300)); r.setEcheance(a.echeance());
             if (nouvelle) em.persist(r);
-            if (planifier(r, jour)) aEnvoyer.computeIfAbsent(r.getDestinataireId(), k -> new ArrayList<>()).add(r);
+            if (circuitCourt(r.getType()) ? planifierCourt(r, jour, feries) : planifier(r, jour)) aEnvoyer.computeIfAbsent(r.getDestinataireId(), k -> new ArrayList<>()).add(r);
         }
         for (Relance r : ouvertes.values()) if (!vues.contains(r.getCle())) { r.setResolue(true); r.setDateResolution(new Date()); }
         em.flush();
@@ -220,12 +315,13 @@ public class AlertesService {
         List<Simulation> out = new ArrayList<>();
         Set<String> vues = new HashSet<>();
         Map<Integer, Users> dests = new HashMap<>();
+        List<cd.mura.hrx.entity.config.JourFerie> feries = calendrier.actifs();
         for (Attendu a : attendus(objectifs)) {
             if (a.echeance() == null || !vues.add(a.cle())) continue;
             Relance o = ouvertes.get(a.cle()), r = new Relance();
             if (o != null) { r.setNbRappels(o.getNbRappels()); r.setNbRelances(o.getNbRelances()); r.setNiveau(o.getNiveau()); r.setDernierEnvoi(o.getDernierEnvoi()); }
-            r.setEcheance(a.echeance());
-            boolean part = planifier(r, jour);
+            r.setEcheance(a.echeance()); r.setType(a.type());
+            boolean part = circuitCourt(a.type()) ? planifierCourt(r, jour, feries) : planifier(r, jour);
             Users d = dests.computeIfAbsent(a.destinataireId(), userDAO::findAccountById);
             out.add(new Simulation(d == null ? "#" + a.destinataireId() : d.getNomComplet(), d == null ? "" : d.getLogin(), d != null && d.getStatut() == 1,
                     d != null && d.getEmail() != null && !d.getEmail().isBlank(), a.type(), a.libelle(), a.echeance(), r.getNiveau(), r.getNbRelances(), part));

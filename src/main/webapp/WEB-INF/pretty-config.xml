@@ -20,6 +20,7 @@
     <url-mapping id="groupesUtilisateurs"><pattern value="/ui/groupesUtilisateurs"/><view-id value="/ui/groupesUtilisateurs.xhtml"/></url-mapping>
     <url-mapping id="userLogs"><pattern value="/ui/userLogs"/><view-id value="/ui/userLogs.xhtml"/></url-mapping>
     <url-mapping id="directions"><pattern value="/ui/directions"/><view-id value="/ui/directions.xhtml"/></url-mapping>
+    <url-mapping id="joursFeries"><pattern value="/ui/joursFeries"/><view-id value="/ui/joursFeries.xhtml"/></url-mapping>
     <url-mapping id="parametres"><pattern value="/ui/parametres"/><view-id value="/ui/parametres.xhtml"/></url-mapping>
 
     <!-- ===== Module Évaluations (à venir) ===== -->
