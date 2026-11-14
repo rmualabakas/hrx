@@ -286,11 +286,16 @@ public class EquipeView implements Serializable {
             return;
         }
         FicheObjectifs fo = ficheObjectifs(u);
-        if (!aObjectifsEnCours(u)) {
-            alerter(u, "objectifs", "Aucun objectif validé",
-                    "Un collaborateur ne peut être évalué que sur des objectifs fixés et validés. Fixez et validez ses objectifs, puis intégrez-le à la campagne.",
-                    "Objectifs validés pour " + exercice, "0", nbProposes(u) > 0 ? nbProposes(u) + " proposition(s) en attente de votre validation" : "aucune proposition en attente",
-                    "Fixer les objectifs", "/ui/objectifs?salarie=" + u.getId() + "&exercice=" + exercice);
+        if (!objectifsSignes(u)) {
+            FicheObjectifs f0 = ficheObjectifs(u);
+            boolean aucun = f0 == null || f0.getNbValides() == 0;
+            alerter(u, "objectifs", aucun ? "Aucun objectif fixé" : "Fiche d'objectifs non signée",
+                    aucun ? "Un collaborateur ne peut être évalué que sur des objectifs fixés, transmis puis signés par lui et par vous. Fixez ses objectifs et transmettez-lui la fiche."
+                          : "Un collaborateur n'est évalué que sur une fiche d'objectifs signée par les deux parties : d'abord par lui, puis par vous. Finalisez la fiche, puis intégrez-le à la campagne.",
+                    "Fiche d'objectifs " + exercice, aucun ? "à fixer" : etatFicheObjectifs(u),
+                    aucun ? (nbProposes(u) > 0 ? nbProposes(u) + " proposition(s) en attente de votre validation" : "aucun objectif validé")
+                          : f0.getNbValides() + " objectif(s) validé(s)" + (f0.isSigneeSalarie() ? " · signée par le collaborateur" : f0.isTransmise() ? " · transmise, en attente de sa signature" : " · pas encore transmise"),
+                    aucun ? "Fixer les objectifs" : "Ouvrir la fiche d'objectifs", "/ui/objectifs?salarie=" + u.getId() + "&exercice=" + exercice);
             return;
         }
         ModeleFiche m = modeleFicheDAO.pourCampagne(campagne, u);
@@ -307,7 +312,18 @@ public class EquipeView implements Serializable {
         return membres.stream().filter(u -> isDirect(u) && u.getEvaluable() == 1 && !enEssai(u) && fiche(u) == null).toList();
     }
     /** Éligible à la campagne : au moins un objectif validé pour l'exercice (fiche de fixation en cours ou signée). */
-    public boolean aObjectifsEnCours(Users u) { FicheObjectifs f = ficheObjectifs(u); return f != null && f.getNbValides() > 0; }
+    /** Éligible à la campagne : fiche d'objectifs de l'exercice signée par le collaborateur puis par le N+1. */
+    public boolean aObjectifsEnCours(Users u) { return objectifsSignes(u); }
+    /** Où en est la fiche d'objectifs (affiché tant qu'elle n'est pas signée par les deux parties). */
+    public String etatFicheObjectifs(Users u) {
+        FicheObjectifs f = ficheObjectifs(u);
+        if (f == null || f.getNbValides() == 0) return "objectifs à fixer";
+        if (f.isSignee()) return "fiche signée";
+        if (f.getNbContestations() > 0) return "révision demandée";
+        if (f.isSigneeSalarie()) return "à signer par vous";
+        if (f.isTransmise()) return "chez le collaborateur";
+        return f.getNbProposes() > 0 ? "propositions à traiter" : "à transmettre";
+    }
     public List<Users> getCandidatsEligibles() { return getCandidats().stream().filter(this::aObjectifsEnCours).toList(); }
     public List<Users> getCandidatsBloques() { return getCandidats().stream().filter(u -> !aObjectifsEnCours(u)).toList(); }
     public void preparerSelection() { selectionIds = new ArrayList<>(getCandidatsEligibles().stream().map(Users::getId).toList()); }
@@ -316,7 +332,7 @@ public class EquipeView implements Serializable {
         int n = 0; List<String> refuses = new ArrayList<>();
         for (Users u : getCandidats()) {
             if (!selectionIds.contains(u.getId())) continue;
-            if (!aObjectifsEnCours(u)) { refuses.add(u.getNomComplet()); continue; }
+            if (!objectifsSignes(u)) { refuses.add(u.getNomComplet()); continue; }
             FicheObjectifs fo = ficheObjectifs(u);
             ModeleFiche m = modeleFicheDAO.pourCampagne(campagne, u);
             Evaluation e = evaluationService.initier(campagne, u, loginBean.getUsers(), m, fo);
@@ -324,7 +340,7 @@ public class EquipeView implements Serializable {
             try { notifications.ficheInitiee(evaluationService.charger(e.getId())); } catch (Exception ex) { }
             n++;
         }
-        if (!refuses.isEmpty()) error("Non intégré(s) : objectifs manquants", String.join(", ", refuses) + " - fixez et validez d'abord leurs objectifs.");
+        if (!refuses.isEmpty()) error("Non intégré(s) : fiche d'objectifs non signée", String.join(", ", refuses) + " - la fiche d'objectifs doit d'abord être signée par le collaborateur puis par vous.");
         if (n == 0) { if (refuses.isEmpty()) error("Aucune sélection", "Cochez au moins un collaborateur."); return; }
         cd.mura.hrx.utils.Dialogue.succes(n + " collaborateur" + (n > 1 ? "s intégrés" : " intégré") + " à la campagne", "Chacun reçoit un e-mail et peut remplir son auto-évaluation depuis « Mes évaluations ».");
         org.primefaces.PrimeFaces.current().ajax().addCallbackParam("ok", true);

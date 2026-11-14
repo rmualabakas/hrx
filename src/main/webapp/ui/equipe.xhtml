@@ -132,6 +132,7 @@
                             <div class="hx-team__meta">
                                 <span><i class="pi pi-list"></i> #{equipeView.nbObjectifs(u)} objectif#{equipeView.nbObjectifs(u) gt 1 ? 's' : ''}
                                     <ui:fragment rendered="#{equipeView.objectifsSignes(u)}"> · <b class="hx-ok">fiche signée</b></ui:fragment>
+                                    <ui:fragment rendered="#{not equipeView.objectifsSignes(u) and equipeView.nbObjectifs(u) gt 0}"> · <b class="hx-warn" title="L'évaluation ne peut être initiée qu'une fois la fiche d'objectifs signée par le collaborateur puis par le N+1">#{equipeView.etatFicheObjectifs(u)}</b></ui:fragment>
                                     <ui:fragment rendered="#{equipeView.fixationEnRetard(u) and equipeView.isDirect(u)}"> · <b class="hx-warn" title="Fenêtre de fixation dépassée (fin janvier, ou 1 mois après l'embauche)">fixation en retard</b></ui:fragment>
                                     <ui:fragment rendered="#{equipeView.nbProposes(u) gt 0}"> · <b class="hx-warn">#{equipeView.nbProposes(u)} proposition#{equipeView.nbProposes(u) gt 1 ? 's' : ''}</b></ui:fragment>
                                 </span>
@@ -146,11 +147,11 @@
 
                             <div class="hx-team__actions">
                                 <ui:fragment rendered="#{u.evaluable eq 1 and equipeView.isDirect(u)}">
-                                    <p:button value="#{equipeView.objectifsSignes(u) ? 'Objectifs' : 'Fixer les objectifs'}" icon="pi pi-flag" styleClass="hx-btn-secondary hx-btn-sm" outcome="/ui/objectifs">
+                                    <p:button value="#{equipeView.objectifsSignes(u) ? 'Objectifs' : (equipeView.nbObjectifs(u) gt 0 ? 'Fiche d’objectifs' : 'Fixer les objectifs')}" icon="pi pi-flag" styleClass="hx-btn-secondary hx-btn-sm" outcome="/ui/objectifs">
                                         <f:param name="salarie" value="#{u.id}"/><f:param name="exercice" value="#{equipeView.exercice}"/>
                                     </p:button>
                                     <p:commandButton value="Initier l'évaluation" icon="pi pi-play" styleClass="hx-btn-sm" process="@this"
-                                                     rendered="#{empty equipeView.fiche(u) and not empty equipeView.campagne and equipeView.nbObjectifs(u) gt 0}"
+                                                     rendered="#{empty equipeView.fiche(u) and not empty equipeView.campagne and equipeView.objectifsSignes(u)}"
                                                      actionListener="#{equipeView.initier(u)}" update=":grille :kpis :bandeau :globalGrowl"/>
                                     <p:button value="#{equipeView.fiche(u).statut eq 'SOUMISE' ? 'Évaluer' : 'Ouvrir la fiche'}" icon="pi pi-file-edit" styleClass="hx-btn-sm"
                                               rendered="#{not empty equipeView.fiche(u)}" outcome="/ui/fiche">
@@ -219,7 +220,7 @@
                                                 <f:param name="salarie" value="#{u.id}"/><f:param name="exercice" value="#{equipeView.exercice}"/>
                                             </p:button>
                                             <p:commandButton icon="pi pi-play" title="Initier l'évaluation" styleClass="hx-icon-btn hx-icon-btn--send" process="@this"
-                                                             rendered="#{empty equipeView.fiche(u) and not empty equipeView.campagne and equipeView.nbObjectifs(u) gt 0}"
+                                                             rendered="#{empty equipeView.fiche(u) and not empty equipeView.campagne and equipeView.objectifsSignes(u)}"
                                                              actionListener="#{equipeView.initier(u)}" update=":grille :kpis :bandeau :globalGrowl"/>
                                             <p:button icon="pi pi-file-edit" title="#{equipeView.fiche(u).statut eq 'SOUMISE' ? 'Évaluer' : 'Ouvrir la fiche'}" styleClass="hx-icon-btn hx-icon-btn--primary"
                                                       rendered="#{not empty equipeView.fiche(u)}" outcome="/ui/fiche">
@@ -247,19 +248,19 @@
                 <p:messages showDetail="true" closable="true"/>
                 <p class="hx-field__help" style="margin-bottom:10px"><i class="pi pi-info-circle"></i> Cochez les collaborateurs à évaluer. Décochez ceux qui ne le sont pas sur cette période (arrivée récente, longue absence, départ…). <b>Un collaborateur sans objectif validé pour l'exercice ne peut pas être intégré.</b></p>
                 <ui:fragment rendered="#{empty equipeView.candidatsEligibles}">
-                    <div class="hx-empty hx-empty--sm"><i class="pi pi-flag"></i><strong>Aucun collaborateur éligible</strong>Fixez et validez d'abord les objectifs de vos collaborateurs.</div>
+                    <div class="hx-empty hx-empty--sm"><i class="pi pi-flag"></i><strong>Aucun collaborateur éligible</strong>Seuls les collaborateurs dont la fiche d'objectifs est signée par eux puis par vous peuvent être intégrés à la campagne.</div>
                 </ui:fragment>
                 <p:selectManyCheckbox value="#{equipeView.selectionIds}" layout="responsive" columns="1" styleClass="hx-poplist" converter="jakarta.faces.Integer" rendered="#{not empty equipeView.candidatsEligibles}">
                     <f:selectItems value="#{equipeView.candidatsEligibles}" var="c" itemValue="#{c.id}"
-                                   itemLabel="#{c.nomComplet} - #{empty c.fonction ? 'fonction non renseignée' : c.fonction} · #{equipeView.nbObjectifs(c)} objectif#{equipeView.nbObjectifs(c) gt 1 ? 's' : ''}#{equipeView.objectifsSignes(c) ? '' : ' (fiche non signée)'}#{equipeView.recrue(c) ? ' · recrue' : ''}"/>
+                                   itemLabel="#{c.nomComplet} - #{empty c.fonction ? 'fonction non renseignée' : c.fonction} · #{equipeView.nbObjectifs(c)} objectif#{equipeView.nbObjectifs(c) gt 1 ? 's' : ''}#{equipeView.recrue(c) ? ' · recrue' : ''}"/>
                 </p:selectManyCheckbox>
                 <ui:fragment rendered="#{not empty equipeView.candidatsBloques}">
                     <div class="hx-blocked">
-                        <h4><i class="pi pi-ban"></i> Non éligibles - aucun objectif validé pour l'exercice #{equipeView.exercice}</h4>
+                        <h4><i class="pi pi-ban"></i> Non éligibles - fiche d'objectifs #{equipeView.exercice} non signée par les deux parties</h4>
                         <ui:repeat value="#{equipeView.candidatsBloques}" var="b">
                             <div class="hx-blocked__row">
-                                <span><b>#{b.nomComplet}</b><small> - #{empty b.fonction ? 'fonction non renseignée' : b.fonction}<ui:fragment rendered="#{equipeView.nbProposes(b) gt 0}"> · #{equipeView.nbProposes(b)} proposition#{equipeView.nbProposes(b) gt 1 ? 's' : ''} à valider</ui:fragment></small></span>
-                                <p:button value="Fixer les objectifs" icon="pi pi-flag" styleClass="hx-btn-secondary hx-btn-sm" outcome="/ui/objectifs"><f:param name="salarie" value="#{b.id}"/><f:param name="exercice" value="#{equipeView.exercice}"/></p:button>
+                                <span><b>#{b.nomComplet}</b><small> - #{empty b.fonction ? 'fonction non renseignée' : b.fonction} · #{equipeView.etatFicheObjectifs(b)}<ui:fragment rendered="#{equipeView.nbProposes(b) gt 0}"> · #{equipeView.nbProposes(b)} proposition#{equipeView.nbProposes(b) gt 1 ? 's' : ''} à valider</ui:fragment></small></span>
+                                <p:button value="#{equipeView.nbObjectifs(b) gt 0 ? 'Fiche d’objectifs' : 'Fixer les objectifs'}" icon="pi pi-flag" styleClass="hx-btn-secondary hx-btn-sm" outcome="/ui/objectifs"><f:param name="salarie" value="#{b.id}"/><f:param name="exercice" value="#{equipeView.exercice}"/></p:button>
                             </div>
                         </ui:repeat>
                     </div>

@@ -402,7 +402,9 @@ public class TableauBordView implements Serializable {
     public long getEquipeSansObjectifs() { return equipe.stream().filter(u -> u.getEvaluable() == 1 && niveaux.get(u.getId()) == 1 && !(objectifsEquipe.containsKey(u.getId()) && objectifsEquipe.get(u.getId()).getNbValides() > 0)).count(); }
     public long getEquipePropositions() { return equipe.stream().filter(u -> niveaux.get(u.getId()) == 1).mapToLong(u -> objectifsEquipe.containsKey(u.getId()) ? objectifsEquipe.get(u.getId()).getNbProposes() : 0).sum(); }
     public long getEquipeInitiees() { return fichesEquipe.size(); }
-    public long getEquipeAInitier() { return campagne == null ? 0 : equipe.stream().filter(u -> u.getEvaluable() == 1 && niveaux.get(u.getId()) == 1 && !fichesEquipe.containsKey(u.getId())).count(); }
+    /** Collaborateurs directs prêts à intégrer la campagne : fiche d'objectifs signée par les deux parties, pas encore de fiche d'évaluation. */
+    public long getEquipeAInitier() { return campagne == null ? 0 : equipe.stream().filter(u -> u.getEvaluable() == 1 && niveaux.get(u.getId()) == 1 && !fichesEquipe.containsKey(u.getId())
+            && objectifsEquipe.containsKey(u.getId()) && objectifsEquipe.get(u.getId()).isSignee()).count(); }
     public long getEquipeATraiter() { return fichesEquipe.values().stream().filter(e -> Evaluation.SOUMISE.equals(e.getStatut()) && e.getEvaluateur() != null && e.getEvaluateur().getId() == moi.getId()).count(); }
     public long getEquipeEnAutoEval() { return fichesEquipe.values().stream().filter(e -> Evaluation.INITIEE.equals(e.getStatut()) || Evaluation.RETOURNEE.equals(e.getStatut())).count(); }
     public long getEquipeEvaluees() { return fichesEquipe.values().stream().filter(e -> Evaluation.EVALUEE.equals(e.getStatut())).count(); }

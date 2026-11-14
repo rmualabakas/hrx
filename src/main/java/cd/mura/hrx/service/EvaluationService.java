@@ -34,6 +34,9 @@ public class EvaluationService {
                 || s.getSuperieurHierarchique().getId() != evaluateur.getId() || s.getId() == evaluateur.getId()) {
             throw new SecurityException("Seul le N+1 direct du collaborateur peut initier sa fiche d'évaluation");
         }
+        if (ficheObjectifs == null || !em.find(cd.mura.hrx.entity.eval.FicheObjectifs.class, ficheObjectifs.getId()).isSignee()) {
+            throw new IllegalStateException("La fiche d'objectifs doit être signée par le collaborateur puis par le N+1 avant l'évaluation");
+        }
         if (essaiNonClos(s.getId())) {
             throw new IllegalStateException("L'évaluation de fin de période d'essai de ce collaborateur n'est pas encore validée par la DCHT");
         }
