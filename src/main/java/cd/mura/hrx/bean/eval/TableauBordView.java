@@ -218,8 +218,8 @@ public class TableauBordView implements Serializable {
                 taches.add(new Tache("pi-hourglass", pluriel(mesObjectifs.getNbProposes(), "proposition d'objectif", "propositions d'objectifs") + " en attente de validation",
                         "Votre hiérarchie doit les valider ou les refuser.", "/ui/mesEvaluations", "info"));
             else if (mesObjectifs.getNbContestations() > 0)
-                taches.add(new Tache("pi-flag", pluriel(mesObjectifs.getNbContestations(), "objectif contesté", "objectifs contestés") + " en attente de réponse",
-                        "Votre N+1 doit réviser ou maintenir les objectifs contestés avant la signature.", "/ui/objectifs?salarie=" + moi.getId() + "&exercice=" + exercice, "info"));
+                taches.add(new Tache("pi-flag", pluriel(mesObjectifs.getNbContestations(), "demande de révision d'objectif", "demandes de révision d'objectifs") + " en attente de réponse",
+                        "Votre N+1 doit réviser ou maintenir ces objectifs avant la signature.", "/ui/objectifs?salarie=" + moi.getId() + "&exercice=" + exercice, "info"));
             else if (!mesObjectifs.isSignee() && !mesObjectifs.isSigneeSalarie())
                 taches.add(new Tache("pi-pen-to-square", "Signer votre fiche d'objectifs " + exercice,
                         pluriel(mesObjectifs.getNbValides(), "objectif validé", "objectifs validés") + (mesObjectifs.isSigneeN1() ? " · déjà signée par votre N+1 : il ne manque que votre signature." : " · votre signature et celle de votre N+1 figent les objectifs."),
@@ -276,7 +276,7 @@ public class TableauBordView implements Serializable {
             if (!contestees.isEmpty()) {
                 long nb = contestees.stream().mapToLong(FicheObjectifs::getNbContestations).sum();
                 FicheObjectifs f0 = contestees.get(0);
-                taches.add(new Tache("pi-flag-fill", pluriel(nb, "objectif contesté", "objectifs contestés") + (contestees.size() == 1 ? " par " + f0.getSalarie().getNomComplet() : " par vos collaborateurs"),
+                taches.add(new Tache("pi-flag-fill", pluriel(nb, "demande de révision d'objectif", "demandes de révision d'objectifs") + (contestees.size() == 1 ? " de " + f0.getSalarie().getNomComplet() : " de vos collaborateurs"),
                         "Révisez-les ou maintenez-les en motivant votre réponse : la fiche ne peut être signée qu'ensuite.",
                         contestees.size() == 1 ? "/ui/objectifs?salarie=" + f0.getSalarie().getId() + "&exercice=" + exercice : "/ui/equipe", "danger"));
             }

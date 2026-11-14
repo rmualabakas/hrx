@@ -99,8 +99,8 @@
                     <ui:fragment rendered="#{objectifsView.nbContestations gt 0}">
                         <div class="hx-alert hx-alert--warn hx-contest-banner" role="status">
                             <i class="pi pi-flag-fill" aria-hidden="true"></i>
-                            <div><strong>#{objectifsView.nbContestations} objectif#{objectifsView.nbContestations gt 1 ? 's' : ''} contesté#{objectifsView.nbContestations gt 1 ? 's' : ''} par le collaborateur</strong>
-                                <span>#{objectifsView.moi ? 'Votre N+1 doit réviser ou maintenir chaque objectif contesté ; la fiche ne pourra être signée qu’ensuite.' : 'Révisez chaque objectif contesté ou maintenez-le en motivant votre réponse : la fiche ne pourra être signée qu’ensuite.'}</span></div>
+                            <div><strong>#{objectifsView.nbContestations} demande#{objectifsView.nbContestations gt 1 ? 's' : ''} de révision d’objectif</strong>
+                                <span>#{objectifsView.moi ? 'Votre N+1 doit réviser ou maintenir chaque objectif concerné ; la fiche ne pourra être signée qu’ensuite.' : 'Le collaborateur demande à revoir certains objectifs : révisez-les ou maintenez-les en motivant votre réponse. La fiche ne pourra être signée qu’ensuite.'}</span></div>
                         </div>
                     </ui:fragment>
 
@@ -123,7 +123,7 @@
                                                          actionListener="#{objectifsView.nouveau(n.id)}" update=":dlgObjectif" oncomplete="PF('dlgObjectif').show()"/>
                                     </header>
                                     <ui:fragment rendered="#{not empty objectifsView.objectifsDe(n)}">
-                                        <div class="hx-objtab #{objectifsView.lectureSeule ? 'hx-objtab--ro' : ''}">
+                                        <div class="hx-objtab #{objectifsView.avecActions ? '' : 'hx-objtab--ro'}">
                                             <div class="hx-objtab__head"><span>Objectif</span><span>Moyens</span><span>Indicateur · cible</span><span>Période</span><span title="Pondération dans la note (0 à 100 %)">Pondération</span><span></span></div>
                                             <ui:repeat value="#{objectifsView.objectifsDe(n)}" var="o" varStatus="st">
                                                 <div class="hx-objtab__row #{o.propose ? 'is-proposed' : ''} #{o.statut eq 'REFUSE' ? 'is-refused' : ''} #{o.contestationEnAttente ? 'is-contested' : ''}">
@@ -139,7 +139,7 @@
                                                         <ui:fragment rendered="#{not empty o.contestationStatut}">
                                                             <div class="hx-contest hx-contest--#{o.contestationStatut}">
                                                                 <span class="hx-contest__head"><i class="pi #{o.contestationEnAttente ? 'pi-flag-fill' : (o.contestationRevise ? 'pi-check-circle' : 'pi-lock')}"></i>
-                                                                    #{o.contestationEnAttente ? 'Révision demandée' : (o.contestationRevise ? 'Révisé suite à contestation' : 'Maintenu par le N+1')} · <b>#{o.contestationMotifLabel}</b></span>
+                                                                    #{o.contestationEnAttente ? 'Révision demandée' : (o.contestationRevise ? 'Révisé à la demande du collaborateur' : 'Maintenu par le N+1')} · <b>#{o.contestationMotifLabel}</b></span>
                                                                 <span class="hx-contest__txt">« #{o.contestationCommentaire} »</span>
                                                                 <ui:fragment rendered="#{not empty o.contestationReponse}"><span class="hx-contest__rep"><i class="pi pi-reply"></i> #{o.contestationReponse}</span></ui:fragment>
                                                             </div>
@@ -156,11 +156,11 @@
                                                     </div>
                                                     <div class="hx-objtab__cell hx-objtab__poids"><ui:fragment rendered="#{o.poids gt 0}">#{o.poids} %</ui:fragment><ui:fragment rendered="#{o.poids le 0}">—</ui:fragment></div>
                                                     <div class="hx-row-actions">
-                                                        <p:commandLink process="@this" title="Contester cet objectif et demander sa révision au N+1" styleClass="hx-contest-btn" rendered="#{objectifsView.isPeutContester(o)}"
-                                                                       actionListener="#{objectifsView.preparerContestation(o)}" update=":dlgContester" oncomplete="PF('dlgContester').show()"><i class="pi pi-flag"></i> Contester</p:commandLink>
-                                                        <p:commandLink process="@this" title="Retirer ma contestation" styleClass="hx-contest-btn hx-contest-btn--ghost" rendered="#{objectifsView.isPeutRetirerContestation(o)}"
+                                                        <p:commandLink process="@this" title="Demander à votre N+1 de revoir cet objectif" styleClass="hx-contest-btn" rendered="#{objectifsView.isPeutContester(o)}"
+                                                                       actionListener="#{objectifsView.preparerContestation(o)}" update=":dlgContester" oncomplete="PF('dlgContester').show()"><i class="pi pi-comments"></i> Demander une révision</p:commandLink>
+                                                        <p:commandLink process="@this" title="Retirer ma demande de révision" styleClass="hx-contest-btn hx-contest-btn--ghost" rendered="#{objectifsView.isPeutRetirerContestation(o)}"
                                                                        actionListener="#{objectifsView.retirerContestation(o)}" update="@form :globalGrowl"><i class="pi pi-undo"></i> Retirer</p:commandLink>
-                                                        <p:commandLink process="@this" title="Réviser l'objectif contesté" styleClass="hx-contest-btn" rendered="#{objectifsView.isPeutTraiterContestation(o)}"
+                                                        <p:commandLink process="@this" title="Réviser l'objectif" styleClass="hx-contest-btn" rendered="#{objectifsView.isPeutTraiterContestation(o)}"
                                                                        actionListener="#{objectifsView.reviser(o)}" update=":dlgObjectif" oncomplete="PF('dlgObjectif').show()"><i class="pi pi-pencil"></i> Réviser</p:commandLink>
                                                         <p:commandLink process="@this" title="Maintenir l'objectif en motivant votre réponse" styleClass="hx-contest-btn hx-contest-btn--ghost" rendered="#{objectifsView.isPeutTraiterContestation(o)}"
                                                                        actionListener="#{objectifsView.preparerMaintien(o)}" update=":dlgMaintien" oncomplete="PF('dlgMaintien').show()"><i class="pi pi-lock"></i> Maintenir</p:commandLink>

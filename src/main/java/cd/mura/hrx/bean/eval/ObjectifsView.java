@@ -228,9 +228,9 @@ public class ObjectifsView implements Serializable {
         if (getNbValides() == 0) { error("Aucun objectif validé", "La fiche doit contenir au moins un objectif validé."); return; }
         if (!isPonderationLibre() && getPoidsTotal() != 100) { error("Pondération incomplète", "La somme des pondérations doit faire 100 %. Laissez-les toutes à 0 pour donner la même pondération à chaque objectif."); return; }
         if (getNbProposes() > 0 && (n1 || hierarchie || dcht)) { error("Propositions en attente", "Validez ou refusez d'abord les objectifs proposés par le collaborateur."); return; }
-        if (getNbContestations() > 0) { cd.mura.hrx.utils.Dialogue.erreur("Contestation en cours", (n1 || hierarchie || dcht)
-                ? "Le collaborateur conteste " + getNbContestations() + " objectif(s) : révisez-les ou maintenez-les en motivant votre réponse avant de signer."
-                : "Votre N+1 doit d'abord répondre à votre contestation avant que la fiche puisse être signée."); return; }
+        if (getNbContestations() > 0) { cd.mura.hrx.utils.Dialogue.erreur("Révision demandée", (n1 || hierarchie || dcht)
+                ? "Le collaborateur demande la révision de " + getNbContestations() + " objectif(s) : révisez-les ou maintenez-les en motivant votre réponse avant de signer."
+                : "Votre N+1 doit d'abord répondre à votre demande de révision avant que la fiche puisse être signée."); return; }
         Date now = new Date();
         if (moi && !fiche.isSigneeSalarie()) fiche.setDateSignatureSalarie(now);
         if ((n1 || hierarchie || dcht) && !fiche.isSigneeN1()) { fiche.setDateSignatureN1(now); fiche.setSignataireN1(loginBean.getUsers()); }
@@ -293,7 +293,7 @@ public class ObjectifsView implements Serializable {
         }
         objectifDAO.save(edit);
         if (revision) {
-            auditService.updated("Objectifs", "Objectif", edit.getId(), "Objectif révisé suite à contestation", salarie.getNomComplet() + " : " + edit.getLibelle());
+            auditService.updated("Objectifs", "Objectif", edit.getId(), "Objectif révisé à la demande du collaborateur", salarie.getNomComplet() + " : " + edit.getLibelle());
             try { notifications.contestationTraitee(objectifDAO.findFiche(fiche.getId()), edit); } catch (Exception ex) { }
         }
         auditService.log(creation ? "CREATE" : "UPDATE", "Objectifs", "Objectif", edit.getId(),
@@ -338,6 +338,8 @@ public class ObjectifsView implements Serializable {
     public void setReponseContestation(String v) { reponseContestation = v; }
     public java.util.Map<String, String> getMotifsContestation() { return Objectif.MOTIFS_CONTESTATION; }
     public long getNbContestations() { return objectifs.stream().filter(Objectif::isContestationEnAttente).count(); }
+    /** Colonne d'actions affichée : édition possible, ou demande / traitement d'une révision. */
+    public boolean isAvecActions() { return !isLectureSeule() || objectifs.stream().anyMatch(o -> isPeutContester(o) || isPeutRetirerContestation(o) || isPeutTraiterContestation(o)); }
 
     /** Le collaborateur peut contester un objectif validé tant qu'il n'a pas signé sa fiche. */
     public boolean isPeutContester(Objectif o) {
@@ -353,7 +355,7 @@ public class ObjectifsView implements Serializable {
     public void contester() {
         if (edit == null) return;
         Objectif x = objectifDAO.find(edit.getId());
-        if (x == null || !isPeutContester(x)) { cd.mura.hrx.utils.Dialogue.erreur("Contestation impossible", "Cet objectif ne peut plus être contesté (fiche déjà signée par vous ou évaluation en cours)."); return; }
+        if (x == null || !isPeutContester(x)) { cd.mura.hrx.utils.Dialogue.erreur("Demande impossible", "La révision de cet objectif ne peut plus être demandée (fiche déjà signée par vous ou évaluation en cours)."); return; }
         if (motifContestation == null || !Objectif.MOTIFS_CONTESTATION.containsKey(motifContestation)) { error("Motif requis", "Choisissez la raison de votre demande de révision."); return; }
         if (commentaireContestation == null || commentaireContestation.trim().length() < 10) { error("Explication requise", "Expliquez en quelques mots pourquoi cet objectif doit être revu (10 caractères au moins)."); return; }
         x.setContestationStatut(Objectif.CONTEST_EN_ATTENTE); x.setContestationMotif(motifContestation);
@@ -365,7 +367,7 @@ public class ObjectifsView implements Serializable {
             fiche.setDateSignatureN1(null); fiche.setSignataireN1(null); fiche.setStatut(FicheObjectifs.EN_COURS);
             fiche = objectifDAO.saveFiche(fiche);
         }
-        auditService.updated("Objectifs", "Objectif", x.getId(), "Contestation d'un objectif par le collaborateur",
+        auditService.updated("Objectifs", "Objectif", x.getId(), "Demande de révision d'un objectif par le collaborateur",
                 salarie.getNomComplet() + " : " + x.getLibelle() + "\nMotif : " + x.getContestationMotifLabel() + "\n" + x.getContestationCommentaire());
         try { notifications.objectifConteste(objectifDAO.findFiche(fiche.getId()), x); } catch (Exception ex) { }
         org.primefaces.PrimeFaces.current().ajax().addCallbackParam("ok", true);
@@ -379,8 +381,8 @@ public class ObjectifsView implements Serializable {
         if (x == null || !isPeutRetirerContestation(x)) return;
         x.setContestationStatut(null); x.setContestationMotif(null); x.setContestationCommentaire(null); x.setDateContestation(null);
         objectifDAO.save(x);
-        auditService.updated("Objectifs", "Objectif", x.getId(), "Contestation retirée par le collaborateur", salarie.getNomComplet() + " : " + x.getLibelle());
-        info("Contestation retirée", x.getLibelle());
+        auditService.updated("Objectifs", "Objectif", x.getId(), "Demande de révision retirée par le collaborateur", salarie.getNomComplet() + " : " + x.getLibelle());
+        info("Demande de révision retirée", x.getLibelle());
         charger();
     }
 
@@ -396,7 +398,7 @@ public class ObjectifsView implements Serializable {
         if (reponseContestation == null || reponseContestation.trim().length() < 10) { error("Justification requise", "Expliquez au collaborateur pourquoi l'objectif est maintenu (10 caractères au moins)."); return; }
         x.setContestationStatut(Objectif.CONTEST_MAINTENU); x.setContestationReponse(reponseContestation.trim()); x.setDateReponseContestation(new Date());
         objectifDAO.save(x);
-        auditService.updated("Objectifs", "Objectif", x.getId(), "Objectif maintenu malgré la contestation", salarie.getNomComplet() + " : " + x.getLibelle() + "\nRéponse : " + x.getContestationReponse());
+        auditService.updated("Objectifs", "Objectif", x.getId(), "Objectif maintenu après demande de révision", salarie.getNomComplet() + " : " + x.getLibelle() + "\nRéponse : " + x.getContestationReponse());
         try { notifications.contestationTraitee(objectifDAO.findFiche(fiche.getId()), x); } catch (Exception ex) { }
         org.primefaces.PrimeFaces.current().ajax().addCallbackParam("ok", true);
         cd.mura.hrx.utils.Dialogue.succes("Objectif maintenu", "Votre réponse est transmise au collaborateur par e-mail. La fiche peut maintenant être signée.");
