@@ -90,6 +90,21 @@ public class ReportingView implements Serializable {
         public long getDemandes() { return demandes; } public long getHaute() { return haute; } public long getMoyenne() { return moyenne; } public long getBasse() { return basse; }
         public long getParEvaluateur() { return parEvaluateur; } public long getParEvalue() { return parEvalue; } public long getParDirecteur() { return parDirecteur; }
         public String getDirectionsTexte() { return String.join(", ", directions); }
+        private static void ajout(List<String> l, long n, String un, String plusieurs) { if (n > 0) l.add(n + " " + (n > 1 ? plusieurs : un)); }
+        /** Répartition des priorités en clair, seulement si plusieurs priorités coexistent (sinon le badge suffit). */
+        public String getDetailPriorites() {
+            List<String> l = new ArrayList<>();
+            ajout(l, haute, "haute", "hautes"); ajout(l, moyenne, "moyenne", "moyennes"); ajout(l, basse, "basse", "basses");
+            return l.size() > 1 ? String.join(" · ", l) : "";
+        }
+        /** Qui a exprimé le besoin, en clair, sans les zéros. */
+        public String getDetailOrigines() {
+            List<String> l = new ArrayList<>();
+            if (parEvalue > 0) l.add("Collaborateur" + (demandes > 1 ? " (" + parEvalue + ")" : ""));
+            if (parEvaluateur > 0) l.add("N+1" + (demandes > 1 ? " (" + parEvaluateur + ")" : ""));
+            if (parDirecteur > 0) l.add("Directeur" + (demandes > 1 ? " (" + parDirecteur + ")" : ""));
+            return String.join(" · ", l);
+        }
         public String getCollaborateursTexte() { return String.join(", ", collaborateurs); }
         public String getPrioriteDominante() { return haute >= moyenne && haute >= basse && haute > 0 ? "HAUTE" : moyenne >= basse ? "MOYENNE" : "BASSE"; }
     }

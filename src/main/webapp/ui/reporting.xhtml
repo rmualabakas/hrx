@@ -157,15 +157,15 @@
                             <ui:fragment rendered="#{not empty reportingView.formations}">
                                 <div class="hx-rpt__scroll">
                                     <table class="hx-dirtable">
-                                        <thead><tr><th>Formation</th><th>Demandes</th><th>Priorité</th><th>Origine</th><th>Directions</th><th>Collaborateurs</th></tr></thead>
+                                        <thead><tr><th>Formation</th><th>Demandes</th><th>Priorité</th><th>Demandé par</th><th>Directions</th><th>Collaborateurs</th></tr></thead>
                                         <tbody>
                                         <ui:repeat value="#{reportingView.formations}" var="f">
                                             <tr>
                                                 <td><strong>#{f.intitule}</strong></td>
                                                 <td><div class="hx-rpt__taux"><div class="hx-att__bar"><span class="hx-att--3" style="width:#{reportingView.pctFormation(f)}%"></span></div><b>#{f.demandes}</b></div></td>
                                                 <td><span class="hx-badge #{reportingView.prioriteClasse(f.prioriteDominante)}">#{reportingView.prioriteLabel(f.prioriteDominante)}</span>
-                                                    <small class="hx-suivi__etape">H #{f.haute} · M #{f.moyenne} · B #{f.basse}</small></td>
-                                                <td><small>Évaluateur #{f.parEvaluateur} · Évalué #{f.parEvalue} · Directeur #{f.parDirecteur}</small></td>
+                                                    <ui:fragment rendered="#{not empty f.detailPriorites}"><small class="hx-suivi__etape">#{f.detailPriorites}</small></ui:fragment></td>
+                                                <td><small>#{f.detailOrigines}</small></td>
                                                 <td><small>#{f.directionsTexte}</small></td>
                                                 <td><small class="hx-muted">#{f.collaborateursTexte}</small></td>
                                             </tr>
