@@ -98,7 +98,7 @@
                             <div class="hx-dash__fact">
                                 <b>#{tableauBordView.mesObjectifsValides}</b>
                                 <span>objectif#{tableauBordView.mesObjectifsValides gt 1 ? 's' : ''} validé#{tableauBordView.mesObjectifsValides gt 1 ? 's' : ''}</span>
-                                <small>#{tableauBordView.mesObjectifsSignes ? 'Fiche d’objectifs signée' : (tableauBordView.mesObjectifsValides gt 0 ? 'Fiche d’objectifs en cours' : 'À fixer avec votre N+1')}</small>
+                                <small>#{tableauBordView.mesObjectifsSignes ? 'Fiche d’objectifs signée' : (tableauBordView.mesObjectifsValides gt 0 ? (tableauBordView.mesObjectifsASigner ? 'Fiche d’objectifs à signer' : 'Fiche d’objectifs en cours') : 'À fixer avec votre N+1')}</small>
                             </div>
                             <div class="hx-dash__fact">
                                 <b>#{tableauBordView.mesObjectifsProposes}</b>

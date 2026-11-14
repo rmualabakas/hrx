@@ -217,6 +217,13 @@ public class TableauBordView implements Serializable {
             else if (mesObjectifs.getNbProposes() > 0)
                 taches.add(new Tache("pi-hourglass", pluriel(mesObjectifs.getNbProposes(), "proposition d'objectif", "propositions d'objectifs") + " en attente de validation",
                         "Votre hiérarchie doit les valider ou les refuser.", "/ui/mesEvaluations", "info"));
+            else if (!mesObjectifs.isSignee() && !mesObjectifs.isSigneeSalarie())
+                taches.add(new Tache("pi-pen-to-square", "Signer votre fiche d'objectifs " + exercice,
+                        pluriel(mesObjectifs.getNbValides(), "objectif validé", "objectifs validés") + (mesObjectifs.isSigneeN1() ? " · déjà signée par votre N+1 : il ne manque que votre signature." : " · votre signature et celle de votre N+1 figent les objectifs."),
+                        "/ui/objectifs?salarie=" + moi.getId() + "&exercice=" + exercice, "primary"));
+            else if (!mesObjectifs.isSignee())
+                taches.add(new Tache("pi-hourglass", "Fiche d'objectifs signée, en attente de votre N+1",
+                        "Elle sera figée dès que votre N+1 l'aura signée à son tour.", "/ui/objectifs?salarie=" + moi.getId() + "&exercice=" + exercice, "info"));
             if (maFiche != null) {
                 switch (maFiche.getStatut()) {
                     case Evaluation.INITIEE -> taches.add(new Tache("pi-pencil", "Renseigner votre auto-évaluation",
@@ -260,6 +267,21 @@ public class TableauBordView implements Serializable {
             long props = getEquipePropositions();
             if (props > 0) taches.add(new Tache("pi-check-square", pluriel(props, "proposition d'objectif", "propositions d'objectifs") + " à valider",
                     "Objectifs saisis par vos collaborateurs, à valider ou refuser.", "/ui/equipe", "info"));
+            // fiches d'objectifs de mes collaborateurs directs prêtes à être signées par moi (N+1)
+            List<FicheObjectifs> aSigner = equipe.stream().filter(u -> niveaux.get(u.getId()) == 1)
+                    .map(u -> objectifsEquipe.get(u.getId()))
+                    .filter(f -> f != null && !f.isSignee() && !f.isSigneeN1() && f.getNbValides() > 0 && f.getNbProposes() == 0).toList();
+            if (aSigner.size() == 1) {
+                FicheObjectifs f = aSigner.get(0);
+                taches.add(new Tache("pi-pen-to-square", "Signer la fiche d'objectifs de " + f.getSalarie().getNomComplet(),
+                        f.isSigneeSalarie() ? "Le collaborateur a déjà signé : il ne manque que votre signature." : pluriel(f.getNbValides(), "objectif validé", "objectifs validés") + ", prêts à être signés.",
+                        "/ui/objectifs?salarie=" + f.getSalarie().getId() + "&exercice=" + exercice, "primary"));
+            } else if (aSigner.size() > 1) {
+                long dejaSignees = aSigner.stream().filter(FicheObjectifs::isSigneeSalarie).count();
+                taches.add(new Tache("pi-pen-to-square", pluriel(aSigner.size(), "fiche d'objectifs", "fiches d'objectifs") + " à signer",
+                        dejaSignees > 0 ? dejaSignees + " déjà signée(s) par le collaborateur, en attente de votre signature." : "Objectifs validés de vos collaborateurs, prêts à être signés.",
+                        "/ui/equipe", "primary"));
+            }
             long sansObj = getEquipeSansObjectifs();
             if (sansObj > 0) taches.add(new Tache("pi-flag", "Fixer les objectifs de " + pluriel(sansObj, "collaborateur", "collaborateurs"),
                     "Sans objectifs validés, un collaborateur ne peut pas intégrer la population évaluable.", "/ui/equipe", "warn"));
@@ -386,6 +408,8 @@ public class TableauBordView implements Serializable {
     public long getMesObjectifsValides() { return mesObjectifs == null ? 0 : mesObjectifs.getNbValides(); }
     public long getMesObjectifsProposes() { return mesObjectifs == null ? 0 : mesObjectifs.getNbProposes(); }
     public boolean isMesObjectifsSignes() { return mesObjectifs != null && mesObjectifs.isSignee(); }
+    /** Objectifs validés, sans proposition en attente, et pas encore signés par moi. */
+    public boolean isMesObjectifsASigner() { return mesObjectifs != null && !mesObjectifs.isSignee() && !mesObjectifs.isSigneeSalarie() && mesObjectifs.getNbValides() > 0 && mesObjectifs.getNbProposes() == 0; }
     public String getMaFicheEtat() {
         if (!isMoiEvaluable()) return "Compte non évaluable";
         if (campagne == null) return "Aucune campagne ouverte";
