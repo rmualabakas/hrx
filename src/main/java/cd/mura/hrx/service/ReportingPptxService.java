@@ -295,6 +295,9 @@ public class ReportingPptxService implements Serializable {
         c.setInsets(new org.apache.poi.sl.usermodel.Insets2D(4, 7, 4, 7));
         for (TableCell.BorderEdge e : TableCell.BorderEdge.values()) { c.setBorderColor(e, LIGNE); c.setBorderWidth(e, .5); }
         c.clearText();
+        // PowerPoint exige <a:bodyPr/> en tête du texte d'une cellule (sinon il « répare » le fichier et supprime le tableau).
+        org.openxmlformats.schemas.drawingml.x2006.main.CTTextBody corps = ((org.openxmlformats.schemas.drawingml.x2006.main.CTTableCell) c.getXmlObject()).getTxBody();
+        if (corps != null && corps.getBodyPr() == null) corps.addNewBodyPr();
         String[] lignes = v == null ? new String[]{""} : v.split("\n", -1);
         for (int i = 0; i < lignes.length; i++) {
             XSLFTextParagraph p = c.addNewTextParagraph();
