@@ -442,6 +442,7 @@ public class FicheView implements Serializable {
     private void redirect(String url) {
         try { FacesContext ctx = FacesContext.getCurrentInstance(); ctx.getExternalContext().redirect(ctx.getExternalContext().getRequestContextPath() + url); ctx.responseComplete(); } catch (IOException ignored) { }
     }
-    private void info(String t, String d) { FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_INFO, t, d)); }
-    private void error(String t, String d) { FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, t, d)); }
+    /** Messages de la fiche : fenêtre stylée (repli automatique sur un message classique hors ajax). */
+    private void info(String t, String d) { cd.mura.hrx.utils.Dialogue.succes(t, d); }
+    private void error(String t, String d) { cd.mura.hrx.utils.Dialogue.erreur(t, d); }
 }
