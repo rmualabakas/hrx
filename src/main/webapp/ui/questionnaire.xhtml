@@ -22,7 +22,7 @@
         <h:form id="frmQuest" prependId="false">
             <div class="hx-page-head">
                 <div>
-                    <p:link outcome="/ui/mesEvaluations" styleClass="hx-link-sm"><f:param name="onglet" value="2"/><i class="pi pi-arrow-left"></i> Mes évaluations de formation</p:link>
+                    <p:link outcome="/ui/mesEvaluations" styleClass="hx-pill-retour"><f:param name="onglet" value="2"/><i class="pi pi-arrow-left"></i> Mes évaluations de formation</p:link>
                     <h2>#{empty questionnaireView.questionnaire ? 'Évaluation de formation' : questionnaireView.questionnaire.intitule}</h2>
                     <ui:fragment rendered="#{not empty questionnaireView.questionnaire}">
                         <p>#{empty questionnaireView.questionnaire.organisme ? '' : questionnaireView.questionnaire.organisme}<ui:fragment rendered="#{not empty questionnaireView.questionnaire.formateur}"> · #{questionnaireView.questionnaire.formateur}</ui:fragment>

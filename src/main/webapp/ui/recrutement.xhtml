@@ -121,7 +121,7 @@
             <ui:fragment rendered="#{recrutementView.mode eq 'edition'}">
                 <div class="hx-page-head">
                     <div>
-                        <p:commandLink process="@this" update="@form" actionListener="#{recrutementView.annulerEdition}" styleClass="hx-link-sm"><i class="pi pi-arrow-left"></i> Annuler</p:commandLink>
+                        <p:commandLink process="@this" update="@form" actionListener="#{recrutementView.annulerEdition}" styleClass="hx-pill-retour"><i class="pi pi-arrow-left"></i> Annuler</p:commandLink>
                         <h2>#{recrutementView.edit.id eq 0 ? 'Nouveau poste' : 'Fiche et critères du poste'}</h2>
                         <p>Les critères d'âge, d'expérience et de niveau d'études sont vérifiés par calcul ; les autres sont appréciés par l'IA à la lecture du CV. Une information absente du CV ne satisfait pas le critère.</p>
                     </div>
@@ -274,7 +274,7 @@
             <ui:fragment rendered="#{recrutementView.mode eq 'poste' and not empty recrutementView.courant}">
                 <div class="hx-page-head">
                     <div>
-                        <p:commandLink process="@this" update="@form" actionListener="#{recrutementView.retourListe}" styleClass="hx-link-sm"><i class="pi pi-arrow-left"></i> Tous les postes</p:commandLink>
+                        <p:commandLink process="@this" update="@form" actionListener="#{recrutementView.retourListe}" styleClass="hx-pill-retour"><i class="pi pi-arrow-left"></i> Tous les postes</p:commandLink>
                         <h2>#{recrutementView.courant.intitule}</h2>
                         <p>#{empty recrutementView.courant.reference ? '' : recrutementView.courant.reference.concat(' · ')}#{empty recrutementView.courant.direction ? 'Direction non précisée' : recrutementView.courant.direction.nom} · #{recrutementView.courant.statutLabel}</p>
                     </div>

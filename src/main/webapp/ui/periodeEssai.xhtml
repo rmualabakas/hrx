@@ -106,7 +106,7 @@
             <h:form id="frmEssai" prependId="false">
                 <div class="hx-page-head">
                     <div>
-                        <p:link outcome="/ui/periodeEssai" styleClass="hx-link-sm"><i class="pi pi-arrow-left"></i> Toutes les fins d'essai et de CDD</p:link>
+                        <p:link outcome="/ui/periodeEssai" styleClass="hx-pill-retour"><i class="pi pi-arrow-left"></i> Toutes les fins d'essai et de CDD</p:link>
                         <h2>Fiche d'évaluation individuelle</h2>
                         <ui:fragment rendered="#{not empty periodeEssaiView.courant}"><p>#{periodeEssaiView.courant.salarie.nomAvecCivilite} · #{periodeEssaiView.courant.typeLabel} · <span class="hx-muted">MAF 070 DRH 02</span></p></ui:fragment>
                     </div>
