@@ -126,6 +126,7 @@
                                                        title="#{c.nomFichier}#{empty c.titreProfil ? '' : ' - '.concat(c.titreProfil)}">
                                             <span class="hx-cvt__ico-doc hx-cvt__ico-doc--#{c.extension}" aria-hidden="true">
                                                 <i class="hx-cvt__ico-lines"></i>
+                                                <ui:fragment rendered="#{c.extension eq 'pdf' or c.extension eq 'jpg' or c.extension eq 'jpeg' or c.extension eq 'png'}"><img class="hx-cvt__mini" src="#{request.contextPath}/cv/#{c.id}?mini=1" alt="" loading="lazy" decoding="async" onload="this.parentNode.classList.add('has-mini')" onerror="this.remove()"/></ui:fragment>
                                                 <b>#{c.extension}</b>
                                                 <ui:fragment rendered="#{c.lu}"><em class="hx-cvt__ico-badge" title="Lu par l'IA"><i class="pi pi-sparkles"></i></em></ui:fragment>
                                                 <ui:fragment rendered="#{c.enErreur}"><em class="hx-cvt__ico-badge is-err" title="#{c.erreurLecture}"><i class="pi pi-exclamation-triangle"></i></em></ui:fragment>

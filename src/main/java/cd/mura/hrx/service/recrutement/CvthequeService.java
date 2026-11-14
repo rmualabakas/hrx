@@ -79,6 +79,68 @@ public class CvthequeService {
 
     public Cv cv(int id) { return em.find(Cv.class, id); }
 
+    /** Limite le rendu simultané des miniatures (PDFBox consomme de la mémoire). */
+    private static final java.util.concurrent.Semaphore RENDU = new java.util.concurrent.Semaphore(2);
+    private static final int LARGEUR_MINI = 240;
+
+    /**
+     * Miniature PNG de la première page (PDF) ou de l'image, mise en cache sur disque à côté des CV.
+     * Renvoie null pour les formats sans aperçu (Word, texte) ou si le rendu échoue.
+     */
+    public byte[] miniature(Cv c) {
+        String ext = extension(c.getNomFichier());
+        if (!java.util.Set.of("pdf", "jpg", "jpeg", "png").contains(ext)) return null;
+        try {
+            Path dir = repertoire().resolve("miniatures");
+            Files.createDirectories(dir);
+            Path f = dir.resolve(c.getSha256() + ".png");
+            if (Files.exists(f)) return Files.readAllBytes(f);
+            RENDU.acquire();
+            try {
+                if (Files.exists(f)) return Files.readAllBytes(f);
+                java.awt.image.BufferedImage src;
+                if ("pdf".equals(ext)) {
+                    try (org.apache.pdfbox.pdmodel.PDDocument doc = org.apache.pdfbox.pdmodel.PDDocument.load(repertoire().resolve(c.getChemin()).toFile(),
+                            org.apache.pdfbox.io.MemoryUsageSetting.setupTempFileOnly())) {
+                        if (doc.getNumberOfPages() == 0) return null;
+                        float largeur = doc.getPage(0).getMediaBox().getWidth();
+                        float echelle = largeur <= 0 ? 0.4f : LARGEUR_MINI / largeur;
+                        src = new org.apache.pdfbox.rendering.PDFRenderer(doc).renderImage(0, echelle, org.apache.pdfbox.rendering.ImageType.RGB);
+                    }
+                } else {
+                    src = javax.imageio.ImageIO.read(repertoire().resolve(c.getChemin()).toFile());
+                    if (src == null) return null;
+                }
+                java.awt.image.BufferedImage mini = reduire(src);
+                java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+                javax.imageio.ImageIO.write(mini, "png", out);
+                byte[] png = out.toByteArray();
+                Files.write(f, png);
+                return png;
+            } finally { RENDU.release(); }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return null;
+        } catch (Exception | OutOfMemoryError e) {
+            java.util.logging.Logger.getLogger(CvthequeService.class.getName()).warning("Miniature impossible pour le CV " + c.getId() + " : " + e.getMessage());
+            return null;
+        }
+    }
+
+    private static java.awt.image.BufferedImage reduire(java.awt.image.BufferedImage src) {
+        if (src.getWidth() <= LARGEUR_MINI) return src;
+        int h = Math.max(1, Math.round(src.getHeight() * (LARGEUR_MINI / (float) src.getWidth())));
+        h = Math.min(h, LARGEUR_MINI * 2);
+        java.awt.image.BufferedImage dst = new java.awt.image.BufferedImage(LARGEUR_MINI, h, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        java.awt.Graphics2D g = dst.createGraphics();
+        g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.setColor(java.awt.Color.WHITE); g.fillRect(0, 0, LARGEUR_MINI, h);
+        int hs = Math.round(src.getHeight() * (LARGEUR_MINI / (float) src.getWidth()));
+        g.drawImage(src, 0, 0, LARGEUR_MINI, hs, null);
+        g.dispose();
+        return dst;
+    }
+
     private static String sha256(byte[] b) {
         try {
             byte[] h = MessageDigest.getInstance("SHA-256").digest(b);

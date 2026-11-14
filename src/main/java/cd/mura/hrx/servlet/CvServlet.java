@@ -38,6 +38,16 @@ public class CvServlet extends HttpServlet {
         if (!brut.matches("\\d{1,9}")) { resp.sendError(HttpServletResponse.SC_NOT_FOUND); return; }
         Cv cv = cvtheque.cv(Integer.parseInt(brut));
         if (cv == null) { resp.sendError(HttpServletResponse.SC_NOT_FOUND); return; }
+        if (req.getParameter("mini") != null) {
+            byte[] png = cvtheque.miniature(cv);
+            if (png == null) { resp.sendError(HttpServletResponse.SC_NOT_FOUND); return; }
+            resp.setContentType("image/png");
+            resp.setHeader("X-Content-Type-Options", "nosniff");
+            resp.setHeader("Cache-Control", "private, max-age=86400");
+            resp.setContentLength(png.length);
+            resp.getOutputStream().write(png);
+            return;
+        }
         byte[] data;
         try { data = cvtheque.contenu(cv); } catch (IllegalStateException e) { resp.sendError(HttpServletResponse.SC_NOT_FOUND); return; }
         boolean dl = req.getParameter("dl") != null;

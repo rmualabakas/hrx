@@ -2210,3 +2210,12 @@ a.hx-ntab.is-on .pi { color: var(--hx-gold); }
 .hx-alerte--erreur { --hx-alerte-c: var(--hx-danger); --hx-alerte-bg: var(--hx-danger-soft); }
 .hx-dlg-boite p { white-space: pre-line; }
 .hx-alerte--erreur.hx-dlg-boite p { text-align: left; width: 100%; padding: 10px 14px; border-radius: 10px; background: var(--hx-danger-soft); color: var(--hx-text-strong); }
+
+/* CVthèque : aperçu de la première page dans l'icône du document */
+.hx-cvt__mini { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top center; border-radius: 3px 13px 3px 3px; opacity: 0; transition: opacity .2s; }
+.hx-cvt__ico-doc.has-mini .hx-cvt__mini { opacity: 1; }
+.hx-cvt__ico-doc.has-mini .hx-cvt__ico-lines { display: none; }
+.hx-cvt__ico-doc.has-mini::before { z-index: 1; }
+.hx-cvt__ico-doc b { z-index: 1; }
+.hx-cvt__ico-badge { z-index: 2; }
+.hx-cvt__item--file .hx-cvt__ico-doc { width: 72px; height: 96px; }
