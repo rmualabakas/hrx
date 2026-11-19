@@ -76,9 +76,60 @@
                 if (remember) remember.checked = true;
             }
         } catch (ignored) { /* stockage local indisponible */ }
-        if (username) username.focus();
+        var password = document.getElementById('frmLogin:password');
+        // Identifiant déjà mémorisé : le curseur va directement au mot de passe.
+        if (username) (username.value && password ? password : username).focus();
         else { var first = document.getElementById('frmPass:oldpass'); if (first) first.focus(); }
     });
+
+    /* Horloge du bandeau (heure du poste). */
+    function tickClock() {
+        var time = document.getElementById('hlClockTime');
+        var date = document.getElementById('hlClockDate');
+        if (!time) return;
+        var now = new Date();
+        time.textContent = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        if (date) date.textContent = now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    }
+    tickClock();
+    window.setInterval(tickClock, 15000);
+
+    /* Parcours du collaborateur : illustration qui enchaîne les étapes (aucune donnée réelle). */
+    var ETAPES = [
+        ['pi-search', 'Candidature', 'Présélection dans la CVthèque'],
+        ['pi-comments', 'Entretien', 'Rencontre avec le futur N+1'],
+        ['pi-hourglass', 'Période d\'essai', 'Évaluation de fin d\'essai'],
+        ['pi-flag', 'Objectifs', 'Fiche signée par les deux parties'],
+        ['pi-star', 'Évaluation', 'N+1, directeur, validation DCHT'],
+        ['pi-book', 'Formation', 'Plan de formation et évaluations']
+    ];
+    var etapeIndex = 0;
+    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function etapeSuivante() {
+        var bloc = document.getElementById('hlEtape');
+        var ico = document.getElementById('hlEtapeIco');
+        var nom = document.getElementById('hlEtapeNom');
+        var det = document.getElementById('hlEtapeDet');
+        var jalons = document.getElementById('hlJalons');
+        if (!bloc || !ico || !nom || !det || document.hidden) return;
+        etapeIndex = (etapeIndex + 1) % ETAPES.length;
+        bloc.classList.remove('is-in');
+        bloc.classList.add('is-out');
+        window.setTimeout(function () {
+            var e = ETAPES[etapeIndex];
+            ico.className = 'pi ' + e[0];
+            nom.textContent = e[1];
+            det.textContent = e[2];
+            if (jalons) Array.prototype.forEach.call(jalons.children, function (li, i) {
+                li.classList.toggle('is-on', i === etapeIndex);
+                li.classList.toggle('is-done', i < etapeIndex);
+            });
+            bloc.classList.remove('is-out');
+            void bloc.offsetWidth; // relance l'animation d'entrée
+            bloc.classList.add('is-in');
+        }, 300);
+    }
+    if (!reduceMotion) window.setInterval(etapeSuivante, 3800);
 
     window.rememberLoginIdentifier = function () {
         var username = document.getElementById('frmLogin:username');
