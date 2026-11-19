@@ -4,7 +4,7 @@
     'use strict';
 
     var body = document.body;
-    var KEY_COLLAPSED = 'hrx.sidebar.collapsed';
+    var KEY_COLLAPSED = 'hrx.sidebar.reduit'; // nouvelle clé : l'ancienne préférence « déplié » ne s'applique plus
     var KEY_OPEN_FOLDERS = 'hrx.sidebar.folders';
 
     function read(key) { try { return window.localStorage.getItem(key); } catch (e) { return null; } }
