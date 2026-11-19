@@ -51,6 +51,7 @@
 </h:head>
 
 <h:body styleClass="#{accountBean.bodyPreferenceClass}" dir="#{accountBean.layoutDirection}">
+<script>/* menu réduit par défaut, appliqué avant l'affichage pour éviter un clignotement */try{if(localStorage.getItem('hrx.sidebar.collapsed')!=='0'&amp;&amp;!window.matchMedia('(max-width: 1024px)').matches)document.body.classList.add('hx-sidebar-collapsed');}catch(e){}</script>
     <f:view encoding="UTF-8" contentType="text/html; charset=UTF-8">
         <ui:insert name="metadata"/>
         <div class="hx-app">

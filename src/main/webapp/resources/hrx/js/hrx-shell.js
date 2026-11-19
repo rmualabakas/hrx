@@ -23,7 +23,8 @@
     window.hrxCloseSidebar = function () { body.classList.remove('hx-sidebar-open'); };
 
     function restoreCollapsed() {
-        if (read(KEY_COLLAPSED) === '1' && !isMobile()) body.classList.add('hx-sidebar-collapsed');
+        // Menu réduit par défaut ; déplié seulement si l'utilisateur l'a choisi (préférence mémorisée).
+        if (read(KEY_COLLAPSED) !== '0' && !isMobile()) body.classList.add('hx-sidebar-collapsed');
     }
 
     /* Les dossiers sont repliés par défaut : seul celui qui contient la page en cours s'ouvre (markActive).
